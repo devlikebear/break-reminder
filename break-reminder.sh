@@ -4,7 +4,7 @@
 #
 # Work 50 minutes → Rest 10 minutes → Repeat!
 
-set -euo pipefail
+set -eu
 
 # Configuration
 WORK_DURATION=$((50 * 60))    # 50 minutes in seconds
@@ -30,7 +30,9 @@ log() {
 
 # Get idle time in seconds (time since last keyboard/mouse input)
 get_idle_time() {
-    /usr/sbin/ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}'
+    local idle
+    idle=$(/usr/sbin/ioreg -c IOHIDSystem | awk '/HIDIdleTime/ {print int($NF/1000000000); exit}' 2>/dev/null || echo "0")
+    echo "${idle:-0}"
 }
 
 # Send macOS notification
