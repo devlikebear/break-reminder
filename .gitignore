@@ -1,0 +1,12 @@
+# State files
+.break-reminder-state
+.break-reminder.log
+
+# macOS
+.DS_Store
+*.swp
+*~
+
+# IDE
+.idea/
+.vscode/
