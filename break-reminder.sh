@@ -355,85 +355,99 @@ show_dashboard() {
     local YELLOW='\033[1;33m'
     local CYAN='\033[0;36m'
     local NC='\033[0m'
-    
+    local EL
+    EL=$(tput el)  # Clear to end of line
+
+    # Print a line and clear remaining characters
+    printl() {
+        echo -e "$1${EL}"
+    }
+
     trap "tput cnorm; clear; exit 0" SIGINT
-    tput civis # Hide cursor
-    
+    tput civis  # Hide cursor
+    clear       # Initial clear
+
     while true; do
         read_state
         local idle_time
         idle_time=$(get_idle_time)
         local now
         now=$(date +%s)
-        
-        clear
-        echo -e "${CYAN}🐹 Break Reminder Dashboard${NC} (Press 'q' to quit)"
-        echo "=================================================="
-        
+
+        tput cup 0 0  # Move cursor to top-left (no flicker)
+
+        printl "${CYAN}🐹 Break Reminder Dashboard${NC} (Press 'q' to quit)"
+        printl "=================================================="
+
         local install_status
         install_status=$(check_install_status)
-        echo -e "System: ${install_status}"
-        
+        printl "System: ${install_status}"
+
         # Status Section
         if ! check_working_hours; then
-             echo -e "Status: ${YELLOW}SLEEPING (Outside Working Hours)${NC}"
+            printl "Status: ${YELLOW}SLEEPING (Outside Working Hours)${NC}"
         else
-             if [[ "$MODE" == "work" ]]; then
-                 echo -e "Status: ${GREEN}WORKING${NC}"
-             else
-                 echo -e "Status: ${BLUE}ON BREAK${NC}"
-             fi
+            if [[ "$MODE" == "work" ]]; then
+                printl "Status: ${GREEN}WORKING${NC}"
+            else
+                printl "Status: ${BLUE}ON BREAK${NC}"
+            fi
         fi
-        
-        echo -e "Idle: ${idle_time}s / Limit: ${IDLE_THRESHOLD}s"
-        echo ""
-        
+
+        printl "Idle: ${idle_time}s / Limit: ${IDLE_THRESHOLD}s"
+        printl ""
+
         # Session Progress
         local session_pct=0
         if [[ "$MODE" == "work" ]]; then
             session_pct=$(( (WORK_SECONDS * 100) / WORK_DURATION ))
             [ $session_pct -gt 100 ] && session_pct=100
-            echo -ne "Session Work: "
+            printf "Session Work: "
             draw_bar "$session_pct" 30 "$GREEN"
-            echo " ($((WORK_SECONDS/60)) / $((WORK_DURATION/60)) min)"
+            printl " ($((WORK_SECONDS/60)) / $((WORK_DURATION/60)) min)"
         else
             local break_elapsed=$((now - BREAK_START))
             session_pct=$(( (break_elapsed * 100) / BREAK_DURATION ))
             [ $session_pct -gt 100 ] && session_pct=100
-            echo -ne "Break Timer:  "
+            printf "Break Timer:  "
             draw_bar "$session_pct" 30 "$BLUE"
-            echo " ($((break_elapsed/60)) / $((BREAK_DURATION/60)) min)"
+            printl " ($((break_elapsed/60)) / $((BREAK_DURATION/60)) min)"
         fi
-        
-        echo "" 
-        
+
+        printl ""
+
         # Daily Stats
         local daily_work_min=$((TODAY_WORK_SECONDS / 60))
         local daily_break_min=$((TODAY_BREAK_SECONDS / 60))
         local total_min=$((daily_work_min + daily_break_min))
-        
-        echo "Daily Statistics:"
-        echo "  Work: ${daily_work_min} min"
-        echo "  Rest: ${daily_break_min} min"
+
+        printl "Daily Statistics:"
+        printl "  Work: ${daily_work_min} min"
+        printl "  Rest: ${daily_break_min} min"
         if [[ $total_min -gt 0 ]]; then
             local work_ratio=$(( (daily_work_min * 100) / total_min ))
-            echo -ne "  Ratio: "
+            printf "  Ratio: "
             draw_bar "$work_ratio" 20 "$YELLOW"
-            echo ""
+            printl ""
+        else
+            printl ""
         fi
-        
-        echo ""
-        echo "Recent Logs:"
-        echo "--------------------------------------------------"
+
+        printl ""
+        printl "Recent Logs:"
+        printl "--------------------------------------------------"
         if [[ -f "$LOG_FILE" ]]; then
             tail -n 5 "$LOG_FILE" | while read -r line; do
-                echo -e "  $line"
+                printl "  $line"
             done
         else
-            echo "  (No logs yet)"
+            printl "  (No logs yet)"
         fi
-        echo "--------------------------------------------------"
-        
+        printl "--------------------------------------------------"
+
+        # Clear any remaining lines from previous render
+        tput ed
+
         # Read input non-blocking (|| true to prevent exit on timeout)
         if read -t 1 -n 1 key 2>/dev/null; then
             if [[ "$key" == "q" ]]; then
