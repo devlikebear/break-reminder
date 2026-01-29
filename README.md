@@ -12,10 +12,14 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 
 - **🖱️ Activity Detection** - Monitors keyboard/mouse usage to track actual work time
 - **⏰ Smart Timer** - 50 min work / 10 min break cycle (configurable)
+- **📊 TUI Dashboard** - Real-time progress bars and daily statistics
+- **🗓️ Smart Scheduling** - Only active during configured working hours/days
+- **📈 Daily Stats** - Track your work/break time and ratio
 - **🔔 Notifications** - Visual + voice alerts (uses macOS native TTS)
 - **🧘 Natural Break Detection** - Automatically resets if you're already taking a break
 - **🚫 Break Enforcement** - Warns you if you try to work during break time
 - **🚀 Auto-start** - Runs automatically on login via launchd
+- **🔒 Secure** - Safe state file parsing with input validation
 
 ## 📦 Installation
 
@@ -30,22 +34,14 @@ cd break-reminder
 ./install.sh
 ```
 
-### Manual Install
+### Using Built-in Command
 
 ```bash
-# Clone the repository
-git clone https://github.com/devlikebear/break-reminder.git
-cd break-reminder
+# Install launchd agent (auto-start on login)
+./break-reminder.sh install
 
-# Make executable
-chmod +x break-reminder.sh
-
-# Copy to your preferred location
-cp break-reminder.sh ~/Scripts/
-
-# Install launch agent (auto-start on login)
-cp com.user.break-reminder.plist ~/Library/LaunchAgents/
-launchctl load ~/Library/LaunchAgents/com.user.break-reminder.plist
+# Uninstall launchd agent
+./break-reminder.sh uninstall
 ```
 
 ## 🚀 Usage
@@ -53,26 +49,64 @@ launchctl load ~/Library/LaunchAgents/com.user.break-reminder.plist
 ### Commands
 
 ```bash
+# Real-time TUI dashboard
+break-reminder dashboard
+
 # Check current status
 break-reminder status
 
 # Manually reset the timer
 break-reminder reset
 
+# Install as launchd agent
+break-reminder install
+
+# Uninstall launchd agent
+break-reminder uninstall
+
 # Run a single check (used by launchd)
 break-reminder check
 
 # Run as foreground daemon (for testing)
 break-reminder daemon
+
+# Show help
+break-reminder help
 ```
 
-### Example Output
+### Dashboard
+
+```
+🐹 Break Reminder Dashboard (Press 'q' to quit)
+==================================================
+System: Installed & Running
+Status: WORKING
+Idle: 5s / Limit: 120s
+
+Session Work: [################--------------] 53% (26 / 50 min)
+
+Daily Statistics:
+  Work: 180 min
+  Rest: 30 min
+  Ratio: [####################] 86%
+
+Recent Logs:
+--------------------------------------------------
+  [2025-01-29 14:30:00] Working... 26min elapsed (24min remaining)
+--------------------------------------------------
+```
+
+### Status Output
 
 ```
 🐹 Break Reminder Status
 ========================
+System: Installed & Running
+State:  Active (Within working hours)
+------------------------
 Mode: work
-Work time: 32min / 50min
+Session Work: 32min / 50min
+Daily Stats: Work 180min / Break 30min
 Current idle: 5sec
 ```
 
@@ -81,9 +115,22 @@ Current idle: 5sec
 Edit the variables at the top of `break-reminder.sh`:
 
 ```bash
-WORK_DURATION=$((50 * 60))    # Work duration in seconds (default: 50 min)
-BREAK_DURATION=$((10 * 60))   # Break duration in seconds (default: 10 min)
-IDLE_THRESHOLD=120            # Seconds of idle to count as "not working" (default: 2 min)
+# Timer Settings
+WORK_DURATION=$((50 * 60))    # Work duration (default: 50 min)
+BREAK_DURATION=$((10 * 60))   # Break duration (default: 10 min)
+IDLE_THRESHOLD=120            # Idle threshold (default: 2 min)
+NATURAL_BREAK_THRESHOLD=300   # Auto-reset threshold (default: 5 min)
+
+# Smart Scheduling
+WORK_DAYS="1 2 3 4 5"         # Working days (1=Mon, 7=Sun)
+WORK_START_HOUR=9             # Start hour (24h format)
+WORK_END_HOUR=18              # End hour (24h format)
+
+# Log Settings
+MAX_LOG_LINES=1000            # Log rotation threshold
+
+# Voice Settings
+VOICE="Yuna"                  # TTS voice (run `say -v '?'` for options)
 ```
 
 ### Optional: Screen Lock on Break
@@ -97,11 +144,16 @@ Uncomment this line in the script to force screen lock when break starts:
 ## 🔧 Managing the Service
 
 ```bash
-# Stop the service
-launchctl unload ~/Library/LaunchAgents/com.user.break-reminder.plist
+# Check installation status
+break-reminder status
 
-# Start the service
-launchctl load ~/Library/LaunchAgents/com.user.break-reminder.plist
+# Install/Uninstall via built-in commands
+break-reminder install
+break-reminder uninstall
+
+# Or manually via launchctl
+launchctl unload ~/Library/LaunchAgents/com.devlikebear.break-reminder.plist
+launchctl load ~/Library/LaunchAgents/com.devlikebear.break-reminder.plist
 
 # Check if running
 launchctl list | grep break-reminder
@@ -112,7 +164,7 @@ launchctl list | grep break-reminder
 | File | Description |
 |------|-------------|
 | `break-reminder.sh` | Main script |
-| `com.user.break-reminder.plist` | launchd configuration |
+| `com.user.break-reminder.plist` | launchd configuration (template) |
 | `install.sh` | Installation script |
 | `uninstall.sh` | Uninstallation script |
 
@@ -131,10 +183,8 @@ The default voice uses macOS Yuna (Korean). To change the voice:
 # List available voices
 say -v '?'
 
-# Edit the script and change the voice
-speak_message() {
-    say -v "Samantha" "$1" &  # English voice
-}
+# Edit the VOICE variable in the script
+VOICE="Samantha"  # English voice
 ```
 
 ## 🤝 Contributing
