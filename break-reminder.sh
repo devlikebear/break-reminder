@@ -13,6 +13,14 @@ IDLE_THRESHOLD=120            # 2 minutes - idle longer than this = not working
 CHECK_INTERVAL=60             # Check every 60 seconds (daemon mode)
 NATURAL_BREAK_THRESHOLD=300   # 5 minutes - auto-reset if idle this long
 
+# Smart Scheduling
+WORK_DAYS="1 2 3 4 5"         # 1=Mon, 7=Sun. Default: Mon-Fri
+WORK_START_HOUR=9             # 09:00
+WORK_END_HOUR=18              # 18:00
+
+# Daily Stats & Logs
+MAX_LOG_LINES=1000            # Log rotation threshold
+
 # File locations
 STATE_FILE="$HOME/.break-reminder-state"
 LOG_FILE="$HOME/.break-reminder.log"
@@ -23,6 +31,54 @@ VOICE="Yuna"  # Korean voice. Change to "Samantha" for English, etc.
 #=============================================================================
 # Functions
 #=============================================================================
+
+# Check if within working hours
+check_working_hours() {
+    local current_hour
+    current_hour=$(date +%H)
+    local current_day
+    current_day=$(date +%u) # 1=Mon, 7=Sun
+
+    # Check Day
+    if ! echo "$WORK_DAYS" | grep -q "$current_day"; then
+        return 1 # Not a working day
+    fi
+
+    # Check Time
+    if [[ 10#$current_hour -lt 10#$WORK_START_HOUR ]] || [[ 10#$current_hour -ge 10#$WORK_END_HOUR ]]; then
+        return 1 # Outside working hours
+    fi
+
+    return 0 # Within working hours
+}
+
+# Rotate logs if too large
+rotate_logs() {
+    if [[ -f "$LOG_FILE" ]]; then
+        local line_count
+        line_count=$(wc -l < "$LOG_FILE")
+        if [[ $line_count -gt $MAX_LOG_LINES ]]; then
+            local temp_file="${LOG_FILE}.tmp"
+            tail -n "$MAX_LOG_LINES" "$LOG_FILE" > "$temp_file"
+            mv "$temp_file" "$LOG_FILE"
+        fi
+    fi
+}
+
+# Check installation status
+check_install_status() {
+    local plist_path="$HOME/Library/LaunchAgents/com.devlikebear.break-reminder.plist"
+    local status="Not Installed"
+    
+    if [[ -f "$plist_path" ]]; then
+        if launchctl list | grep -q "com.devlikebear.break-reminder"; then
+            status="Installed & Running"
+        else
+            status="Installed (Not Loaded)"
+        fi
+    fi
+    echo "$status"
+}
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
@@ -61,6 +117,11 @@ read_state() {
     LAST_CHECK=$(date +%s)
     BREAK_START=0
     
+    # Daily Stats
+    TODAY_WORK_SECONDS=0
+    TODAY_BREAK_SECONDS=0
+    LAST_UPDATE_DATE=$(date +%Y-%m-%d)
+
     if [[ -f "$STATE_FILE" ]]; then
         # shellcheck source=/dev/null
         source "$STATE_FILE"
@@ -74,6 +135,9 @@ WORK_SECONDS=$WORK_SECONDS
 MODE=$MODE
 LAST_CHECK=$LAST_CHECK
 BREAK_START=$BREAK_START
+TODAY_WORK_SECONDS=$TODAY_WORK_SECONDS
+TODAY_BREAK_SECONDS=$TODAY_BREAK_SECONDS
+LAST_UPDATE_DATE=$LAST_UPDATE_DATE
 EOF
 }
 
@@ -81,8 +145,29 @@ EOF
 check_and_remind() {
     read_state
     
+    # Check working hours first
+    if ! check_working_hours; then
+        # If we were in a session, maybe we should end it or just pause?
+        # For now, we save state and exit silently.
+        # But we should probably reset LAST_CHECK to avoid huge Elapsed times next time.
+        LAST_CHECK=$(date +%s)
+        save_state
+        return
+    fi
+    
     local now
     now=$(date +%s)
+    
+    # Daily Stats Reset
+    local today
+    today=$(date +%Y-%m-%d)
+    if [[ "$today" != "$LAST_UPDATE_DATE" ]]; then
+        log "New day detected! Resetting daily stats."
+        TODAY_WORK_SECONDS=0
+        TODAY_BREAK_SECONDS=0
+        LAST_UPDATE_DATE="$today"
+    fi
+    
     local idle_time
     idle_time=$(get_idle_time)
     local elapsed=$((now - LAST_CHECK))
@@ -99,9 +184,10 @@ check_and_remind() {
     if [[ "$MODE" == "work" ]]; then
         handle_work_mode "$idle_time" "$elapsed" "$now"
     elif [[ "$MODE" == "break" ]]; then
-        handle_break_mode "$idle_time" "$now"
+        handle_break_mode "$idle_time" "$elapsed" "$now"
     fi
     
+    rotate_logs
     save_state
 }
 
@@ -113,6 +199,8 @@ handle_work_mode() {
     if [[ $idle_time -lt $IDLE_THRESHOLD ]]; then
         # User is active - accumulate work time
         WORK_SECONDS=$((WORK_SECONDS + elapsed))
+        TODAY_WORK_SECONDS=$((TODAY_WORK_SECONDS + elapsed))
+
         
         local work_minutes=$((WORK_SECONDS / 60))
         local remaining_minutes=$(( (WORK_DURATION - WORK_SECONDS) / 60 ))
@@ -152,7 +240,11 @@ handle_work_mode() {
 
 handle_break_mode() {
     local idle_time=$1
-    local now=$2
+    local elapsed=$2
+    local now=$3
+    
+    TODAY_BREAK_SECONDS=$((TODAY_BREAK_SECONDS + elapsed))
+
     
     local break_elapsed=$((now - BREAK_START))
     local break_remaining=$(( (BREAK_DURATION - break_elapsed) / 60 ))
@@ -182,11 +274,25 @@ show_status() {
     local idle_time
     idle_time=$(get_idle_time)
     local work_minutes=$((WORK_SECONDS / 60))
+    local daily_work_min=$((TODAY_WORK_SECONDS / 60))
+    local daily_break_min=$((TODAY_BREAK_SECONDS / 60))
+    local install_status
+    install_status=$(check_install_status)
     
     echo "🐹 Break Reminder Status"
     echo "========================"
+    echo "System: $install_status"
+    
+    if check_working_hours; then
+        echo "State:  Active (Within working hours)"
+    else
+        echo "State:  Inactive (Outside working hours)"
+    fi
+    
+    echo "------------------------"
     echo "Mode: $MODE"
-    echo "Work time: ${work_minutes}min / $((WORK_DURATION / 60))min"
+    echo "Session Work: ${work_minutes}min / $((WORK_DURATION / 60))min"
+    echo "Daily Stats: Work ${daily_work_min}min / Break ${daily_break_min}min"
     echo "Current idle: ${idle_time}sec"
     
     if [[ "$MODE" == "break" ]]; then
@@ -196,6 +302,121 @@ show_status() {
         local break_minutes=$((break_elapsed / 60))
         echo "Break elapsed: ${break_minutes}min / $((BREAK_DURATION / 60))min"
     fi
+}
+
+# Draw progress bar
+draw_bar() {
+    local percent=$1
+    local length=$2
+    local color=$3
+    local fill_len=$(( (percent * length) / 100 ))
+    local empty_len=$((length - fill_len))
+    
+    printf "["
+    printf "${color}"
+    for ((i=0; i<fill_len; i++)); do printf "#"; done
+    printf "\033[0m"
+    for ((i=0; i<empty_len; i++)); do printf "-"; done
+    printf "] %d%%" "$percent"
+}
+
+# TUI Dashboard
+show_dashboard() {
+    # Colors
+    local GREEN='\033[0;32m'
+    local BLUE='\033[0;34m'
+    local RED='\033[0;31m'
+    local YELLOW='\033[1;33m'
+    local CYAN='\033[0;36m'
+    local NC='\033[0m'
+    
+    trap "tput cnorm; clear; exit 0" SIGINT
+    tput civis # Hide cursor
+    
+    while true; do
+        read_state
+        local idle_time
+        idle_time=$(get_idle_time)
+        local now
+        now=$(date +%s)
+        
+        clear
+        echo -e "${CYAN}🐹 Break Reminder Dashboard${NC} (Press 'q' to quit)"
+        echo "=================================================="
+        
+        local install_status
+        install_status=$(check_install_status)
+        echo -e "System: ${install_status}"
+        
+        # Status Section
+        if ! check_working_hours; then
+             echo -e "Status: ${YELLOW}SLEEPING (Outside Working Hours)${NC}"
+        else
+             if [[ "$MODE" == "work" ]]; then
+                 echo -e "Status: ${GREEN}WORKING${NC}"
+             else
+                 echo -e "Status: ${BLUE}ON BREAK${NC}"
+             fi
+        fi
+        
+        echo -e "Idle: ${idle_time}s / Limit: ${IDLE_THRESHOLD}s"
+        echo ""
+        
+        # Session Progress
+        local session_pct=0
+        if [[ "$MODE" == "work" ]]; then
+            session_pct=$(( (WORK_SECONDS * 100) / WORK_DURATION ))
+            [ $session_pct -gt 100 ] && session_pct=100
+            echo -ne "Session Work: "
+            draw_bar "$session_pct" 30 "$GREEN"
+            echo " ($((WORK_SECONDS/60)) / $((WORK_DURATION/60)) min)"
+        else
+            local break_elapsed=$((now - BREAK_START))
+            session_pct=$(( (break_elapsed * 100) / BREAK_DURATION ))
+            [ $session_pct -gt 100 ] && session_pct=100
+            echo -ne "Break Timer:  "
+            draw_bar "$session_pct" 30 "$BLUE"
+            echo " ($((break_elapsed/60)) / $((BREAK_DURATION/60)) min)"
+        fi
+        
+        echo "" 
+        
+        # Daily Stats
+        local daily_work_min=$((TODAY_WORK_SECONDS / 60))
+        local daily_break_min=$((TODAY_BREAK_SECONDS / 60))
+        local total_min=$((daily_work_min + daily_break_min))
+        
+        echo "Daily Statistics:"
+        echo "  Work: ${daily_work_min} min"
+        echo "  Rest: ${daily_break_min} min"
+        if [[ $total_min -gt 0 ]]; then
+            local work_ratio=$(( (daily_work_min * 100) / total_min ))
+            echo -ne "  Ratio: "
+            draw_bar "$work_ratio" 20 "$YELLOW"
+            echo ""
+        fi
+        
+        echo ""
+        echo "Recent Logs:"
+        echo "--------------------------------------------------"
+        if [[ -f "$LOG_FILE" ]]; then
+            tail -n 5 "$LOG_FILE" | while read -r line; do
+                echo -e "  $line"
+            done
+        else
+            echo "  (No logs yet)"
+        fi
+        echo "--------------------------------------------------"
+        
+        # Read input non-blocking
+        read -t 1 -n 1 key
+        if [[ "$key" == "q" ]]; then
+            tput cnorm
+            clear
+            break
+        fi
+    done
+    tput cnorm
 }
 
 # Reset timer
@@ -209,6 +430,59 @@ reset_timer() {
     log "Timer manually reset"
 }
 
+# Install Launchd Agent
+install_launchd() {
+    local plist_path="$HOME/Library/LaunchAgents/com.devlikebear.break-reminder.plist"
+    local script_path
+    script_path=$(realpath "$0")
+    
+    cat > "$plist_path" << EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.devlikebear.break-reminder</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>${script_path}</string>
+        <string>check</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>60</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/break-reminder.out</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/break-reminder.err</string>
+</dict>
+</plist>
+EOF
+    
+    echo "Generated plist at $plist_path"
+    
+    # Unload if exists, then load
+    launchctl unload "$plist_path" 2>/dev/null || true
+    launchctl load "$plist_path"
+    
+    echo "✅ Successfully installed and loaded break-reminder agent!"
+    echo "It will now run every minute in the background."
+}
+
+# Uninstall Launchd Agent
+uninstall_launchd() {
+    local plist_path="$HOME/Library/LaunchAgents/com.devlikebear.break-reminder.plist"
+
+    if [[ -f "$plist_path" ]]; then
+        launchctl unload "$plist_path" 2>/dev/null || true
+        rm "$plist_path"
+        echo "✅ Successfully uninstalled break-reminder agent."
+    else
+        echo "⚠️  Agent not found (not installed?)"
+    fi
+}
+
 # Show help
 show_help() {
     cat << EOF
@@ -217,8 +491,11 @@ show_help() {
 Usage: $(basename "$0") <command>
 
 Commands:
+  dashboard Run TUI Dashboard (Real-time view)
+  status    Show current status/stats
+  install   Install as macOS LaunchAgent (Runs every minute)
+  uninstall Uninstall macOS LaunchAgent
   check     Run a single check (used by launchd)
-  status    Show current status
   reset     Reset the timer
   daemon    Run as foreground daemon (for testing)
   help      Show this help message
@@ -227,8 +504,9 @@ Configuration:
   Edit the variables at the top of this script to customize:
   - WORK_DURATION    Work period (default: 50 minutes)
   - BREAK_DURATION   Break period (default: 10 minutes)
-  - IDLE_THRESHOLD   Idle time to count as "not working"
-  - VOICE            TTS voice (run 'say -v ?' for options)
+  - WORK_DAYS        Working days (1=Mon, 5=Fri)
+  - WORK_START/END   Working hours (24h format)
+  - MAX_LOG_LINES    Log rotation limit
 
 Files:
   ~/.break-reminder-state   Current state
@@ -249,6 +527,10 @@ case "${1:-check}" in
     status)
         show_status
         ;;
+    dashboard)
+        show_dashboard
+        ;;
+
     reset)
         reset_timer
         ;;
@@ -260,7 +542,14 @@ case "${1:-check}" in
             sleep $CHECK_INTERVAL
         done
         ;;
+    install)
+        install_launchd
+        ;;
+    uninstall)
+        uninstall_launchd
+        ;;
     help|--help|-h)
+
         show_help
         ;;
     *)
