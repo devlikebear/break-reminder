@@ -110,21 +110,47 @@ lock_screen() {
     osascript -e 'tell application "System Events" to keystroke "q" using {control down, command down}'
 }
 
-# Read state from file
+# Read state from file (safe key-value parsing)
 read_state() {
     WORK_SECONDS=0
     MODE="work"
     LAST_CHECK=$(date +%s)
     BREAK_START=0
-    
+
     # Daily Stats
     TODAY_WORK_SECONDS=0
     TODAY_BREAK_SECONDS=0
     LAST_UPDATE_DATE=$(date +%Y-%m-%d)
 
     if [[ -f "$STATE_FILE" ]]; then
-        # shellcheck source=/dev/null
-        source "$STATE_FILE"
+        while IFS='=' read -r key value; do
+            # Skip empty lines
+            [[ -z "$key" ]] && continue
+
+            case "$key" in
+                WORK_SECONDS)
+                    [[ "$value" =~ ^[0-9]+$ ]] && WORK_SECONDS=$value
+                    ;;
+                MODE)
+                    [[ "$value" =~ ^(work|break)$ ]] && MODE=$value
+                    ;;
+                LAST_CHECK)
+                    [[ "$value" =~ ^[0-9]+$ ]] && LAST_CHECK=$value
+                    ;;
+                BREAK_START)
+                    [[ "$value" =~ ^[0-9]+$ ]] && BREAK_START=$value
+                    ;;
+                TODAY_WORK_SECONDS)
+                    [[ "$value" =~ ^[0-9]+$ ]] && TODAY_WORK_SECONDS=$value
+                    ;;
+                TODAY_BREAK_SECONDS)
+                    [[ "$value" =~ ^[0-9]+$ ]] && TODAY_BREAK_SECONDS=$value
+                    ;;
+                LAST_UPDATE_DATE)
+                    [[ "$value" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] && LAST_UPDATE_DATE=$value
+                    ;;
+            esac
+        done < "$STATE_FILE"
     fi
 }
 
