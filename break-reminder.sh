@@ -434,12 +434,13 @@ show_dashboard() {
         fi
         echo "--------------------------------------------------"
         
-        # Read input non-blocking
-        read -t 1 -n 1 key
-        if [[ "$key" == "q" ]]; then
-            tput cnorm
-            clear
-            break
+        # Read input non-blocking (|| true to prevent exit on timeout)
+        if read -t 1 -n 1 key 2>/dev/null; then
+            if [[ "$key" == "q" ]]; then
+                tput cnorm
+                clear
+                break
+            fi
         fi
     done
     tput cnorm
