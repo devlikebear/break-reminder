@@ -534,6 +534,7 @@ Usage: $(basename "$0") <command>
 Commands:
   dashboard Run TUI Dashboard (Real-time view)
   status    Show current status/stats
+  doctor    Diagnose and test all features
   install   Install as macOS LaunchAgent (Runs every minute)
   uninstall Uninstall macOS LaunchAgent
   check     Run a single check (used by launchd)
@@ -555,6 +556,119 @@ Files:
 
 More info: https://github.com/devlikebear/break-reminder
 EOF
+}
+
+# Doctor - diagnose and test all features
+run_doctor() {
+    local passed=0
+    local failed=0
+    local GREEN='\033[0;32m'
+    local RED='\033[0;31m'
+    local YELLOW='\033[1;33m'
+    local NC='\033[0m'
+
+    echo "🩺 Break Reminder Doctor"
+    echo "========================"
+    echo ""
+
+    # Test 1: Voice availability
+    printf "Checking voice ($VOICE)... "
+    if say -v '?' | grep -q "^$VOICE "; then
+        echo -e "${GREEN}OK${NC}"
+        ((passed++))
+    else
+        echo -e "${RED}FAIL${NC} - Voice '$VOICE' not found"
+        echo "   Available voices: $(say -v '?' | head -5 | cut -d' ' -f1 | tr '\n' ' ')..."
+        ((failed++))
+    fi
+
+    # Test 2: TTS
+    printf "Testing TTS (say)... "
+    if say -v "$VOICE" "테스트" 2>/dev/null; then
+        echo -e "${GREEN}OK${NC}"
+        ((passed++))
+    else
+        echo -e "${RED}FAIL${NC}"
+        ((failed++))
+    fi
+
+    # Test 3: Notification
+    printf "Testing notification... "
+    if osascript -e 'display notification "Doctor test" with title "🩺 Break Reminder" sound name "Glass"' 2>/dev/null; then
+        echo -e "${GREEN}OK${NC}"
+        ((passed++))
+    else
+        echo -e "${RED}FAIL${NC}"
+        ((failed++))
+    fi
+
+    # Test 4: Idle time detection
+    printf "Testing idle time detection... "
+    local idle
+    idle=$(get_idle_time)
+    if [[ "$idle" =~ ^[0-9]+$ ]]; then
+        echo -e "${GREEN}OK${NC} (current: ${idle}s)"
+        ((passed++))
+    else
+        echo -e "${RED}FAIL${NC} - Could not read idle time"
+        ((failed++))
+    fi
+
+    # Test 5: State file
+    printf "Checking state file... "
+    if [[ -f "$STATE_FILE" ]]; then
+        echo -e "${GREEN}OK${NC} ($STATE_FILE)"
+        ((passed++))
+    else
+        echo -e "${YELLOW}WARN${NC} - Not found (will be created on first run)"
+        ((passed++))
+    fi
+
+    # Test 6: Log file
+    printf "Checking log file... "
+    if [[ -f "$LOG_FILE" ]]; then
+        local lines
+        lines=$(wc -l < "$LOG_FILE")
+        echo -e "${GREEN}OK${NC} ($lines lines)"
+        ((passed++))
+    else
+        echo -e "${YELLOW}WARN${NC} - Not found (will be created on first run)"
+        ((passed++))
+    fi
+
+    # Test 7: LaunchAgent
+    printf "Checking LaunchAgent... "
+    local plist_path="$HOME/Library/LaunchAgents/com.devlikebear.break-reminder.plist"
+    if [[ -f "$plist_path" ]]; then
+        if launchctl list 2>/dev/null | grep -q "com.devlikebear.break-reminder"; then
+            echo -e "${GREEN}OK${NC} (installed & running)"
+            ((passed++))
+        else
+            echo -e "${YELLOW}WARN${NC} (installed but not loaded)"
+            ((passed++))
+        fi
+    else
+        echo -e "${YELLOW}WARN${NC} - Not installed (run 'install' to set up)"
+        ((passed++))
+    fi
+
+    # Test 8: Working hours check
+    printf "Checking working hours... "
+    if check_working_hours; then
+        echo -e "${GREEN}OK${NC} (within working hours)"
+    else
+        echo -e "${YELLOW}INFO${NC} (outside working hours - inactive)"
+    fi
+    ((passed++))
+
+    # Summary
+    echo ""
+    echo "========================"
+    if [[ $failed -eq 0 ]]; then
+        echo -e "Result: ${GREEN}All checks passed!${NC} ($passed tests)"
+    else
+        echo -e "Result: ${RED}$failed failed${NC}, $passed passed"
+    fi
 }
 
 #=============================================================================
@@ -588,6 +702,9 @@ case "${1:-check}" in
         ;;
     uninstall)
         uninstall_launchd
+        ;;
+    doctor)
+        run_doctor
         ;;
     help|--help|-h)
 
