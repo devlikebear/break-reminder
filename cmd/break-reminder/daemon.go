@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/logging"
 )
 
@@ -35,6 +36,9 @@ func newDaemonCmd() *cobra.Command {
 			for {
 				select {
 				case <-ticker.C:
+					if newCfg, err := config.Load(); err == nil {
+						cfg = newCfg
+					}
 					if err := runCheck(); err != nil {
 						log.Error().Err(err).Msg("Check failed")
 					}

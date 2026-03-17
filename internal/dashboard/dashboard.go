@@ -75,6 +75,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 	case tickMsg:
+		if newCfg, err := config.Load(); err == nil {
+			m.cfg = newCfg
+		}
 		m.state, _ = state.Load(state.DefaultStatePath())
 		m.idleSec = idle.NewDetector().IdleSeconds()
 		m.logs = logging.Tail(logging.DefaultLogPath(), 5)
