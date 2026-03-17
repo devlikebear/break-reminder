@@ -10,3 +10,7 @@
 # IDE
 .idea/
 .vscode/
+
+# Go build artifacts
+bin/
+break-reminder

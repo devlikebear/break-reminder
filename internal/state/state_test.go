@@ -1,0 +1,93 @@
+package state
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestLoadSaveRoundtrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test-state")
+
+	original := State{
+		WorkSeconds:       1800,
+		Mode:              "work",
+		LastCheck:         1700000000,
+		BreakStart:        0,
+		TodayWorkSeconds:  3600,
+		TodayBreakSeconds: 600,
+		LastUpdateDate:    "2025-01-15",
+	}
+
+	if err := Save(path, original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if loaded.WorkSeconds != original.WorkSeconds {
+		t.Errorf("WorkSeconds = %d, want %d", loaded.WorkSeconds, original.WorkSeconds)
+	}
+	if loaded.Mode != original.Mode {
+		t.Errorf("Mode = %q, want %q", loaded.Mode, original.Mode)
+	}
+	if loaded.LastCheck != original.LastCheck {
+		t.Errorf("LastCheck = %d, want %d", loaded.LastCheck, original.LastCheck)
+	}
+	if loaded.TodayWorkSeconds != original.TodayWorkSeconds {
+		t.Errorf("TodayWorkSeconds = %d, want %d", loaded.TodayWorkSeconds, original.TodayWorkSeconds)
+	}
+	if loaded.TodayBreakSeconds != original.TodayBreakSeconds {
+		t.Errorf("TodayBreakSeconds = %d, want %d", loaded.TodayBreakSeconds, original.TodayBreakSeconds)
+	}
+	if loaded.LastUpdateDate != original.LastUpdateDate {
+		t.Errorf("LastUpdateDate = %q, want %q", loaded.LastUpdateDate, original.LastUpdateDate)
+	}
+}
+
+func TestLoadBashFormat(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bash-state")
+
+	// Simulate bash script's state file format
+	content := `WORK_SECONDS=2400
+MODE=break
+LAST_CHECK=1700000100
+BREAK_START=1700000000
+TODAY_WORK_SECONDS=7200
+TODAY_BREAK_SECONDS=1200
+LAST_UPDATE_DATE=2025-01-15
+`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if s.WorkSeconds != 2400 {
+		t.Errorf("WorkSeconds = %d, want 2400", s.WorkSeconds)
+	}
+	if s.Mode != "break" {
+		t.Errorf("Mode = %q, want %q", s.Mode, "break")
+	}
+	if s.BreakStart != 1700000000 {
+		t.Errorf("BreakStart = %d, want 1700000000", s.BreakStart)
+	}
+}
+
+func TestLoadMissing(t *testing.T) {
+	s, err := Load("/nonexistent/path")
+	if err != nil {
+		t.Fatalf("Load missing: %v", err)
+	}
+	if s.Mode != "work" {
+		t.Errorf("Mode = %q, want default %q", s.Mode, "work")
+	}
+}

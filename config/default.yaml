@@ -1,0 +1,15 @@
+work_duration_min: 50
+break_duration_min: 10
+idle_threshold_sec: 120
+natural_break_sec: 300
+work_days: [1, 2, 3, 4, 5]
+work_start_hour: 9
+work_end_hour: 18
+voice: "Yuna"
+notifications_enabled: true
+tts_enabled: true
+break_activities_enabled: true
+ai_enabled: false
+ai_cli: "claude"
+max_log_lines: 1000
+check_interval_sec: 60
