@@ -13,4 +13,4 @@
 
 # Go build artifacts
 bin/
-break-reminder
+/break-reminder
