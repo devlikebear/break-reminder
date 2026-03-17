@@ -47,8 +47,12 @@ func TestLoadYAML(t *testing.T) {
 	}
 
 	// Note: Load() uses hardcoded path, so we test merge directly
+	// Build raw map to simulate what YAML unmarshal produces
+	var raw map[string]any
+	_ = yaml.Unmarshal(data, &raw)
+
 	cfg := Default()
-	merge(&cfg, &custom)
+	merge(&cfg, &custom, raw)
 
 	if cfg.WorkDurationMin != 25 {
 		t.Errorf("WorkDurationMin = %d, want 25", cfg.WorkDurationMin)
@@ -62,5 +66,29 @@ func TestLoadYAML(t *testing.T) {
 	// Unchanged defaults
 	if cfg.IdleThresholdSec != 120 {
 		t.Errorf("IdleThresholdSec = %d, want 120 (unchanged default)", cfg.IdleThresholdSec)
+	}
+}
+
+func TestMergeBooleans(t *testing.T) {
+	yamlData := []byte("ai_enabled: true\ntts_enabled: false\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if !cfg.AIEnabled {
+		t.Error("AIEnabled should be true after merge")
+	}
+	if cfg.TTSEnabled {
+		t.Error("TTSEnabled should be false after merge (explicitly set)")
+	}
+	// NotificationsEnabled not in YAML, should keep default (true)
+	if !cfg.NotificationsEnabled {
+		t.Error("NotificationsEnabled should remain true (not in YAML)")
 	}
 }

@@ -36,12 +36,19 @@ func Load() (Config, error) {
 		return cfg, err
 	}
 
+	// First unmarshal into a map to know which keys are explicitly set
+	var raw map[string]any
+	if err := yaml.Unmarshal(data, &raw); err != nil {
+		return cfg, err
+	}
+
+	// Then unmarshal into the struct for typed values
 	var fileCfg Config
 	if err := yaml.Unmarshal(data, &fileCfg); err != nil {
 		return cfg, err
 	}
 
-	merge(&cfg, &fileCfg)
+	merge(&cfg, &fileCfg, raw)
 	return cfg, nil
 }
 
@@ -65,7 +72,9 @@ func EnsureConfigFile() error {
 	return os.WriteFile(path, data, 0o644)
 }
 
-func merge(dst, src *Config) {
+// merge applies values from src to dst. raw is the unmarshaled map used to
+// detect which keys were explicitly set in the YAML file (needed for booleans).
+func merge(dst, src *Config, raw map[string]any) {
 	if src.WorkDurationMin > 0 {
 		dst.WorkDurationMin = src.WorkDurationMin
 	}
@@ -99,8 +108,18 @@ func merge(dst, src *Config) {
 	if src.CheckIntervalSec > 0 {
 		dst.CheckIntervalSec = src.CheckIntervalSec
 	}
-	// Booleans: only override if YAML explicitly sets them
-	// Since Go zero value for bool is false, we can't distinguish
-	// "not set" from "set to false" with simple struct unmarshaling.
-	// For now, keep defaults unless the source file explicitly has them.
+
+	// Booleans: only override if explicitly present in the YAML file
+	if _, ok := raw["notifications_enabled"]; ok {
+		dst.NotificationsEnabled = src.NotificationsEnabled
+	}
+	if _, ok := raw["tts_enabled"]; ok {
+		dst.TTSEnabled = src.TTSEnabled
+	}
+	if _, ok := raw["break_activities_enabled"]; ok {
+		dst.BreakActivitiesEnabled = src.BreakActivitiesEnabled
+	}
+	if _, ok := raw["ai_enabled"]; ok {
+		dst.AIEnabled = src.AIEnabled
+	}
 }
