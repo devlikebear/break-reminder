@@ -11,6 +11,7 @@
 .idea/
 .vscode/
 
-# Go build artifacts
+# Build artifacts
 bin/
 /break-reminder
+helpers/.build/

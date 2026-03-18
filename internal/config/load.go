@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const (
+var (
 	configDir  = ".config/break-reminder"
 	configFile = "config.yaml"
 )

@@ -22,6 +22,9 @@ func TestDefault(t *testing.T) {
 	if len(cfg.WorkDays) != 5 {
 		t.Errorf("WorkDays = %v, want 5 days", cfg.WorkDays)
 	}
+	if cfg.BreakScreenMode != "ask" {
+		t.Errorf("BreakScreenMode = %q, want 'ask'", cfg.BreakScreenMode)
+	}
 }
 
 func TestLoadYAML(t *testing.T) {
@@ -90,5 +93,68 @@ func TestMergeBooleans(t *testing.T) {
 	// NotificationsEnabled not in YAML, should keep default (true)
 	if !cfg.NotificationsEnabled {
 		t.Error("NotificationsEnabled should remain true (not in YAML)")
+	}
+}
+
+func TestMergeBreakScreenMode(t *testing.T) {
+	yamlData := []byte("break_screen_mode: block\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.BreakScreenMode != "block" {
+		t.Errorf("BreakScreenMode = %q, want 'block'", cfg.BreakScreenMode)
+	}
+}
+
+func TestMergeBreakScreenModeUnset(t *testing.T) {
+	yamlData := []byte("work_duration_min: 25\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.BreakScreenMode != "ask" {
+		t.Errorf("BreakScreenMode = %q, want 'ask' (default)", cfg.BreakScreenMode)
+	}
+}
+
+func TestSaveAndLoad(t *testing.T) {
+	// Override config path for test
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	tmpDir := t.TempDir()
+	configDir = tmpDir
+
+	cfg := Default()
+	cfg.BreakScreenMode = "block"
+	cfg.WorkDurationMin = 30
+
+	if err := Save(cfg); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if loaded.BreakScreenMode != "block" {
+		t.Errorf("BreakScreenMode = %q, want 'block'", loaded.BreakScreenMode)
+	}
+	if loaded.WorkDurationMin != 30 {
+		t.Errorf("WorkDurationMin = %d, want 30", loaded.WorkDurationMin)
 	}
 }

@@ -9,8 +9,9 @@ VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev
 LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION)"
 
 build-helper:
-	swiftc -O -o $(BUILD_DIR)/$(HELPER) helpers/break-screen/main.swift -framework AppKit
-	swiftc -O -o $(BUILD_DIR)/break-dashboard helpers/dashboard/main.swift -framework AppKit
+	cd helpers && swift build -c release
+	cp helpers/.build/release/BreakScreenApp $(BUILD_DIR)/$(HELPER)
+	cp helpers/.build/release/DashboardApp $(BUILD_DIR)/break-dashboard
 
 build: build-helper
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/break-reminder
@@ -30,6 +31,7 @@ uninstall:
 
 test:
 	go test ./...
+	cd helpers && swift test
 
 clean:
 	rm -rf $(BUILD_DIR)

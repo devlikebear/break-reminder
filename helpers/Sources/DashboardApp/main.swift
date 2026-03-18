@@ -1,71 +1,21 @@
 import AppKit
 import Foundation
+import HelperCore
 
-// MARK: - State & Config Parsing
+// MARK: - System utilities (not testable — platform-specific)
 
-struct AppState {
-    var workSeconds: Int = 0
-    var mode: String = "work"
-    var lastCheck: Int64 = 0
-    var breakStart: Int64 = 0
-    var todayWorkSeconds: Int = 0
-    var todayBreakSeconds: Int = 0
-    var lastUpdateDate: String = ""
-}
-
-struct AppConfig {
-    var workDurationMin: Int = 50
-    var breakDurationMin: Int = 10
-    var idleThresholdSec: Int = 120
-    var checkIntervalSec: Int = 60
-}
-
-func loadState() -> AppState {
+func loadStateFromFile() -> AppState {
     let home = FileManager.default.homeDirectoryForCurrentUser
     let path = home.appendingPathComponent(".break-reminder-state")
     guard let content = try? String(contentsOf: path, encoding: .utf8) else { return AppState() }
-
-    var s = AppState()
-    for line in content.components(separatedBy: "\n") {
-        let parts = line.split(separator: "=", maxSplits: 1)
-        guard parts.count == 2 else { continue }
-        let key = String(parts[0])
-        let val = String(parts[1])
-        switch key {
-        case "WORK_SECONDS":      s.workSeconds = Int(val) ?? 0
-        case "MODE":              s.mode = val
-        case "LAST_CHECK":        s.lastCheck = Int64(val) ?? 0
-        case "BREAK_START":       s.breakStart = Int64(val) ?? 0
-        case "TODAY_WORK_SECONDS":  s.todayWorkSeconds = Int(val) ?? 0
-        case "TODAY_BREAK_SECONDS": s.todayBreakSeconds = Int(val) ?? 0
-        case "LAST_UPDATE_DATE":  s.lastUpdateDate = val
-        default: break
-        }
-    }
-    return s
+    return parseState(from: content)
 }
 
-func loadConfig() -> AppConfig {
+func loadConfigFromFile() -> AppConfig {
     let home = FileManager.default.homeDirectoryForCurrentUser
     let path = home.appendingPathComponent(".config/break-reminder/config.yaml")
     guard let content = try? String(contentsOf: path, encoding: .utf8) else { return AppConfig() }
-
-    var c = AppConfig()
-    for line in content.components(separatedBy: "\n") {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        let parts = trimmed.split(separator: ":", maxSplits: 1)
-        guard parts.count == 2 else { continue }
-        let key = String(parts[0]).trimmingCharacters(in: .whitespaces)
-        let val = String(parts[1]).trimmingCharacters(in: .whitespaces)
-        switch key {
-        case "work_duration_min":  c.workDurationMin = Int(val) ?? 50
-        case "break_duration_min": c.breakDurationMin = Int(val) ?? 10
-        case "idle_threshold_sec": c.idleThresholdSec = Int(val) ?? 120
-        case "check_interval_sec": c.checkIntervalSec = Int(val) ?? 60
-        default: break
-        }
-    }
-    return c
+    return parseConfig(from: content)
 }
 
 func launchdStatus() -> String {
@@ -96,7 +46,6 @@ func getIdleSeconds() -> Int {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         task.waitUntilExit()
         guard let output = String(data: data, encoding: .utf8) else { return 0 }
-        // Find HIDIdleTime in nanoseconds
         for line in output.components(separatedBy: "\n") {
             if line.contains("HIDIdleTime") {
                 let parts = line.components(separatedBy: "=")
@@ -130,7 +79,6 @@ class CircularProgressView: NSView {
         let startAngle: CGFloat = 90
         let endAngle: CGFloat = startAngle - 360
 
-        // Track
         let trackPath = NSBezierPath()
         trackPath.appendArc(withCenter: center, radius: radius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
         trackColor.setStroke()
@@ -138,7 +86,6 @@ class CircularProgressView: NSView {
         trackPath.lineCapStyle = .round
         trackPath.stroke()
 
-        // Fill
         if progress > 0 {
             let fillEnd = startAngle - (360 * progress)
             let fillPath = NSBezierPath()
@@ -182,7 +129,6 @@ class DashboardApp: NSObject, NSApplicationDelegate {
     var window: NSWindow!
     var timer: Timer?
 
-    // UI elements
     var statusDot: NSView!
     var statusLabel: NSTextField!
     var modeLabel: NSTextField!
@@ -201,7 +147,6 @@ class DashboardApp: NSObject, NSApplicationDelegate {
     var resetButton: NSButton!
     var breakButton: NSButton!
 
-    // Colors
     let workColor = NSColor(red: 0.3, green: 0.8, blue: 0.5, alpha: 1.0)
     let breakColor = NSColor(red: 0.4, green: 0.7, blue: 1.0, alpha: 1.0)
     let bgColor = NSColor(red: 0.1, green: 0.1, blue: 0.12, alpha: 1.0)
@@ -218,9 +163,7 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         }
     }
 
-    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
-        return true
-    }
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 
     func setupWindow() {
         let width: CGFloat = 360
@@ -257,7 +200,6 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let content = window.contentView!
         var y: CGFloat = 470
 
-        // ── Header ──
         let title = makeLabel("Break Reminder", size: 20, weight: .bold, color: textColor)
         title.frame = NSRect(x: 20, y: y, width: 320, height: 28)
         content.addSubview(title)
@@ -268,7 +210,6 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         content.addSubview(hint)
         y -= 30
 
-        // ── Status Row ──
         statusDot = NSView(frame: NSRect(x: 20, y: y + 4, width: 12, height: 12))
         statusDot.wantsLayer = true
         statusDot.layer?.cornerRadius = 6
@@ -285,12 +226,9 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         content.addSubview(modeLabel)
         y -= 20
 
-        // ── Divider ──
-        let div1 = makeDivider(y: y)
-        content.addSubview(div1)
+        content.addSubview(makeDivider(y: y))
         y -= 16
 
-        // ── Circular Progress ──
         let ringSize: CGFloat = 160
         let ringX = (360 - ringSize) / 2
         circularProgress = CircularProgressView(frame: NSRect(x: ringX, y: y - ringSize, width: ringSize, height: ringSize))
@@ -307,15 +245,11 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         sessionInfoLabel.alignment = .center
         sessionInfoLabel.frame = NSRect(x: ringX, y: y - ringSize / 2 - 32, width: ringSize, height: 16)
         content.addSubview(sessionInfoLabel)
-
         y -= ringSize + 20
 
-        // ── Divider ──
-        let div2 = makeDivider(y: y)
-        content.addSubview(div2)
+        content.addSubview(makeDivider(y: y))
         y -= 20
 
-        // ── Daily Stats ──
         let statsTitle = makeLabel("Daily Statistics", size: 14, weight: .semibold, color: textColor)
         statsTitle.frame = NSRect(x: 20, y: y, width: 320, height: 20)
         content.addSubview(statsTitle)
@@ -340,12 +274,9 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         content.addSubview(dailyRatioLabel)
         y -= 24
 
-        // ── Divider ──
-        let div3 = makeDivider(y: y)
-        content.addSubview(div3)
+        content.addSubview(makeDivider(y: y))
         y -= 20
 
-        // ── System Info ──
         systemLabel = makeLabel("System: ...", size: 12, weight: .regular, color: dimColor)
         systemLabel.frame = NSRect(x: 20, y: y, width: 320, height: 16)
         content.addSubview(systemLabel)
@@ -356,7 +287,6 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         content.addSubview(idleLabel)
         y -= 28
 
-        // ── Buttons ──
         resetButton = makeStyledButton(title: "Reset", action: #selector(resetTimer))
         resetButton.frame = NSRect(x: 40, y: y, width: 120, height: 32)
         content.addSubview(resetButton)
@@ -367,56 +297,34 @@ class DashboardApp: NSObject, NSApplicationDelegate {
     }
 
     func refresh() {
-        let state = loadState()
-        let config = loadConfig()
+        let state = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
         let idleSec = getIdleSeconds()
 
         let isWork = state.mode == "work"
         let activeColor = isWork ? workColor : breakColor
 
-        // Status
         statusDot.layer?.backgroundColor = activeColor.cgColor
         statusLabel.stringValue = isWork ? "WORKING" : "ON BREAK"
         statusLabel.textColor = activeColor
 
-        // Progress — interpolate between check intervals for smooth updates
-        var progress: CGFloat = 0
-        var remaining: Int = 0
-        var totalSec: Int = 0
-        var elapsedSec: Int = 0
-
+        let sp: SessionProgress
         if isWork {
-            totalSec = config.workDurationMin * 60
-            // workSeconds from file + time since last check = real-time estimate
-            let sinceLastCheck = max(Int(now - state.lastCheck), 0)
-            elapsedSec = state.workSeconds + sinceLastCheck
-            if totalSec > 0 {
-                progress = CGFloat(elapsedSec) / CGFloat(totalSec)
-            }
-            remaining = max(totalSec - elapsedSec, 0)
-            modeLabel.stringValue = "\(elapsedSec / 60) / \(config.workDurationMin) min"
+            sp = workProgress(state: state, config: config, now: now)
+            modeLabel.stringValue = "\(sp.elapsedSec / 60) / \(config.workDurationMin) min"
             sessionInfoLabel.stringValue = "until break"
         } else {
-            totalSec = config.breakDurationMin * 60
-            elapsedSec = Int(now - state.breakStart)
-            if totalSec > 0 {
-                progress = CGFloat(elapsedSec) / CGFloat(totalSec)
-            }
-            remaining = max(totalSec - elapsedSec, 0)
-            modeLabel.stringValue = "\(elapsedSec / 60) / \(config.breakDurationMin) min"
+            sp = breakProgress(state: state, config: config, now: now)
+            modeLabel.stringValue = "\(sp.elapsedSec / 60) / \(config.breakDurationMin) min"
             sessionInfoLabel.stringValue = "until work"
         }
 
-        circularProgress.progress = min(progress, 1.0)
+        circularProgress.progress = CGFloat(sp.progress)
         circularProgress.fillColor = activeColor
         circularProgress.needsDisplay = true
+        timeLabel.stringValue = sp.remainingFormatted
 
-        let min = remaining / 60
-        let sec = remaining % 60
-        timeLabel.stringValue = String(format: "%02d:%02d", min, sec)
-
-        // Daily stats — also interpolate work seconds
         let dailyWorkSec = isWork
             ? state.todayWorkSeconds + max(Int(now - state.lastCheck), 0)
             : state.todayWorkSeconds
@@ -437,7 +345,6 @@ class DashboardApp: NSObject, NSApplicationDelegate {
             dailyRatioLabel.stringValue = "-"
         }
 
-        // System
         systemLabel.stringValue = "System: \(launchdStatus())"
         idleLabel.stringValue = "Idle: \(idleSec)s / Threshold: \(config.idleThresholdSec)s"
     }
@@ -448,39 +355,28 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let now = Int64(Date().timeIntervalSince1970)
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
-        let today = df.string(from: Date())
-        let lines = [
-            "WORK_SECONDS=0",
-            "MODE=work",
-            "LAST_CHECK=\(now)",
-            "BREAK_START=0",
-            "TODAY_WORK_SECONDS=0",
-            "TODAY_BREAK_SECONDS=0",
-            "LAST_UPDATE_DATE=\(today)",
-        ]
-        try? lines.joined(separator: "\n").data(using: .utf8)?.write(to: path)
+        var s = AppState()
+        s.lastCheck = now
+        s.lastUpdateDate = df.string(from: Date())
+        try? serializeState(s).data(using: .utf8)?.write(to: path)
         refresh()
     }
 
     @objc func forceBreak() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
-        let state = loadState()
+        let state = loadStateFromFile()
         let now = Int64(Date().timeIntervalSince1970)
-        let lines = [
-            "WORK_SECONDS=0",
-            "MODE=break",
-            "LAST_CHECK=\(now)",
-            "BREAK_START=\(now)",
-            "TODAY_WORK_SECONDS=\(state.todayWorkSeconds)",
-            "TODAY_BREAK_SECONDS=\(state.todayBreakSeconds)",
-            "LAST_UPDATE_DATE=\(state.lastUpdateDate)",
-        ]
-        try? lines.joined(separator: "\n").data(using: .utf8)?.write(to: path)
+        var s = AppState()
+        s.mode = "break"
+        s.lastCheck = now
+        s.breakStart = now
+        s.todayWorkSeconds = state.todayWorkSeconds
+        s.todayBreakSeconds = state.todayBreakSeconds
+        s.lastUpdateDate = state.lastUpdateDate
+        try? serializeState(s).data(using: .utf8)?.write(to: path)
         refresh()
     }
-
-    // MARK: - Helpers
 
     func makeLabel(_ text: String, size: CGFloat, weight: NSFont.Weight, color: NSColor) -> NSTextField {
         let label = NSTextField(labelWithString: text)

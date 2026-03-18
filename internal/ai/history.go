@@ -15,8 +15,14 @@ type DailySummary struct {
 	Activities int    `json:"activities"`
 }
 
+// historyPathOverride allows tests to redirect the history file.
+var historyPathOverride string
+
 // HistoryPath returns ~/.break-reminder-history.json
 func HistoryPath() string {
+	if historyPathOverride != "" {
+		return historyPathOverride
+	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".break-reminder-history.json")
 }
