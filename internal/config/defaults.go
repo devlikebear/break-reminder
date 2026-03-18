@@ -16,6 +16,7 @@ func Default() Config {
 		BreakActivitiesEnabled: true,
 		AIEnabled:              false,
 		AICLI:                  "claude",
+		BreakScreenMode:        "ask",
 		MaxLogLines:            1000,
 		CheckIntervalSec:       60,
 	}

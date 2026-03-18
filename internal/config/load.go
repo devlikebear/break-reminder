@@ -72,6 +72,20 @@ func EnsureConfigFile() error {
 	return os.WriteFile(path, data, 0o644)
 }
 
+// Save writes the configuration to the YAML file.
+func Save(cfg Config) error {
+	if err := os.MkdirAll(ConfigDir(), 0o755); err != nil {
+		return err
+	}
+
+	data, err := yaml.Marshal(&cfg)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(ConfigPath(), data, 0o644)
+}
+
 // merge applies values from src to dst. raw is the unmarshaled map used to
 // detect which keys were explicitly set in the YAML file (needed for booleans).
 func merge(dst, src *Config, raw map[string]any) {
@@ -101,6 +115,9 @@ func merge(dst, src *Config, raw map[string]any) {
 	}
 	if src.AICLI != "" {
 		dst.AICLI = src.AICLI
+	}
+	if src.BreakScreenMode != "" {
+		dst.BreakScreenMode = src.BreakScreenMode
 	}
 	if src.MaxLogLines > 0 {
 		dst.MaxLogLines = src.MaxLogLines

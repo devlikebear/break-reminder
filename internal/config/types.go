@@ -15,6 +15,7 @@ type Config struct {
 	BreakActivitiesEnabled bool     `yaml:"break_activities_enabled"`
 	AIEnabled              bool     `yaml:"ai_enabled"`
 	AICLI                  string   `yaml:"ai_cli"`
+	BreakScreenMode        string   `yaml:"break_screen_mode"` // "ask", "block", "notify"
 	MaxLogLines            int      `yaml:"max_log_lines"`
 	CheckIntervalSec       int      `yaml:"check_interval_sec"`
 }

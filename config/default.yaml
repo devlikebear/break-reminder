@@ -11,5 +11,6 @@ tts_enabled: true
 break_activities_enabled: true
 ai_enabled: false
 ai_cli: "claude"
+break_screen_mode: "ask"
 max_log_lines: 1000
 check_interval_sec: 60

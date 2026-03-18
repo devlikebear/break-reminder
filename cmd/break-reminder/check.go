@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/devlikebear/break-reminder/internal/breakscreen"
 	"github.com/devlikebear/break-reminder/internal/idle"
 	"github.com/devlikebear/break-reminder/internal/logging"
 	"github.com/devlikebear/break-reminder/internal/notify"
@@ -52,20 +53,20 @@ func runCheck() error {
 		logging.Log(logPath, result.LogMsg)
 	}
 
-	executeActions(result.Actions)
+	executeActions(result.Actions, result.State)
 
 	logging.Rotate(logPath, cfg.MaxLogLines)
 	return state.Save(statePath, result.State)
 }
 
-func executeActions(actions []timer.Action) {
+func executeActions(actions []timer.Action, s state.State) {
 	notifier := notify.NewNotifier()
 	speaker := tts.NewSpeaker()
 
 	for _, a := range actions {
 		switch a {
 		case timer.ActionNotifyBreakTime:
-			_ = notifier.Send("Break Time!", "50 minutes complete! Take a 10-minute break~", "Blow")
+			breakscreen.Show(cfg, cfg.BreakDurationSec(), s.BreakStart)
 		case timer.ActionNotifyBreakOver:
 			_ = notifier.Send("Break Over!", "Back to work! 50-minute timer started~", "Hero")
 		case timer.ActionNotifyFiveMinWarning:
