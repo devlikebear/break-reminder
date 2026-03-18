@@ -28,10 +28,18 @@ func parseArgs() -> Args {
     return args
 }
 
+// MARK: - Key-accepting borderless window
+
+class KeyWindow: NSWindow {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { true }
+}
+
 // MARK: - App Delegate
 
 class BreakScreenApp: NSObject, NSApplicationDelegate {
     var windows: [NSWindow] = []
+    var primaryWindow: NSWindow?
     var countdownLabel: NSTextField!
     var progressView: NSView!
     var progressFill: NSView!
@@ -60,11 +68,19 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory) // No dock icon
 
+        // NSScreen.main can be nil for accessory apps — fall back to first screen
+        let mainScreen = NSScreen.main ?? NSScreen.screens.first
+
         for screen in NSScreen.screens {
-            createWindow(on: screen, isPrimary: screen == NSScreen.main)
+            createWindow(on: screen, isPrimary: screen === mainScreen)
         }
 
+        // Order all windows front first, then make primary key
+        for window in windows {
+            window.orderFrontRegardless()
+        }
         NSApp.activate(ignoringOtherApps: true)
+        primaryWindow?.makeKeyAndOrderFront(nil)
 
         // Global Esc key monitor — always available as emergency exit
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
@@ -81,7 +97,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
     }
 
     func createWindow(on screen: NSScreen, isPrimary: Bool) {
-        let window = NSWindow(
+        let window = KeyWindow(
             contentRect: screen.frame,
             styleMask: .borderless,
             backing: .buffered,
@@ -114,7 +130,9 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             window.contentView = contentView
         }
 
-        window.orderFrontRegardless()
+        if isPrimary {
+            primaryWindow = window
+        }
         windows.append(window)
     }
 
