@@ -48,11 +48,13 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             createWindow(on: screen, isPrimary: screen === mainScreen)
         }
 
-        for window in windows {
-            window.orderFrontRegardless()
+        DispatchQueue.main.async {
+            NSApp.activate(ignoringOtherApps: true)
+            for window in self.windows {
+                window.orderFrontRegardless()
+            }
+            self.primaryWindow?.makeKeyAndOrderFront(nil)
         }
-        NSApp.activate(ignoringOtherApps: true)
-        primaryWindow?.makeKeyAndOrderFront(nil)
 
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {
@@ -76,25 +78,28 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             screen: screen
         )
         window.level = .screenSaver
-        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         window.isOpaque = false
         window.backgroundColor = NSColor(white: 0.08, alpha: 0.95)
         window.ignoresMouseEvents = !isPrimary
+        window.setFrame(screen.frame, display: false)
+
+        let localFrame = NSRect(origin: .zero, size: screen.frame.size)
 
         if isPrimary {
-            let contentView = NSView(frame: screen.frame)
-            setupPrimaryUI(in: contentView, frame: screen.frame)
+            let contentView = NSView(frame: localFrame)
+            setupPrimaryUI(in: contentView, frame: localFrame)
             window.contentView = contentView
         } else {
-            let contentView = NSView(frame: screen.frame)
+            let contentView = NSView(frame: localFrame)
             let label = NSTextField(labelWithString: "☕ Break Time")
             label.font = NSFont.systemFont(ofSize: 36, weight: .light)
             label.textColor = NSColor(white: 0.5, alpha: 1.0)
             label.alignment = .center
             label.sizeToFit()
             label.frame.origin = NSPoint(
-                x: (screen.frame.width - label.frame.width) / 2,
-                y: screen.frame.height / 2 - label.frame.height / 2
+                x: (localFrame.width - label.frame.width) / 2,
+                y: localFrame.height / 2 - label.frame.height / 2
             )
             contentView.addSubview(label)
             window.contentView = contentView
