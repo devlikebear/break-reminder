@@ -3,10 +3,8 @@
 package breakscreen
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -16,7 +14,7 @@ import (
 // showOverlay launches the Swift break-screen helper as a subprocess.
 // It blocks until the helper exits (timer complete or user skipped).
 func showOverlay(breakDurSec int, breakStartUnix int64) {
-	helperPath := findHelper()
+	helperPath := FindHelper("break-screen")
 	if helperPath == "" {
 		log.Warn().Msg("break-screen helper not found, falling back to notification")
 		sendNotification()
@@ -44,33 +42,3 @@ func showOverlay(breakDurSec int, breakStartUnix int64) {
 	}
 }
 
-// findHelper searches for the break-screen binary in common locations.
-func findHelper() string {
-	// 1. Next to the main binary
-	if exe, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(exe), "break-screen")
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
-	}
-
-	// 2. In the project's bin/ directory (development)
-	candidates := []string{
-		"bin/break-screen",
-		filepath.Join(os.Getenv("HOME"), ".local", "bin", "break-screen"),
-	}
-	for _, c := range candidates {
-		if _, err := os.Stat(c); err == nil {
-			abs, _ := filepath.Abs(c)
-			return abs
-		}
-	}
-
-	// 3. In PATH
-	if p, err := exec.LookPath("break-screen"); err == nil {
-		return p
-	}
-
-	fmt.Fprintln(os.Stderr, "break-screen helper not found. Run 'make build-helper' to build it.")
-	return ""
-}

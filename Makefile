@@ -10,6 +10,7 @@ LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION)"
 
 build-helper:
 	swiftc -O -o $(BUILD_DIR)/$(HELPER) helpers/break-screen/main.swift -framework AppKit
+	swiftc -O -o $(BUILD_DIR)/break-dashboard helpers/dashboard/main.swift -framework AppKit
 
 build: build-helper
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/break-reminder
@@ -18,6 +19,7 @@ install: build
 	@mkdir -p $(INSTALL_DIR)
 	cp $(BUILD_DIR)/$(BINARY) $(INSTALL_DIR)/
 	cp $(BUILD_DIR)/$(HELPER) $(INSTALL_DIR)/
+	cp $(BUILD_DIR)/break-dashboard $(INSTALL_DIR)/
 	$(INSTALL_DIR)/$(BINARY) service install
 	@echo "Installed to $(INSTALL_DIR)/$(BINARY)"
 
