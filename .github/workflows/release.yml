@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: macos-latest
+    env:
+      TAP_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -76,12 +78,12 @@ jobs:
           git push
 
       - name: Update Homebrew tap
-        if: ${{ secrets.TAP_GITHUB_TOKEN != '' }}
+        if: env.TAP_TOKEN != ''
         run: |
           SHA256=$(cat bin/break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz.sha256 | awk '{print $1}')
           VERSION=${{ steps.version.outputs.VERSION }}
           cd /tmp
-          git clone https://x-access-token:${{ secrets.TAP_GITHUB_TOKEN }}@github.com/devlikebear/homebrew-tap.git
+          git clone https://x-access-token:${TAP_TOKEN}@github.com/devlikebear/homebrew-tap.git
           cd homebrew-tap
           sed -i '' "s|url \".*\"|url \"https://github.com/devlikebear/break-reminder/releases/download/${VERSION}/break-reminder-${VERSION}-darwin-arm64.tar.gz\"|" Formula/break-reminder.rb
           sed -i '' "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/break-reminder.rb
