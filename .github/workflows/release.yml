@@ -27,6 +27,16 @@ jobs:
         id: version
         run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify VERSION file matches tag
+        run: |
+          FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
+          TAG_VERSION="${{ steps.version.outputs.VERSION }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::VERSION file ($FILE_VERSION) does not match tag ($TAG_VERSION)"
+            exit 1
+          fi
+
       - name: Build Go binary
         run: |
           mkdir -p bin

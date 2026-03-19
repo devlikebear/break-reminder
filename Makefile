@@ -5,7 +5,7 @@ HELPER := break-screen
 BUILD_DIR := bin
 INSTALL_DIR := $(HOME)/.local/bin
 
-VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+VERSION := $(shell cat VERSION 2>/dev/null || echo "dev")
 LDFLAGS := -ldflags "-s -w -X main.version=$(VERSION)"
 
 build-helper:
