@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Build Go binary
+        run: |
+          mkdir -p bin
+          go build -ldflags "-s -w -X main.version=${{ steps.version.outputs.VERSION }}" \
+            -o bin/break-reminder ./cmd/break-reminder
+
+      - name: Build Swift helpers
+        run: |
+          cd helpers && swift build -c release
+          cp .build/release/BreakScreenApp ../bin/break-screen
+          cp .build/release/DashboardApp ../bin/break-dashboard
+
+      - name: Run tests
+        run: |
+          go test ./...
+          cd helpers && swift test
+
+      - name: Create archive
+        run: |
+          cd bin
+          tar czf break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz \
+            break-reminder break-screen break-dashboard
+          shasum -a 256 break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz \
+            > break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            bin/break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz
+            bin/break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz.sha256
+
+      - name: Update Homebrew formula
+        run: |
+          SHA256=$(cat bin/break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz.sha256 | awk '{print $1}')
+          VERSION=${{ steps.version.outputs.VERSION }}
+          sed -i '' "s|url \".*\"|url \"https://github.com/devlikebear/break-reminder/releases/download/${VERSION}/break-reminder-${VERSION}-darwin-arm64.tar.gz\"|" Formula/break-reminder.rb
+          sed -i '' "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/break-reminder.rb
+          sed -i '' "s|version \".*\"|version \"${VERSION#v}\"|" Formula/break-reminder.rb
+
+      - name: Commit formula update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git add Formula/break-reminder.rb
+          git diff --cached --quiet || git commit -m "chore: update Homebrew formula to ${{ steps.version.outputs.VERSION }}"
+          git push
