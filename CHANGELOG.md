@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-03-19
+
+### Fixed
+- Release workflow: use env var for secrets in if-condition
+- Release workflow: sync Homebrew tap repo with PAT
+
+### Changed
+- Add VERSION file for centralized version management
+
+## [0.1.0] - 2026-03-19
+
+### Added
+- **Go rewrite** — Complete rewrite from bash to Go + Swift
+- **Fullscreen break screen** — Swift AppKit overlay with multi-monitor support
+- **Native GUI dashboard** — `break-reminder dashboard --gui` for macOS native UI
+- **TUI dashboard** — Bubbletea real-time dashboard with progress bars and daily stats
+- **Guided break activities** — Eye exercise (20-20-20), stretching, box breathing, walk timer
+- **AI integration** — Claude/Codex CLI for productivity analysis (`ai summary`, `ai suggest`, `ai configure`)
+- **Daily history tracking** — Automatic day-end summary persistence for AI analysis
+- **Gap detection** — Skip sleep/wake gaps to prevent inflated work time
+- **Today's stats display** — Work/break stats shown on break screen, dashboard, and status command
+- **Homebrew support** — `brew install devlikebear/tap/break-reminder`
+- **GitHub Actions CI/CD** — Build + test on push/PR, automated release with Homebrew tap update
+- **System diagnostics** — `break-reminder doctor` checks all components
+- **YAML configuration** — `~/.config/break-reminder/config.yaml` with smart boolean merging
+- **Hot-reload config** — Daemon and dashboard modes pick up config changes without restart
+- **Platform abstraction** — Build tags for macOS-specific features (idle, notify, TTS)
+- **Service management** — `break-reminder service install/uninstall/start/stop/status`
+
+### Architecture
+- Pure function `timer.Tick()` — no side effects, fully testable
+- Swift SPM package with shared HelperCore library
+- Go ↔ Swift communication via CLI subprocess + arguments
+- Comprehensive test suite: Go unit tests + Swift HelperCore tests
+
+---
+
+## Legacy (bash script)
+
 ## [1.2.0] - 2025-01-29
 
 ### Security

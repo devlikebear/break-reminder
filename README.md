@@ -5,43 +5,40 @@
 Work 50 minutes → Rest 10 minutes → Repeat!
 
 ![macOS](https://img.shields.io/badge/macOS-000000?style=flat&logo=apple&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.24-00ADD8?style=flat&logo=go&logoColor=white)
+![Swift](https://img.shields.io/badge/Swift-5.9-F05138?style=flat&logo=swift&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Shell](https://img.shields.io/badge/shell-bash-green.svg)
 
 ## ✨ Features
 
-- **🖱️ Activity Detection** - Monitors keyboard/mouse usage to track actual work time
-- **⏰ Smart Timer** - 50 min work / 10 min break cycle (configurable)
-- **📊 TUI Dashboard** - Real-time progress bars and daily statistics
-- **🗓️ Smart Scheduling** - Only active during configured working hours/days
-- **📈 Daily Stats** - Track your work/break time and ratio
-- **🔔 Notifications** - Visual + voice alerts (uses macOS native TTS)
-- **🧘 Natural Break Detection** - Automatically resets if you're already taking a break
-- **🚫 Break Enforcement** - Warns you if you try to work during break time
-- **🚀 Auto-start** - Runs automatically on login via launchd
-- **🔒 Secure** - Safe state file parsing with input validation
+- **🖱️ Activity Detection** — Monitors keyboard/mouse idle time via `ioreg`
+- **⏰ Smart Timer** — 50 min work / 10 min break cycle (configurable)
+- **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support
+- **📊 TUI Dashboard** — Real-time progress bars and daily statistics (Bubbletea)
+- **🖼️ Native GUI Dashboard** — macOS native window with circular progress bar
+- **🧘 Guided Break Activities** — Eye exercise, stretching, box breathing, walk timer
+- **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
+- **🗓️ Smart Scheduling** — Only active during configured working hours/days
+- **📈 Daily Stats** — Track work/break time with gap detection for accurate tracking
+- **🔔 Notifications** — Visual + voice alerts (macOS native TTS)
+- **🚀 Auto-start** — LaunchAgent service with 60-second check interval
+- **🏥 Diagnostics** — `doctor` command to verify all components
 
 ## 📦 Installation
 
-### Quick Install
+### Homebrew (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/devlikebear/break-reminder.git
-cd break-reminder
-
-# Run installer
-./install.sh
+brew install devlikebear/tap/break-reminder
 ```
 
-### Using Built-in Command
+### From Source
 
 ```bash
-# Install launchd agent (auto-start on login)
-./break-reminder.sh install
-
-# Uninstall launchd agent
-./break-reminder.sh uninstall
+git clone https://github.com/devlikebear/break-reminder.git
+cd break-reminder
+make build      # Build Go binary + Swift helpers
+make install    # Install to ~/.local/bin/ + register LaunchAgent
 ```
 
 ## 🚀 Usage
@@ -49,51 +46,65 @@ cd break-reminder
 ### Commands
 
 ```bash
-# Real-time TUI dashboard
-break-reminder dashboard
+# Core
+break-reminder check              # Single timer tick (used by launchd)
+break-reminder daemon             # Foreground loop
+break-reminder status             # Current state overview
+break-reminder reset              # Reset timer
 
-# Check current status
-break-reminder status
+# Dashboard
+break-reminder dashboard          # TUI dashboard
+break-reminder dashboard --gui    # Native macOS GUI
 
-# Manually reset the timer
-break-reminder reset
+# Service Management
+break-reminder service install    # Register LaunchAgent
+break-reminder service uninstall  # Remove LaunchAgent
+break-reminder service start      # Start service
+break-reminder service stop       # Stop service
+break-reminder service status     # Check service status
 
-# Install as launchd agent
-break-reminder install
+# Guided Break Activities
+break-reminder break eye          # 20-20-20 eye exercise (2 min)
+break-reminder break stretch      # Stretching guide (5 min)
+break-reminder break breathe      # Box breathing (4 min)
+break-reminder break walk         # Walk timer (5 min)
 
-# Uninstall launchd agent
-break-reminder uninstall
+# AI (requires claude or codex CLI)
+break-reminder ai summary         # Daily productivity report
+break-reminder ai summary --weekly # Weekly report
+break-reminder ai suggest         # Optimal timing suggestions
+break-reminder ai configure "25분 작업, 5분 휴식" # Natural language config
 
-# Run a single check (used by launchd)
-break-reminder check
+# Configuration
+break-reminder config show        # Show current config
+break-reminder config edit        # Open in $EDITOR
+break-reminder config path        # Show config file path
 
-# Run as foreground daemon (for testing)
-break-reminder daemon
-
-# Show help
-break-reminder help
+# Diagnostics
+break-reminder doctor             # Check all components
+break-reminder version            # Show version
 ```
 
 ### Dashboard
 
 ```
-🐹 Break Reminder Dashboard (Press 'q' to quit)
-==================================================
+🐹 Break Reminder Dashboard (q:quit r:reset b:break)
+══════════════════════════════════════════════════
 System: Installed & Running
 Status: WORKING
-Idle: 5s / Limit: 120s
+Idle: 3s / Limit: 120s
 
-Session Work: [################--------------] 53% (26 / 50 min)
+Session Work: [████████████████░░░░░░░░░░░░░░] 53% (26 / 50 min)
 
 Daily Statistics:
-  Work: 180 min
-  Rest: 30 min
-  Ratio: [####################] 86%
+  Work: 2h 5m
+  Rest: 30m
+  Ratio: [████████████████████░░░░] 80%
 
 Recent Logs:
---------------------------------------------------
-  [2025-01-29 14:30:00] Working... 26min elapsed (24min remaining)
---------------------------------------------------
+──────────────────────────────────────────────────
+  [2026-03-19 14:30:00] work mode, session 26min
+──────────────────────────────────────────────────
 ```
 
 ### Status Output
@@ -106,85 +117,94 @@ State:  Active (Within working hours)
 ------------------------
 Mode: work
 Session Work: 32min / 50min
-Daily Stats: Work 180min / Break 30min
-Current idle: 5sec
+Daily Stats: Work 2h 5m / Break 30m
+Current idle: 3sec
 ```
 
 ## ⚙️ Configuration
 
-Edit the variables at the top of `break-reminder.sh`:
+Edit `~/.config/break-reminder/config.yaml`:
 
-```bash
+```yaml
 # Timer Settings
-WORK_DURATION=$((50 * 60))    # Work duration (default: 50 min)
-BREAK_DURATION=$((10 * 60))   # Break duration (default: 10 min)
-IDLE_THRESHOLD=120            # Idle threshold (default: 2 min)
-NATURAL_BREAK_THRESHOLD=300   # Auto-reset threshold (default: 5 min)
+work_duration_min: 50          # Work duration (default: 50 min)
+break_duration_min: 10         # Break duration (default: 10 min)
+idle_threshold_sec: 120        # Idle threshold (default: 2 min)
+natural_break_sec: 300         # Auto-reset threshold (default: 5 min)
 
 # Smart Scheduling
-WORK_DAYS="1 2 3 4 5"         # Working days (1=Mon, 7=Sun)
-WORK_START_HOUR=9             # Start hour (24h format)
-WORK_END_HOUR=18              # End hour (24h format)
+work_days: [1, 2, 3, 4, 5]    # ISO weekdays (1=Mon, 7=Sun)
+work_start_hour: 9
+work_end_hour: 18
 
-# Log Settings
-MAX_LOG_LINES=1000            # Log rotation threshold
+# Break Screen
+break_screen_mode: "ask"       # "ask" (choose once), "block" (fullscreen), "notify" (notification only)
+break_activities_enabled: true  # Show guided activity menu on break
 
-# Voice Settings
-VOICE="Yuna"                  # TTS voice (run `say -v '?'` for options)
+# Voice & Notifications
+voice: "Yuna"                  # TTS voice (run `say -v '?'` for options)
+tts_enabled: true
+notifications_enabled: true
+
+# AI
+ai_enabled: true               # Enable AI features
+ai_cli: "claude"               # "claude" or "codex"
 ```
 
-### Optional: Screen Lock on Break
-
-Uncomment this line in the script to force screen lock when break starts:
+Or use natural language:
 
 ```bash
-# lock_screen
+break-reminder ai configure "25분 작업, 5분 휴식으로 바꿔줘"
 ```
 
-## 🔧 Managing the Service
+## 📁 Project Structure
 
-```bash
-# Check installation status
-break-reminder status
-
-# Install/Uninstall via built-in commands
-break-reminder install
-break-reminder uninstall
-
-# Or manually via launchctl
-launchctl unload ~/Library/LaunchAgents/com.devlikebear.break-reminder.plist
-launchctl load ~/Library/LaunchAgents/com.devlikebear.break-reminder.plist
-
-# Check if running
-launchctl list | grep break-reminder
 ```
-
-## 📁 Files
-
-| File | Description |
-|------|-------------|
-| `break-reminder.sh` | Main script |
-| `com.user.break-reminder.plist` | launchd configuration (template) |
-| `install.sh` | Installation script |
-| `uninstall.sh` | Uninstallation script |
+cmd/break-reminder/           # Cobra CLI commands
+internal/                     # Go internal packages
+  timer/                      # Pure function timer logic (Tick)
+  config/                     # YAML config with smart boolean merge
+  state/                      # Key-value state file persistence
+  idle/                       # Idle detection (ioreg on macOS)
+  notify/                     # macOS notifications (osascript)
+  tts/                        # Text-to-speech (say command)
+  breakscreen/                # Break screen orchestration
+  dashboard/                  # TUI dashboard + break activities
+  ai/                         # AI CLI wrapper + history
+  doctor/                     # System diagnostics
+  schedule/                   # Working hours check
+  launchd/                    # LaunchAgent management
+  logging/                    # File-based logging with rotation
+helpers/                      # Swift SPM package
+  Sources/BreakScreenApp/     # Fullscreen break screen (multi-monitor)
+  Sources/DashboardApp/       # Native GUI dashboard
+  Sources/HelperCore/         # Shared pure logic (parsing, formatting)
+  Tests/HelperCoreTests/      # Swift unit tests
+Formula/                      # Homebrew formula
+.github/workflows/            # CI + Release pipelines
+```
 
 ### State & Logs
 
 | File | Location |
 |------|----------|
+| Config | `~/.config/break-reminder/config.yaml` |
 | State file | `~/.break-reminder-state` |
 | Log file | `~/.break-reminder.log` |
+| History | `~/.break-reminder-history.json` |
+| LaunchAgent | `~/Library/LaunchAgents/com.devlikebear.break-reminder.plist` |
 
 ## 🌏 Localization
 
-The default voice uses macOS Yuna (Korean). To change the voice:
+The default voice uses macOS Yuna (Korean). To change:
 
 ```bash
 # List available voices
 say -v '?'
 
-# Edit the VOICE variable in the script
-VOICE="Samantha"  # English voice
+# Update config
+break-reminder config edit
+# Change: voice: "Samantha"
 ```
 
 ## 🤝 Contributing
