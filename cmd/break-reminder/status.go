@@ -12,6 +12,18 @@ import (
 	"github.com/devlikebear/break-reminder/internal/state"
 )
 
+func fmtMin(min int) string {
+	if min >= 60 {
+		h := min / 60
+		m := min % 60
+		if m > 0 {
+			return fmt.Sprintf("%dh %dm", h, m)
+		}
+		return fmt.Sprintf("%dh", h)
+	}
+	return fmt.Sprintf("%dm", min)
+}
+
 func newStatusCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "status",
@@ -35,7 +47,7 @@ func newStatusCmd() *cobra.Command {
 			fmt.Println("------------------------")
 			fmt.Println("Mode:", s.Mode)
 			fmt.Printf("Session Work: %dmin / %dmin\n", s.WorkSeconds/60, cfg.WorkDurationMin)
-			fmt.Printf("Daily Stats: Work %dmin / Break %dmin\n", s.TodayWorkSeconds/60, s.TodayBreakSeconds/60)
+			fmt.Printf("Daily Stats: Work %s / Break %s\n", fmtMin(s.TodayWorkSeconds/60), fmtMin(s.TodayBreakSeconds/60))
 			fmt.Printf("Current idle: %dsec\n", idleSec)
 
 			if s.Mode == "break" {

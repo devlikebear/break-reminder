@@ -330,8 +330,8 @@ class DashboardApp: NSObject, NSApplicationDelegate {
             : state.todayWorkSeconds
         let workMin = dailyWorkSec / 60
         let breakMin = state.todayBreakSeconds / 60
-        dailyWorkLabel.stringValue = "Work: \(workMin) min"
-        dailyBreakLabel.stringValue = "Break: \(breakMin) min"
+        dailyWorkLabel.stringValue = "Work: \(formatMinutes(workMin))"
+        dailyBreakLabel.stringValue = "Break: \(formatMinutes(breakMin))"
 
         let total = workMin + breakMin
         if total > 0 {

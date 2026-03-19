@@ -13,7 +13,7 @@ import (
 
 // showOverlay launches the Swift break-screen helper as a subprocess.
 // It blocks until the helper exits (timer complete or user skipped).
-func showOverlay(breakDurSec int, breakStartUnix int64) {
+func showOverlay(breakDurSec int, breakStartUnix int64, todayWorkMin, todayBreakMin int) {
 	helperPath := FindHelper("break-screen")
 	if helperPath == "" {
 		log.Warn().Msg("break-screen helper not found, falling back to notification")
@@ -31,6 +31,8 @@ func showOverlay(breakDurSec int, breakStartUnix int64) {
 	cmd := exec.Command(helperPath,
 		"--duration", strconv.Itoa(remaining),
 		"--skip-after", "120",
+		"--work-min", strconv.Itoa(todayWorkMin),
+		"--break-min", strconv.Itoa(todayBreakMin),
 	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

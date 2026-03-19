@@ -40,4 +40,27 @@ final class ArgsParserTests: XCTestCase {
         let args = parseBreakScreenArgs(["break-screen", "--duration"])
         XCTAssertEqual(args.duration, 600, "Should keep default when value is missing")
     }
+
+    func testWorkBreakMinArgs() {
+        let args = parseBreakScreenArgs(["break-screen", "--duration", "300", "--work-min", "125", "--break-min", "30"])
+        XCTAssertEqual(args.todayWorkMin, 125)
+        XCTAssertEqual(args.todayBreakMin, 30)
+    }
+
+    func testWorkBreakMinDefaults() {
+        let args = parseBreakScreenArgs(["break-screen"])
+        XCTAssertEqual(args.todayWorkMin, 0)
+        XCTAssertEqual(args.todayBreakMin, 0)
+    }
+
+    func testFormatMinutesUnderHour() {
+        XCTAssertEqual(formatMinutes(0), "0m")
+        XCTAssertEqual(formatMinutes(45), "45m")
+    }
+
+    func testFormatMinutesOverHour() {
+        XCTAssertEqual(formatMinutes(60), "1h")
+        XCTAssertEqual(formatMinutes(125), "2h 5m")
+        XCTAssertEqual(formatMinutes(180), "3h")
+    }
 }

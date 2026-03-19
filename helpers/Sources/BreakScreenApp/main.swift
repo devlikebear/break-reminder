@@ -154,12 +154,24 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         activityLabel.frame = NSRect(x: centerX - 300, y: centerY - 120, width: 600, height: 30)
         view.addSubview(activityLabel)
 
+        // Today's work/break stats
+        if args.todayWorkMin > 0 || args.todayBreakMin > 0 {
+            let statsText = "Today: \(formatMinutes(args.todayWorkMin)) worked · \(formatMinutes(args.todayBreakMin)) rested"
+            let statsLabel = NSTextField(labelWithString: statsText)
+            statsLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
+            statsLabel.textColor = NSColor(white: 0.5, alpha: 1.0)
+            statsLabel.alignment = .center
+            statsLabel.sizeToFit()
+            statsLabel.frame = NSRect(x: centerX - 300, y: centerY - 170, width: 600, height: 24)
+            view.addSubview(statsLabel)
+        }
+
         skipButton = NSButton(title: "Skip (available in \(args.skipAfter / 60)min)", target: self, action: #selector(skipBreak))
         skipButton.bezelStyle = .rounded
         skipButton.font = NSFont.systemFont(ofSize: 16)
         skipButton.isEnabled = false
         skipButton.sizeToFit()
-        skipButton.frame.origin = NSPoint(x: centerX - skipButton.frame.width / 2, y: centerY - 200)
+        skipButton.frame.origin = NSPoint(x: centerX - skipButton.frame.width / 2, y: centerY - 220)
         skipButton.contentTintColor = NSColor(white: 0.5, alpha: 1.0)
         view.addSubview(skipButton)
 
@@ -168,7 +180,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         escHint.textColor = NSColor(white: 0.35, alpha: 1.0)
         escHint.alignment = .center
         escHint.sizeToFit()
-        escHint.frame.origin = NSPoint(x: centerX - escHint.frame.width / 2, y: centerY - 240)
+        escHint.frame.origin = NSPoint(x: centerX - escHint.frame.width / 2, y: centerY - 260)
         view.addSubview(escHint)
     }
 

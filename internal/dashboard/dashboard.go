@@ -224,8 +224,8 @@ func (m Model) View() string {
 	totalMin := dailyWorkMin + dailyBreakMin
 
 	b.WriteString("Daily Statistics:\n")
-	b.WriteString(fmt.Sprintf("  Work: %d min\n", dailyWorkMin))
-	b.WriteString(fmt.Sprintf("  Rest: %d min\n", dailyBreakMin))
+	b.WriteString(fmt.Sprintf("  Work: %s\n", fmtMin(dailyWorkMin)))
+	b.WriteString(fmt.Sprintf("  Rest: %s\n", fmtMin(dailyBreakMin)))
 	if totalMin > 0 {
 		ratio := (dailyWorkMin * 100) / totalMin
 		bar := renderBar(ratio, 20, yellowStyle)
@@ -267,6 +267,18 @@ func (m Model) View() string {
 	}
 
 	return b.String()
+}
+
+func fmtMin(min int) string {
+	if min >= 60 {
+		h := min / 60
+		m := min % 60
+		if m > 0 {
+			return fmt.Sprintf("%dh %dm", h, m)
+		}
+		return fmt.Sprintf("%dh", h)
+	}
+	return fmt.Sprintf("%dm", min)
 }
 
 func renderBar(pct, length int, style lipgloss.Style) string {
