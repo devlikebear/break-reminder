@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
 	"github.com/devlikebear/break-reminder/internal/ai"
 	"github.com/devlikebear/break-reminder/internal/config"
+	"github.com/devlikebear/break-reminder/internal/state"
 )
 
 func newAICmd() *cobra.Command {
@@ -101,6 +103,33 @@ func newAISummaryCmd() *cobra.Command {
 				return fmt.Errorf("load history: %w", err)
 			}
 
+			// Include today's live data from state file
+			today := time.Now().Format("2006-01-02")
+			s, _ := state.Load(state.DefaultStatePath())
+			now := time.Now().Unix()
+			todayWorkSec := s.TodayWorkSeconds
+			if s.Mode == "work" && s.LastCheck > 0 {
+				todayWorkSec += int(now - s.LastCheck)
+			}
+			todaySummary := ai.DailySummary{
+				Date:     today,
+				WorkMin:  todayWorkSec / 60,
+				BreakMin: s.TodayBreakSeconds / 60,
+			}
+
+			// Upsert today's entry in history for the prompt
+			foundToday := false
+			for i, h := range history {
+				if h.Date == today {
+					history[i] = todaySummary
+					foundToday = true
+					break
+				}
+			}
+			if !foundToday {
+				history = append(history, todaySummary)
+			}
+
 			if len(history) == 0 {
 				fmt.Println("Not enough history data yet.")
 				return nil
@@ -127,7 +156,7 @@ Include:
 3. Patterns observed
 4. One actionable suggestion
 
-Keep it concise and encouraging.`, label, string(historyJSON))
+Keep it concise and encouraging. Respond in the same language as the user's system locale (Korean if applicable).`, label, string(historyJSON))
 
 			fmt.Printf("Generating %s report...\n", label)
 			resp, err := client.Query(context.Background(), prompt)

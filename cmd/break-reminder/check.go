@@ -6,6 +6,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
+	"github.com/devlikebear/break-reminder/internal/ai"
 	"github.com/devlikebear/break-reminder/internal/breakscreen"
 	"github.com/devlikebear/break-reminder/internal/idle"
 	"github.com/devlikebear/break-reminder/internal/logging"
@@ -53,13 +54,13 @@ func runCheck() error {
 		logging.Log(logPath, result.LogMsg)
 	}
 
-	executeActions(result.Actions, result.State)
+	executeActions(result.Actions, result.State, result.DayEndSummary)
 
 	logging.Rotate(logPath, cfg.MaxLogLines)
 	return state.Save(statePath, result.State)
 }
 
-func executeActions(actions []timer.Action, s state.State) {
+func executeActions(actions []timer.Action, s state.State, daySummary *timer.DayEndSummary) {
 	notifier := notify.NewNotifier()
 	speaker := tts.NewSpeaker()
 
@@ -77,6 +78,14 @@ func executeActions(actions []timer.Action, s state.State) {
 			_ = speaker.Speak(cfg.Voice, "Time for a break! You've been working for 50 minutes.")
 		case timer.ActionSpeakBreakOver:
 			_ = speaker.Speak(cfg.Voice, "Break time is over! Let's get back to work!")
+		case timer.ActionSaveDailyHistory:
+			if daySummary != nil {
+				_ = ai.AppendHistory(ai.DailySummary{
+					Date:     daySummary.Date,
+					WorkMin:  daySummary.WorkSeconds / 60,
+					BreakMin: daySummary.BreakSeconds / 60,
+				})
+			}
 		}
 	}
 }

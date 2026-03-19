@@ -18,13 +18,22 @@ const (
 	ActionNotifyStillOnBreak
 	ActionSpeakBreakTime
 	ActionSpeakBreakOver
+	ActionSaveDailyHistory
 )
+
+// DayEndSummary holds the previous day's stats when a daily reset occurs.
+type DayEndSummary struct {
+	Date         string
+	WorkSeconds  int
+	BreakSeconds int
+}
 
 // TickResult is the outcome of a single timer tick.
 type TickResult struct {
-	State   state.State
-	Actions []Action
-	LogMsg  string
+	State         state.State
+	Actions       []Action
+	LogMsg        string
+	DayEndSummary *DayEndSummary // non-nil when daily reset triggers history save
 }
 
 // Tick computes the next state given config, current state, current time, and idle seconds.
@@ -34,11 +43,22 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 
 	// Daily reset
 	today := now.Format("2006-01-02")
-	if today != s.LastUpdateDate {
+	if today != s.LastUpdateDate && s.LastUpdateDate != "" {
+		// Save previous day's stats before resetting
+		if s.TodayWorkSeconds > 0 || s.TodayBreakSeconds > 0 {
+			result.DayEndSummary = &DayEndSummary{
+				Date:         s.LastUpdateDate,
+				WorkSeconds:  s.TodayWorkSeconds,
+				BreakSeconds: s.TodayBreakSeconds,
+			}
+			result.Actions = append(result.Actions, ActionSaveDailyHistory)
+		}
 		result.State.TodayWorkSeconds = 0
 		result.State.TodayBreakSeconds = 0
 		result.State.LastUpdateDate = today
 		result.LogMsg = "New day detected! Resetting daily stats."
+	} else if s.LastUpdateDate == "" {
+		result.State.LastUpdateDate = today
 	}
 
 	elapsed := int(unix - s.LastCheck)

@@ -18,7 +18,7 @@ type Client struct {
 func NewClient(cliName string) *Client {
 	return &Client{
 		CLIName: cliName,
-		Timeout: 30 * time.Second,
+		Timeout: 120 * time.Second,
 	}
 }
 
@@ -36,7 +36,7 @@ func (c *Client) Query(ctx context.Context, prompt string) (string, error) {
 	var cmd *exec.Cmd
 	switch c.CLIName {
 	case "claude":
-		cmd = exec.CommandContext(ctx, "claude", "-p", prompt, "--output-format", "text")
+		cmd = exec.CommandContext(ctx, "claude", "-p", prompt, "--output-format", "text", "--max-turns", "1")
 	case "codex":
 		cmd = exec.CommandContext(ctx, "codex", "-q", prompt)
 	default:

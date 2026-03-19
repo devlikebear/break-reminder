@@ -98,8 +98,9 @@ func TestTick(t *testing.T) {
 				LastCheck:         now.Add(-60 * time.Second).Unix(),
 				LastUpdateDate:    "2025-01-14",
 			},
-			idleSec:  5,
-			wantMode: "work",
+			idleSec:     5,
+			wantMode:    "work",
+			wantActions: []Action{ActionSaveDailyHistory},
 		},
 	}
 
@@ -138,6 +139,51 @@ func TestTick(t *testing.T) {
 					t.Errorf("WorkSeconds = %d, want 0 (natural break reset)", result.State.WorkSeconds)
 				}
 			}
+
+			if tt.name == "daily reset on new day" {
+				if result.DayEndSummary == nil {
+					t.Fatal("DayEndSummary should be set on daily reset")
+				}
+				if result.DayEndSummary.Date != "2025-01-14" {
+					t.Errorf("DayEndSummary.Date = %q, want %q", result.DayEndSummary.Date, "2025-01-14")
+				}
+				if result.DayEndSummary.WorkSeconds != 5000 {
+					t.Errorf("DayEndSummary.WorkSeconds = %d, want 5000", result.DayEndSummary.WorkSeconds)
+				}
+				if result.DayEndSummary.BreakSeconds != 1000 {
+					t.Errorf("DayEndSummary.BreakSeconds = %d, want 1000", result.DayEndSummary.BreakSeconds)
+				}
+			}
 		})
+	}
+}
+
+func TestDailyResetNoHistoryWhenEmpty(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       600,
+		TodayWorkSeconds:  0,
+		TodayBreakSeconds: 0,
+		LastCheck:         now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:    "2025-01-14",
+	}
+
+	result := Tick(cfg, s, now, 5)
+
+	if result.DayEndSummary != nil {
+		t.Error("DayEndSummary should be nil when previous day had zero work/break")
+	}
+
+	hasHistoryAction := false
+	for _, a := range result.Actions {
+		if a == ActionSaveDailyHistory {
+			hasHistoryAction = true
+		}
+	}
+	if hasHistoryAction {
+		t.Error("should not emit ActionSaveDailyHistory when previous day had no data")
 	}
 }
