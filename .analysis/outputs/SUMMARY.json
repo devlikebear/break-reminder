@@ -1,0 +1,55 @@
+{
+  "session_id": "analyze-20260319-120041",
+  "mode": "analyze",
+  "scope": ".",
+  "status": "completed",
+  "commit": "809ab56c8e6c045b39df006af63c3f886d6643e6",
+  "visited_count": 1,
+  "frontier_count": 0,
+  "modules": [
+    {
+      "name": "ai",
+      "file": "outputs/modules/ai.md",
+      "summary": "**경로**: `internal/ai/`"
+    },
+    {
+      "name": "commands",
+      "file": "outputs/modules/commands.md",
+      "summary": "```"
+    },
+    {
+      "name": "config-state",
+      "file": "outputs/modules/config-state.md",
+      "summary": "**파일**: `types.go`, `defaults.go`, `load.go`"
+    },
+    {
+      "name": "dashboard-activities",
+      "file": "outputs/modules/dashboard-activities.md",
+      "summary": "**경로**: `internal/dashboard/`"
+    },
+    {
+      "name": "platform",
+      "file": "outputs/modules/platform.md",
+      "summary": "Go build tag를 사용하여 macOS 전용 기능과 스텁을 분리."
+    },
+    {
+      "name": "service-infra",
+      "file": "outputs/modules/service-infra.md",
+      "summary": "LaunchAgent 관리, 로깅, 스케줄링, 진단 — 시스템 운영 지원 모듈."
+    },
+    {
+      "name": "swift-helpers",
+      "file": "outputs/modules/swift-helpers.md",
+      "summary": "SPM(Swift Package Manager) 패키지. Go에서 서브프로세스로 실행되는 네이티브 macOS UI 앱."
+    },
+    {
+      "name": "timer",
+      "file": "outputs/modules/timer.md",
+      "summary": "**경로**: `internal/timer/timer.go`"
+    }
+  ],
+  "outputs": [
+    "dependency-graph.json,module-map.json,issue-candidates.md"
+  ],
+  "checkpoints_count": 1
+}

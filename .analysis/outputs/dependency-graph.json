@@ -1,0 +1,92 @@
+{
+  "cmd/break-reminder/main.go": [
+    "internal/config"
+  ],
+  "cmd/break-reminder/check.go": [
+    "internal/ai",
+    "internal/breakscreen",
+    "internal/idle",
+    "internal/logging",
+    "internal/notify",
+    "internal/schedule",
+    "internal/state",
+    "internal/timer",
+    "internal/tts"
+  ],
+  "cmd/break-reminder/config_cmd.go": [
+    "internal/config"
+  ],
+  "cmd/break-reminder/service.go": [
+    "internal/launchd"
+  ],
+  "cmd/break-reminder/reset.go": [
+    "internal/logging",
+    "internal/state"
+  ],
+  "cmd/break-reminder/ai.go": [
+    "internal/ai",
+    "internal/config",
+    "internal/state"
+  ],
+  "cmd/break-reminder/dashboard.go": [
+    "internal/breakscreen",
+    "internal/dashboard"
+  ],
+  "cmd/break-reminder/break.go": [
+    "internal/dashboard"
+  ],
+  "cmd/break-reminder/daemon.go": [
+    "internal/config",
+    "internal/logging"
+  ],
+  "cmd/break-reminder/status.go": [
+    "internal/idle",
+    "internal/launchd",
+    "internal/schedule",
+    "internal/state"
+  ],
+  "cmd/break-reminder/doctor.go": [
+    "internal/doctor"
+  ],
+  "internal/timer/timer.go": [
+    "internal/config",
+    "internal/state"
+  ],
+  "internal/schedule/schedule.go": [
+    "internal/config"
+  ],
+  "internal/breakscreen/breakscreen.go": [
+    "internal/config",
+    "internal/notify",
+    "internal/state"
+  ],
+  "internal/dashboard/dashboard.go": [
+    "internal/config",
+    "internal/idle",
+    "internal/launchd",
+    "internal/logging",
+    "internal/schedule",
+    "internal/state"
+  ],
+  "internal/doctor/doctor.go": [
+    "internal/config",
+    "internal/idle",
+    "internal/launchd",
+    "internal/logging",
+    "internal/notify",
+    "internal/schedule",
+    "internal/state",
+    "internal/tts"
+  ],
+  "helpers/Sources/BreakScreenApp/main.swift": [
+    "HelperCore"
+  ],
+  "helpers/Sources/DashboardApp/main.swift": [
+    "HelperCore"
+  ],
+  "helpers/Sources/HelperCore/ArgsParser.swift": [],
+  "helpers/Sources/HelperCore/StateParser.swift": [],
+  "helpers/Sources/HelperCore/ConfigParser.swift": [],
+  "helpers/Sources/HelperCore/ProgressCalc.swift": [],
+  "helpers/Sources/HelperCore/TimeFormatter.swift": []
+}

@@ -1,0 +1,82 @@
+{
+  "config": {
+    "path": "internal/config",
+    "responsibility": "YAML 설정 로드, 기본값 병합, 타입 정의",
+    "key_files": ["internal/config/types.go", "internal/config/load.go", "internal/config/defaults.go"]
+  },
+  "state": {
+    "path": "internal/state",
+    "responsibility": "타이머 상태 key=value 파일 저장/로드",
+    "key_files": ["internal/state/state.go"]
+  },
+  "timer": {
+    "path": "internal/timer",
+    "responsibility": "작업/휴식 사이클 핵심 로직 (순수 함수)",
+    "key_files": ["internal/timer/timer.go"]
+  },
+  "schedule": {
+    "path": "internal/schedule",
+    "responsibility": "근무 시간/요일 판정",
+    "key_files": ["internal/schedule/schedule.go"]
+  },
+  "idle": {
+    "path": "internal/idle",
+    "responsibility": "시스템 유휴 시간 감지 (플랫폼별 구현)",
+    "key_files": ["internal/idle/idle.go", "internal/idle/idle_darwin.go", "internal/idle/idle_stub.go"]
+  },
+  "notify": {
+    "path": "internal/notify",
+    "responsibility": "데스크톱 알림 전송 (플랫폼별 구현)",
+    "key_files": ["internal/notify/notify.go", "internal/notify/notify_darwin.go", "internal/notify/notify_stub.go"]
+  },
+  "tts": {
+    "path": "internal/tts",
+    "responsibility": "음성 안내 (플랫폼별 구현)",
+    "key_files": ["internal/tts/tts.go", "internal/tts/tts_darwin.go", "internal/tts/tts_stub.go"]
+  },
+  "breakscreen": {
+    "path": "internal/breakscreen",
+    "responsibility": "휴식 잠금 화면 (block/notify/ask 모드)",
+    "key_files": ["internal/breakscreen/breakscreen.go", "internal/breakscreen/helper.go", "internal/breakscreen/overlay_darwin.go"]
+  },
+  "dashboard": {
+    "path": "internal/dashboard",
+    "responsibility": "Bubbletea TUI 대시보드 + 가이드 휴식 활동",
+    "key_files": ["internal/dashboard/dashboard.go", "internal/dashboard/activities.go"]
+  },
+  "ai": {
+    "path": "internal/ai",
+    "responsibility": "AI CLI 연동 및 일간 히스토리 관리",
+    "key_files": ["internal/ai/client.go", "internal/ai/history.go"]
+  },
+  "logging": {
+    "path": "internal/logging",
+    "responsibility": "파일 로깅, 로테이션, tail",
+    "key_files": ["internal/logging/logging.go"]
+  },
+  "launchd": {
+    "path": "internal/launchd",
+    "responsibility": "macOS LaunchAgent 설치/관리",
+    "key_files": ["internal/launchd/launchd.go"]
+  },
+  "doctor": {
+    "path": "internal/doctor",
+    "responsibility": "전체 서브시스템 진단",
+    "key_files": ["internal/doctor/doctor.go"]
+  },
+  "HelperCore": {
+    "path": "helpers/Sources/HelperCore",
+    "responsibility": "Swift 공유 라이브러리 (파싱, 포맷, 진행률 계산)",
+    "key_files": ["helpers/Sources/HelperCore/ArgsParser.swift", "helpers/Sources/HelperCore/StateParser.swift", "helpers/Sources/HelperCore/ConfigParser.swift", "helpers/Sources/HelperCore/ProgressCalc.swift", "helpers/Sources/HelperCore/TimeFormatter.swift"]
+  },
+  "BreakScreenApp": {
+    "path": "helpers/Sources/BreakScreenApp",
+    "responsibility": "네이티브 풀스크린 잠금 화면 (멀티모니터)",
+    "key_files": ["helpers/Sources/BreakScreenApp/main.swift"]
+  },
+  "DashboardApp": {
+    "path": "helpers/Sources/DashboardApp",
+    "responsibility": "네이티브 GUI 대시보드",
+    "key_files": ["helpers/Sources/DashboardApp/main.swift"]
+  }
+}
