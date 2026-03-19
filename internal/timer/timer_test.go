@@ -158,6 +158,30 @@ func TestTick(t *testing.T) {
 	}
 }
 
+func TestMediumGapSkippedAsIdle(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       600,
+		TodayWorkSeconds:  600,
+		TodayBreakSeconds: 0,
+		LastCheck:         now.Add(-10 * time.Minute).Unix(), // 600s gap
+		LastUpdateDate:    now.Format("2006-01-02"),
+	}
+
+	result := Tick(cfg, s, now, 5)
+
+	// Should NOT accumulate 600s of work time
+	if result.State.TodayWorkSeconds != 600 {
+		t.Errorf("TodayWorkSeconds = %d, want 600 (gap should be skipped)", result.State.TodayWorkSeconds)
+	}
+	if result.State.WorkSeconds != 600 {
+		t.Errorf("WorkSeconds = %d, want 600 (gap should not add work)", result.State.WorkSeconds)
+	}
+}
+
 func TestDailyResetNoHistoryWhenEmpty(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)

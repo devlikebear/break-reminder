@@ -72,6 +72,18 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 		return result
 	}
 
+	// If elapsed exceeds check interval significantly, the computer was likely
+	// asleep or the app wasn't running — don't count that time as work.
+	maxExpectedElapsed := cfg.CheckIntervalSec * 3 // allow some slack (e.g. 180s for 60s interval)
+	if maxExpectedElapsed < 300 {
+		maxExpectedElapsed = 300
+	}
+	if elapsed > maxExpectedElapsed {
+		result.State.LastCheck = unix
+		result.LogMsg = "Gap detected (" + itoa(elapsed) + "s), skipping as idle"
+		return result
+	}
+
 	result.State.LastCheck = unix
 
 	switch s.Mode {
