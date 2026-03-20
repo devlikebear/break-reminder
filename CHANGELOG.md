@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-03-20
+
+### Added
+- Optional `KittenTTS` backend with selectable engine/model/python config
+- `break-reminder tts install kittentts` command to bootstrap a managed venv
+
+### Changed
+- Doctor output now guides users to install `KittenTTS` when selected but unavailable
+- Homebrew caveats and README now document optional `KittenTTS` setup
+
 ## [0.1.1] - 2026-03-19
 
 ### Fixed

@@ -113,6 +113,15 @@ func merge(dst, src *Config, raw map[string]any) {
 	if src.Voice != "" {
 		dst.Voice = src.Voice
 	}
+	if src.TTSEngine != "" {
+		dst.TTSEngine = src.TTSEngine
+	}
+	if src.TTSModel != "" {
+		dst.TTSModel = src.TTSModel
+	}
+	if src.TTSPythonCmd != "" {
+		dst.TTSPythonCmd = src.TTSPythonCmd
+	}
 	if src.AICLI != "" {
 		dst.AICLI = src.AICLI
 	}
