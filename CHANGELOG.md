@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-20
+
+### Added
+- Optional `Supertonic` backend with managed venv bootstrap via `break-reminder tts install supertonic`
+- `break-reminder tts uninstall <engine>` command for managed Python TTS backends
+- `break-reminder tts test "<message>"` command to run blocking end-to-end speech checks
+
+### Changed
+- Doctor now suggests install commands for both `KittenTTS` and `Supertonic`
+- Managed Python TTS installs now auto-select a Python 3.8-3.12 interpreter and reject incompatible runtimes earlier
+- README and Homebrew caveats now document `Supertonic` setup and managed backend lifecycle
+
 ## [0.2.0] - 2026-03-20
 
 ### Added

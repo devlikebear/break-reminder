@@ -12,6 +12,7 @@ func TestNormalizeEngine(t *testing.T) {
 		{name: "say", input: "say", expect: engineSay},
 		{name: "kitten alias", input: "kitten", expect: engineKittenTTS},
 		{name: "kitten canonical", input: "kittentts", expect: engineKittenTTS},
+		{name: "supertonic canonical", input: "supertonic", expect: engineSupertonic},
 		{name: "trim and lower", input: "  KiTTeNtts  ", expect: engineKittenTTS},
 	}
 
@@ -61,11 +62,49 @@ func TestBuildSpeakCommandKittenTTS(t *testing.T) {
 	}
 }
 
+func TestBuildSpeakCommandSupertonic(t *testing.T) {
+	cmd, err := buildSpeakCommand(engineSupertonic, "", "", "M1", "안녕하세요")
+	if err != nil {
+		t.Fatalf("buildSpeakCommand() error = %v", err)
+	}
+
+	if cmd.Args[0] != defaultPythonCommand {
+		t.Fatalf("command = %q, want %q", cmd.Args[0], defaultPythonCommand)
+	}
+	if got := cmd.Args[len(cmd.Args)-3]; got != "M1" {
+		t.Fatalf("voice arg = %q, want M1", got)
+	}
+	if got := cmd.Args[len(cmd.Args)-2]; got != "ko" {
+		t.Fatalf("lang arg = %q, want ko", got)
+	}
+	if got := cmd.Args[len(cmd.Args)-1]; got != "안녕하세요" {
+		t.Fatalf("message arg = %q, want 안녕하세요", got)
+	}
+}
+
 func TestKittenVoiceAvailable(t *testing.T) {
 	if !kittenVoiceAvailable("Jasper") {
 		t.Fatal("Jasper should be supported by KittenTTS")
 	}
 	if kittenVoiceAvailable("Yuna") {
 		t.Fatal("Yuna should not be treated as a KittenTTS voice")
+	}
+}
+
+func TestDetectSupertonicLanguage(t *testing.T) {
+	if got := detectSupertonicLanguage("안녕하세요"); got != "ko" {
+		t.Fatalf("detectSupertonicLanguage() = %q, want ko", got)
+	}
+	if got := detectSupertonicLanguage("Time for a break!"); got != "en" {
+		t.Fatalf("detectSupertonicLanguage() = %q, want en", got)
+	}
+}
+
+func TestSupertonicVoiceAvailable(t *testing.T) {
+	if !supertonicVoiceAvailable("M1") {
+		t.Fatal("M1 should be supported by Supertonic")
+	}
+	if supertonicVoiceAvailable("Yuna") {
+		t.Fatal("Yuna should not be treated as a Supertonic voice")
 	}
 }

@@ -20,7 +20,7 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
 - **📈 Daily Stats** — Track work/break time with gap detection for accurate tracking
-- **🔔 Notifications** — Visual + voice alerts (`say` or KittenTTS)
+- **🔔 Notifications** — Visual + voice alerts (`say`, KittenTTS, or Supertonic)
 - **🚀 Auto-start** — LaunchAgent service with 60-second check interval
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
@@ -80,7 +80,11 @@ break-reminder config show        # Show current config
 break-reminder config edit        # Open in $EDITOR
 
 # Optional TTS backends
-break-reminder tts install kittentts  # Install KittenTTS into a managed venv
+break-reminder tts install kittentts   # Install KittenTTS into a managed venv
+break-reminder tts install supertonic  # Install Supertonic into a managed venv
+break-reminder tts test "안녕하세요"  # Speak a phrase with the current TTS config
+break-reminder tts uninstall kittentts   # Remove the managed KittenTTS venv
+break-reminder tts uninstall supertonic  # Remove the managed Supertonic venv
 break-reminder config path        # Show config file path
 
 # Diagnostics
@@ -146,9 +150,9 @@ break_activities_enabled: true  # Show guided activity menu on break
 
 # Voice & Notifications
 voice: "Yuna"                  # Voice name for the selected TTS engine
-tts_engine: "say"              # "say" or "kittentts"
-tts_model: "KittenML/kitten-tts-nano-0.8"  # Used when tts_engine is "kittentts"
-tts_python_cmd: "python3"      # Python with kittentts installed
+tts_engine: "say"              # "say", "kittentts", or "supertonic"
+tts_model: "KittenML/kitten-tts-nano-0.8"  # Used by KittenTTS; Supertonic currently uses a fixed model bundle
+tts_python_cmd: "python3"      # Python with the selected optional TTS package installed
 tts_enabled: true
 notifications_enabled: true
 
@@ -173,7 +177,7 @@ internal/                     # Go internal packages
   state/                      # Key-value state file persistence
   idle/                       # Idle detection (ioreg on macOS)
   notify/                     # macOS notifications (osascript)
-  tts/                        # Text-to-speech (say / KittenTTS)
+  tts/                        # Text-to-speech (say / KittenTTS / Supertonic)
   breakscreen/                # Break screen orchestration
   dashboard/                  # TUI dashboard + break activities
   ai/                         # AI CLI wrapper + history
@@ -219,12 +223,44 @@ To use KittenTTS instead:
 break-reminder tts install kittentts
 ```
 
+The installer auto-selects a compatible Python 3.8-3.12 interpreter when possible. Use `--bootstrap-python` to override it explicitly.
+
 KittenTTS currently provides these built-in voices: `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`.
 
 You can customize the activated model or voice during install:
 
 ```bash
 break-reminder tts install kittentts --voice Bella --model KittenML/kitten-tts-micro-0.8
+```
+
+To remove the managed KittenTTS environment and restore `say` defaults:
+
+```bash
+break-reminder tts uninstall kittentts
+```
+
+To use Supertonic instead:
+
+```bash
+break-reminder tts install supertonic
+```
+
+Supertonic currently provides these built-in voices: `F1`, `F2`, `F3`, `F4`, `F5`, `M1`, `M2`, `M3`, `M4`, `M5`.
+
+The first Supertonic playback downloads the ONNX model bundle automatically (roughly 300MB). After that, Korean and English phrases run locally on-device.
+
+You can customize the activated voice during install:
+
+```bash
+break-reminder tts install supertonic --voice F3
+```
+
+`tts_model` is still stored in config for Supertonic, but the runtime currently uses the built-in `Supertone/supertonic-2` bundle.
+
+To remove the managed Supertonic environment and restore `say` defaults:
+
+```bash
+break-reminder tts uninstall supertonic
 ```
 
 ## 🤝 Contributing
