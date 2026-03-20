@@ -3,6 +3,7 @@ package doctor
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/devlikebear/break-reminder/internal/config"
@@ -45,18 +46,28 @@ func (r *Report) FailCount() int {
 // Run performs all diagnostic checks.
 func Run(cfg config.Config) Report {
 	var r Report
+	isKittenTTS := strings.EqualFold(strings.TrimSpace(cfg.TTSEngine), "kittentts")
 
 	// Voice availability
-	speaker := tts.NewSpeaker()
+	speaker := tts.NewSpeaker(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd)
+	voiceLabel := cfg.TTSEngine + ":" + cfg.Voice
 	if speaker.Available(cfg.Voice) {
-		r.add("ok", "Voice ("+cfg.Voice+")", "available")
+		r.add("ok", "Voice ("+voiceLabel+")", "available")
 	} else {
-		r.add("fail", "Voice ("+cfg.Voice+")", "not found")
+		detail := "not found"
+		if isKittenTTS {
+			detail = "not found (run 'break-reminder tts install kittentts')"
+		}
+		r.add("fail", "Voice ("+voiceLabel+")", detail)
 	}
 
 	// TTS
 	if err := speaker.Speak(cfg.Voice, "테스트"); err != nil {
-		r.add("fail", "TTS", err.Error())
+		detail := err.Error()
+		if isKittenTTS && !strings.Contains(detail, "break-reminder tts install kittentts") {
+			detail += " (run 'break-reminder tts install kittentts')"
+		}
+		r.add("fail", "TTS", detail)
 	} else {
 		r.add("ok", "TTS", "working")
 	}

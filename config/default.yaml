@@ -6,6 +6,9 @@ work_days: [1, 2, 3, 4, 5]
 work_start_hour: 9
 work_end_hour: 18
 voice: "Yuna"
+tts_engine: "say"
+tts_model: "KittenML/kitten-tts-nano-0.8"
+tts_python_cmd: "python3"
 notifications_enabled: true
 tts_enabled: true
 break_activities_enabled: true

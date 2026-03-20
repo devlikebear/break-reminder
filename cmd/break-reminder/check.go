@@ -62,7 +62,7 @@ func runCheck() error {
 
 func executeActions(actions []timer.Action, s state.State, daySummary *timer.DayEndSummary) {
 	notifier := notify.NewNotifier()
-	speaker := tts.NewSpeaker()
+	speaker := tts.NewSpeaker(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd)
 
 	for _, a := range actions {
 		switch a {

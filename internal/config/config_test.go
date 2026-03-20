@@ -25,6 +25,15 @@ func TestDefault(t *testing.T) {
 	if cfg.BreakScreenMode != "ask" {
 		t.Errorf("BreakScreenMode = %q, want 'ask'", cfg.BreakScreenMode)
 	}
+	if cfg.TTSEngine != "say" {
+		t.Errorf("TTSEngine = %q, want 'say'", cfg.TTSEngine)
+	}
+	if cfg.TTSModel != "KittenML/kitten-tts-nano-0.8" {
+		t.Errorf("TTSModel = %q, want KittenML/kitten-tts-nano-0.8", cfg.TTSModel)
+	}
+	if cfg.TTSPythonCmd != "python3" {
+		t.Errorf("TTSPythonCmd = %q, want 'python3'", cfg.TTSPythonCmd)
+	}
 }
 
 func TestLoadYAML(t *testing.T) {
@@ -156,5 +165,31 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if loaded.WorkDurationMin != 30 {
 		t.Errorf("WorkDurationMin = %d, want 30", loaded.WorkDurationMin)
+	}
+}
+
+func TestMergeTTSSettings(t *testing.T) {
+	yamlData := []byte("tts_engine: kittentts\ntts_model: KittenML/kitten-tts-micro-0.8\ntts_python_cmd: /tmp/venv/bin/python\nvoice: Jasper\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.TTSEngine != "kittentts" {
+		t.Errorf("TTSEngine = %q, want kittentts", cfg.TTSEngine)
+	}
+	if cfg.TTSModel != "KittenML/kitten-tts-micro-0.8" {
+		t.Errorf("TTSModel = %q, want KittenML/kitten-tts-micro-0.8", cfg.TTSModel)
+	}
+	if cfg.TTSPythonCmd != "/tmp/venv/bin/python" {
+		t.Errorf("TTSPythonCmd = %q, want /tmp/venv/bin/python", cfg.TTSPythonCmd)
+	}
+	if cfg.Voice != "Jasper" {
+		t.Errorf("Voice = %q, want Jasper", cfg.Voice)
 	}
 }

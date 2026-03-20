@@ -4,14 +4,16 @@ package tts
 
 import "fmt"
 
-type StubSpeaker struct{}
+type StubSpeaker struct {
+	engine string
+}
 
-func NewSpeaker() Speaker {
-	return &StubSpeaker{}
+func NewSpeaker(engine, model, pythonCmd string) Speaker {
+	return &StubSpeaker{engine: normalizeEngine(engine)}
 }
 
 func (s *StubSpeaker) Speak(voice, message string) error {
-	fmt.Printf("[tts] %s: %s\n", voice, message)
+	fmt.Printf("[tts:%s] %s: %s\n", s.engine, voice, message)
 	return nil
 }
 

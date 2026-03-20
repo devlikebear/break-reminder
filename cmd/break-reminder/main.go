@@ -46,6 +46,7 @@ func main() {
 		newServiceCmd(),
 		newBreakCmd(),
 		newConfigCmd(),
+		newTTSCmd(),
 		newAICmd(),
 		newVersionCmd(),
 	)

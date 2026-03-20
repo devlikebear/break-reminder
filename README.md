@@ -20,7 +20,7 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
 - **📈 Daily Stats** — Track work/break time with gap detection for accurate tracking
-- **🔔 Notifications** — Visual + voice alerts (macOS native TTS)
+- **🔔 Notifications** — Visual + voice alerts (`say` or KittenTTS)
 - **🚀 Auto-start** — LaunchAgent service with 60-second check interval
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
@@ -78,6 +78,9 @@ break-reminder ai configure "25분 작업, 5분 휴식" # Natural language confi
 # Configuration
 break-reminder config show        # Show current config
 break-reminder config edit        # Open in $EDITOR
+
+# Optional TTS backends
+break-reminder tts install kittentts  # Install KittenTTS into a managed venv
 break-reminder config path        # Show config file path
 
 # Diagnostics
@@ -142,7 +145,10 @@ break_screen_mode: "ask"       # "ask" (choose once), "block" (fullscreen), "not
 break_activities_enabled: true  # Show guided activity menu on break
 
 # Voice & Notifications
-voice: "Yuna"                  # TTS voice (run `say -v '?'` for options)
+voice: "Yuna"                  # Voice name for the selected TTS engine
+tts_engine: "say"              # "say" or "kittentts"
+tts_model: "KittenML/kitten-tts-nano-0.8"  # Used when tts_engine is "kittentts"
+tts_python_cmd: "python3"      # Python with kittentts installed
 tts_enabled: true
 notifications_enabled: true
 
@@ -167,7 +173,7 @@ internal/                     # Go internal packages
   state/                      # Key-value state file persistence
   idle/                       # Idle detection (ioreg on macOS)
   notify/                     # macOS notifications (osascript)
-  tts/                        # Text-to-speech (say command)
+  tts/                        # Text-to-speech (say / KittenTTS)
   breakscreen/                # Break screen orchestration
   dashboard/                  # TUI dashboard + break activities
   ai/                         # AI CLI wrapper + history
@@ -205,6 +211,20 @@ say -v '?'
 # Update config
 break-reminder config edit
 # Change: voice: "Samantha"
+```
+
+To use KittenTTS instead:
+
+```bash
+break-reminder tts install kittentts
+```
+
+KittenTTS currently provides these built-in voices: `Bella`, `Jasper`, `Luna`, `Bruno`, `Rosie`, `Hugo`, `Kiki`, `Leo`.
+
+You can customize the activated model or voice during install:
+
+```bash
+break-reminder tts install kittentts --voice Bella --model KittenML/kitten-tts-micro-0.8
 ```
 
 ## 🤝 Contributing
