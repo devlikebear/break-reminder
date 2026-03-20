@@ -46,7 +46,7 @@ func (r *Report) FailCount() int {
 // Run performs all diagnostic checks.
 func Run(cfg config.Config) Report {
 	var r Report
-	isKittenTTS := strings.EqualFold(strings.TrimSpace(cfg.TTSEngine), "kittentts")
+	installHint := ttsInstallHint(cfg.TTSEngine)
 
 	// Voice availability
 	speaker := tts.NewSpeaker(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd)
@@ -55,17 +55,17 @@ func Run(cfg config.Config) Report {
 		r.add("ok", "Voice ("+voiceLabel+")", "available")
 	} else {
 		detail := "not found"
-		if isKittenTTS {
-			detail = "not found (run 'break-reminder tts install kittentts')"
+		if installHint != "" {
+			detail = "not found (" + installHint + ")"
 		}
 		r.add("fail", "Voice ("+voiceLabel+")", detail)
 	}
 
 	// TTS
-	if err := speaker.Speak(cfg.Voice, "테스트"); err != nil {
+	if err := tts.SpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, cfg.Voice, "테스트"); err != nil {
 		detail := err.Error()
-		if isKittenTTS && !strings.Contains(detail, "break-reminder tts install kittentts") {
-			detail += " (run 'break-reminder tts install kittentts')"
+		if installHint != "" && !strings.Contains(detail, installHint) {
+			detail += " (" + installHint + ")"
 		}
 		r.add("fail", "TTS", detail)
 	} else {
@@ -125,4 +125,15 @@ func Run(cfg config.Config) Report {
 	}
 
 	return r
+}
+
+func ttsInstallHint(engine string) string {
+	switch strings.ToLower(strings.TrimSpace(engine)) {
+	case "kitten", "kittentts":
+		return "run 'break-reminder tts install kittentts'"
+	case "supertonic":
+		return "run 'break-reminder tts install supertonic'"
+	default:
+		return ""
+	}
 }

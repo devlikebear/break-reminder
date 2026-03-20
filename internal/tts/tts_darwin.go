@@ -17,12 +17,16 @@ type DarwinSpeaker struct {
 func NewSpeaker(engine, model, pythonCmd string) Speaker {
 	return &DarwinSpeaker{
 		engine:    normalizeEngine(engine),
-		model:     normalizeKittenModel(model),
+		model:     normalizeModelForEngine(engine, model),
 		pythonCmd: normalizePythonCommand(pythonCmd),
 	}
 }
 
 func (s *DarwinSpeaker) Speak(voice, message string) error {
+	return s.speak(voice, message, false)
+}
+
+func (s *DarwinSpeaker) speak(voice, message string, wait bool) error {
 	if err := s.validate(voice); err != nil {
 		return err
 	}
@@ -30,6 +34,10 @@ func (s *DarwinSpeaker) Speak(voice, message string) error {
 	cmd, err := buildSpeakCommand(s.engine, s.model, s.pythonCmd, voice, message)
 	if err != nil {
 		return err
+	}
+
+	if wait {
+		return cmd.Run()
 	}
 
 	if err := cmd.Start(); err != nil {
@@ -56,6 +64,18 @@ func (s *DarwinSpeaker) Available(voice string) bool {
 			return false
 		}
 		ok, err := kittenModuleInstalled(s.pythonCmd)
+		return err == nil && ok
+	case engineSupertonic:
+		if !supertonicVoiceAvailable(voice) {
+			return false
+		}
+		if _, err := exec.LookPath(s.pythonCmd); err != nil {
+			return false
+		}
+		if _, err := exec.LookPath("afplay"); err != nil {
+			return false
+		}
+		ok, err := supertonicModuleInstalled(s.pythonCmd)
 		return err == nil && ok
 	default:
 		return false
@@ -90,6 +110,23 @@ func (s *DarwinSpeaker) validate(voice string) error {
 		if !ok {
 			return fmt.Errorf("kittentts is not installed for %s", s.pythonCmd)
 		}
+	case engineSupertonic:
+		if !supertonicVoiceAvailable(voice) {
+			return fmt.Errorf("voice %q not supported by Supertonic", voice)
+		}
+		if _, err := exec.LookPath(s.pythonCmd); err != nil {
+			return fmt.Errorf("python command %q not found", s.pythonCmd)
+		}
+		if _, err := exec.LookPath("afplay"); err != nil {
+			return fmt.Errorf("afplay command not found")
+		}
+		ok, err := supertonicModuleInstalled(s.pythonCmd)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("supertonic is not installed for %s", s.pythonCmd)
+		}
 	default:
 		return fmt.Errorf("unsupported TTS engine %q", s.engine)
 	}
@@ -116,10 +153,18 @@ func sayVoiceAvailable(voice string) bool {
 }
 
 func kittenModuleInstalled(pythonCmd string) (bool, error) {
+	return pythonModuleInstalled(pythonCmd, "kittentts")
+}
+
+func supertonicModuleInstalled(pythonCmd string) (bool, error) {
+	return pythonModuleInstalled(pythonCmd, "supertonic")
+}
+
+func pythonModuleInstalled(pythonCmd, module string) (bool, error) {
 	cmd := exec.Command(
 		pythonCmd,
 		"-c",
-		`import importlib.util, sys; sys.exit(0 if importlib.util.find_spec("kittentts") else 1)`,
+		fmt.Sprintf(`import importlib.util, sys; sys.exit(0 if importlib.util.find_spec(%q) else 1)`, module),
 	)
 	if err := cmd.Run(); err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() == 1 {
@@ -128,4 +173,17 @@ func kittenModuleInstalled(pythonCmd string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func VoiceAvailable(engine, model, pythonCmd, voice string) bool {
+	return NewSpeaker(engine, model, pythonCmd).Available(voice)
+}
+
+func SpeakAndWait(engine, model, pythonCmd, voice, message string) error {
+	speaker := &DarwinSpeaker{
+		engine:    normalizeEngine(engine),
+		model:     normalizeModelForEngine(engine, model),
+		pythonCmd: normalizePythonCommand(pythonCmd),
+	}
+	return speaker.speak(voice, message, true)
 }

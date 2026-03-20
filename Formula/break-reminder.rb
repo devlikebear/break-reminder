@@ -18,7 +18,7 @@ class BreakReminder < Formula
     ohai "Run 'break-reminder service install' to set up the launchd agent"
     ohai "Run 'break-reminder doctor' to verify your setup"
     ohai "Run 'break-reminder dashboard' for the TUI dashboard"
-    ohai "Optional: run 'break-reminder tts install kittentts' to enable KittenTTS"
+    ohai "Optional: run 'break-reminder tts install kittentts' or 'break-reminder tts install supertonic' to enable alternate TTS engines"
   end
 
   def caveats
@@ -31,6 +31,9 @@ class BreakReminder < Formula
 
       To enable KittenTTS:
         break-reminder tts install kittentts
+
+      To enable Supertonic:
+        break-reminder tts install supertonic
 
       Configuration file:
         ~/.config/break-reminder/config.yaml
