@@ -99,3 +99,25 @@ func TestLoadMissing(t *testing.T) {
 		t.Errorf("Mode = %q, want default %q", s.Mode, "work")
 	}
 }
+
+func TestEnterBreakResetsWarningBucket(t *testing.T) {
+	updated := (State{
+		Mode:                   "work",
+		WorkSeconds:            1800,
+		BreakStart:             123,
+		LastBreakWarningBucket: 3,
+	}).EnterBreak(456)
+
+	if updated.Mode != "break" {
+		t.Fatalf("Mode = %q, want break", updated.Mode)
+	}
+	if updated.BreakStart != 456 {
+		t.Fatalf("BreakStart = %d, want 456", updated.BreakStart)
+	}
+	if updated.WorkSeconds != 0 {
+		t.Fatalf("WorkSeconds = %d, want 0", updated.WorkSeconds)
+	}
+	if updated.LastBreakWarningBucket != 0 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 0", updated.LastBreakWarningBucket)
+	}
+}

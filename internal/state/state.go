@@ -38,6 +38,15 @@ func New() State {
 	}
 }
 
+// EnterBreak updates the state for a fresh break transition.
+func (s State) EnterBreak(at int64) State {
+	s.Mode = "break"
+	s.BreakStart = at
+	s.WorkSeconds = 0
+	s.LastBreakWarningBucket = 0
+	return s
+}
+
 // Load reads state from the key=value file (compatible with bash version).
 func Load(path string) (State, error) {
 	s := New()

@@ -115,10 +115,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 			if cfg.TTSEnabled {
 				r.Actions = append(r.Actions, ActionSpeakBreakTime)
 			}
-			r.State.Mode = "break"
-			r.State.BreakStart = unix
-			r.State.WorkSeconds = 0
-			r.State.LastBreakWarningBucket = 0
+			r.State = r.State.EnterBreak(unix)
 			return r
 		}
 

@@ -107,9 +107,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = s
 		case key.Matches(msg, keys.Break):
 			// Force break mode
-			m.state.Mode = "break"
-			m.state.BreakStart = time.Now().Unix()
-			m.state.WorkSeconds = 0
+			m.state = m.state.EnterBreak(time.Now().Unix())
 			_ = state.Save(state.DefaultStatePath(), m.state)
 			if m.cfg.BreakActivitiesEnabled {
 				m.showBreakMenu = true

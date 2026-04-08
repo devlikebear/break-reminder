@@ -287,3 +287,94 @@ func TestBreakWarningAdvancesOnNewBucket(t *testing.T) {
 		t.Fatalf("LastBreakWarningBucket = %d, want 2", result.State.LastBreakWarningBucket)
 	}
 }
+
+func TestWorkTickAtIdleThresholdDoesNotAccumulate(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       600,
+		TodayWorkSeconds:  1200,
+		LastCheck:         now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:    now.Format("2006-01-02"),
+		TodayBreakSeconds: 300,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec)
+
+	if result.State.WorkSeconds != s.WorkSeconds {
+		t.Fatalf("WorkSeconds = %d, want %d", result.State.WorkSeconds, s.WorkSeconds)
+	}
+	if result.State.TodayWorkSeconds != s.TodayWorkSeconds {
+		t.Fatalf("TodayWorkSeconds = %d, want %d", result.State.TodayWorkSeconds, s.TodayWorkSeconds)
+	}
+	for _, action := range result.Actions {
+		if action == ActionNotifyFiveMinWarning || action == ActionNotifyBreakTime {
+			t.Fatalf("unexpected action at idle threshold: %v", action)
+		}
+	}
+}
+
+func TestBreakWarningSuppressedAtIdleThresholdBoundary(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             now.Add(-(4*time.Minute + 5*time.Second)).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:         now.Format("2006-01-02"),
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec)
+
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			t.Fatal("expected no active-break warning when idle time is exactly at threshold")
+		}
+	}
+	if result.State.LastBreakWarningBucket != 1 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 1", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestDailyResetWhileStillOnBreak(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 16, 0, 1, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             time.Date(2025, 1, 15, 23, 58, 0, 0, time.Local).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		TodayWorkSeconds:       5000,
+		TodayBreakSeconds:      900,
+		LastUpdateDate:         "2025-01-15",
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec+30)
+
+	if result.DayEndSummary == nil {
+		t.Fatal("expected DayEndSummary on rollover during break")
+	}
+	if result.DayEndSummary.Date != "2025-01-15" {
+		t.Fatalf("DayEndSummary.Date = %q, want 2025-01-15", result.DayEndSummary.Date)
+	}
+	if result.DayEndSummary.WorkSeconds != 5000 || result.DayEndSummary.BreakSeconds != 900 {
+		t.Fatalf("DayEndSummary = %+v, want prior-day totals", *result.DayEndSummary)
+	}
+	if result.State.Mode != "break" {
+		t.Fatalf("Mode = %q, want break", result.State.Mode)
+	}
+	if result.State.LastUpdateDate != "2025-01-16" {
+		t.Fatalf("LastUpdateDate = %q, want 2025-01-16", result.State.LastUpdateDate)
+	}
+	if result.State.TodayWorkSeconds != 0 {
+		t.Fatalf("TodayWorkSeconds = %d, want 0", result.State.TodayWorkSeconds)
+	}
+	if result.State.TodayBreakSeconds != 60 {
+		t.Fatalf("TodayBreakSeconds = %d, want 60", result.State.TodayBreakSeconds)
+	}
+}
