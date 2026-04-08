@@ -12,13 +12,14 @@ import (
 
 // State represents the application's current timer state.
 type State struct {
-	WorkSeconds      int       `json:"work_seconds"`
-	Mode             string    `json:"mode"` // "work" or "break"
-	LastCheck        int64     `json:"last_check"`
-	BreakStart       int64     `json:"break_start"`
-	TodayWorkSeconds int       `json:"today_work_seconds"`
-	TodayBreakSeconds int      `json:"today_break_seconds"`
-	LastUpdateDate   string    `json:"last_update_date"`
+	WorkSeconds            int    `json:"work_seconds"`
+	Mode                   string `json:"mode"` // "work" or "break"
+	LastCheck              int64  `json:"last_check"`
+	BreakStart             int64  `json:"break_start"`
+	TodayWorkSeconds       int    `json:"today_work_seconds"`
+	TodayBreakSeconds      int    `json:"today_break_seconds"`
+	LastUpdateDate         string `json:"last_update_date"`
+	LastBreakWarningBucket int    `json:"last_break_warning_bucket"`
 }
 
 // DefaultStatePath returns ~/.break-reminder-state
@@ -89,6 +90,10 @@ func Load(path string) (State, error) {
 			}
 		case "LAST_UPDATE_DATE":
 			s.LastUpdateDate = value
+		case "LAST_BREAK_WARNING_BUCKET":
+			if v, err := strconv.Atoi(value); err == nil {
+				s.LastBreakWarningBucket = v
+			}
 		}
 	}
 
@@ -104,8 +109,9 @@ BREAK_START=%d
 TODAY_WORK_SECONDS=%d
 TODAY_BREAK_SECONDS=%d
 LAST_UPDATE_DATE=%s
+LAST_BREAK_WARNING_BUCKET=%d
 `, s.WorkSeconds, s.Mode, s.LastCheck, s.BreakStart,
-		s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate)
+		s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate, s.LastBreakWarningBucket)
 
 	return os.WriteFile(path, []byte(content), 0o644)
 }

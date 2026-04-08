@@ -211,3 +211,79 @@ func TestDailyResetNoHistoryWhenEmpty(t *testing.T) {
 		t.Error("should not emit ActionSaveDailyHistory when previous day had no data")
 	}
 }
+
+func TestBreakWarningRequiresActiveUser(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 10, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             now.Add(-3 * time.Minute).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:         now.Format("2006-01-02"),
+		LastBreakWarningBucket: 0,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec+30)
+
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			t.Fatal("expected no active-break warning while user is idle")
+		}
+	}
+	if result.State.LastBreakWarningBucket != 0 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 0", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestBreakWarningOnlyOncePerBucket(t *testing.T) {
+	cfg := config.Default()
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             start.Unix(),
+		LastCheck:              start.Add(2 * time.Minute).Unix(),
+		LastUpdateDate:         start.Format("2006-01-02"),
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, start.Add(2*time.Minute+30*time.Second), 5)
+
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			t.Fatal("expected no duplicate active-break warning in same bucket")
+		}
+	}
+	if result.State.LastBreakWarningBucket != 1 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 1", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestBreakWarningAdvancesOnNewBucket(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             now.Add(-(4*time.Minute + 5*time.Second)).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:         now.Format("2006-01-02"),
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, 5)
+
+	found := false
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected an active-break warning when entering a new 2-minute bucket")
+	}
+	if result.State.LastBreakWarningBucket != 2 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 2", result.State.LastBreakWarningBucket)
+	}
+}

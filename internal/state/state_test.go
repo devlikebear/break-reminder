@@ -11,13 +11,14 @@ func TestLoadSaveRoundtrip(t *testing.T) {
 	path := filepath.Join(dir, "test-state")
 
 	original := State{
-		WorkSeconds:       1800,
-		Mode:              "work",
-		LastCheck:         1700000000,
-		BreakStart:        0,
-		TodayWorkSeconds:  3600,
-		TodayBreakSeconds: 600,
-		LastUpdateDate:    "2025-01-15",
+		WorkSeconds:            1800,
+		Mode:                   "work",
+		LastCheck:              1700000000,
+		BreakStart:             0,
+		TodayWorkSeconds:       3600,
+		TodayBreakSeconds:      600,
+		LastUpdateDate:         "2025-01-15",
+		LastBreakWarningBucket: 2,
 	}
 
 	if err := Save(path, original); err != nil {
@@ -47,6 +48,9 @@ func TestLoadSaveRoundtrip(t *testing.T) {
 	if loaded.LastUpdateDate != original.LastUpdateDate {
 		t.Errorf("LastUpdateDate = %q, want %q", loaded.LastUpdateDate, original.LastUpdateDate)
 	}
+	if loaded.LastBreakWarningBucket != original.LastBreakWarningBucket {
+		t.Errorf("LastBreakWarningBucket = %d, want %d", loaded.LastBreakWarningBucket, original.LastBreakWarningBucket)
+	}
 }
 
 func TestLoadBashFormat(t *testing.T) {
@@ -61,6 +65,7 @@ BREAK_START=1700000000
 TODAY_WORK_SECONDS=7200
 TODAY_BREAK_SECONDS=1200
 LAST_UPDATE_DATE=2025-01-15
+LAST_BREAK_WARNING_BUCKET=3
 `
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
@@ -79,6 +84,9 @@ LAST_UPDATE_DATE=2025-01-15
 	}
 	if s.BreakStart != 1700000000 {
 		t.Errorf("BreakStart = %d, want 1700000000", s.BreakStart)
+	}
+	if s.LastBreakWarningBucket != 3 {
+		t.Errorf("LastBreakWarningBucket = %d, want 3", s.LastBreakWarningBucket)
 	}
 }
 
