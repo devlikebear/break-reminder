@@ -318,6 +318,16 @@ func TestLoadRejectsInvalidWorkSchedule(t *testing.T) {
 			wantErr: "work_end_minute must be between 0 and 59",
 		},
 		{
+			name:    "start hour above 23",
+			yaml:    "work_start_hour: 25\n",
+			wantErr: "work_start_hour must be between 0 and 23",
+		},
+		{
+			name:    "end hour negative",
+			yaml:    "work_end_hour: -1\n",
+			wantErr: "work_end_hour must be between 0 and 23",
+		},
+		{
 			name:    "workday window must increase",
 			yaml:    "work_start_hour: 17\nwork_end_hour: 17\n",
 			wantErr: "work schedule must end after it starts",
