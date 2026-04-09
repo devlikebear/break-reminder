@@ -100,6 +100,19 @@ func TestAICmdRejectsInvalidConfigBeforeCheckingAIFeatures(t *testing.T) {
 	}
 }
 
+func TestMenuBarCmdReturnsHelpfulErrorWhenHelperMissing(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("PATH", "")
+
+	err := runMenuBarApp()
+	if err == nil {
+		t.Fatal("runMenuBarApp() error = nil, want missing helper error")
+	}
+	if err.Error() != "break-menubar helper not found. Run 'make build-helper' to build it" {
+		t.Fatalf("runMenuBarApp() error = %q, want missing helper guidance", err.Error())
+	}
+}
+
 func TestSetAppConfigPreservesCurrentConfigOnValidationError(t *testing.T) {
 	origLoadConfig := loadConfig
 	origCfg := cfg

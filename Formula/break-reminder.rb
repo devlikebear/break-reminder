@@ -12,6 +12,7 @@ class BreakReminder < Formula
     bin.install "break-reminder"
     bin.install "break-screen"
     bin.install "break-dashboard"
+    bin.install "break-menubar"
   end
 
   def post_install

@@ -16,6 +16,7 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support
 - **📊 TUI Dashboard** — Real-time progress bars and daily statistics (Bubbletea)
 - **🖼️ Native GUI Dashboard** — macOS native window with circular progress bar
+- **🍎 Menu Bar App** — Native macOS status item with quick controls and live session status
 - **🧘 Guided Break Activities** — Eye exercise, stretching, box breathing, walk timer
 - **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
@@ -37,7 +38,7 @@ brew install devlikebear/tap/break-reminder
 ```bash
 git clone https://github.com/devlikebear/break-reminder.git
 cd break-reminder
-make build      # Build Go binary + Swift helpers
+make build      # Build Go binary + Swift helpers (break-screen, break-dashboard, break-menubar)
 make install    # Install to ~/.local/bin/ + register LaunchAgent
 ```
 
@@ -55,6 +56,7 @@ break-reminder reset              # Reset timer
 # Dashboard
 break-reminder dashboard          # TUI dashboard
 break-reminder dashboard --gui    # Native macOS GUI
+break-reminder menubar            # Native macOS menu bar app
 
 # Service Management
 break-reminder service install    # Register LaunchAgent
