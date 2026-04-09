@@ -95,27 +95,27 @@ func Save(cfg Config) error {
 }
 
 var validConfigKeys = map[string]struct{}{
-	"work_duration_min":         {},
-	"break_duration_min":        {},
-	"idle_threshold_sec":        {},
-	"natural_break_sec":         {},
-	"work_days":                 {},
-	"work_start_hour":           {},
-	"work_start_minute":         {},
-	"work_end_hour":             {},
-	"work_end_minute":           {},
-	"voice":                     {},
-	"tts_engine":                {},
-	"tts_model":                 {},
-	"tts_python_cmd":            {},
-	"ai_cli":                    {},
-	"break_screen_mode":         {},
-	"max_log_lines":             {},
-	"check_interval_sec":        {},
-	"notifications_enabled":     {},
-	"tts_enabled":               {},
-	"break_activities_enabled":  {},
-	"ai_enabled":                {},
+	"work_duration_min":        {},
+	"break_duration_min":       {},
+	"idle_threshold_sec":       {},
+	"natural_break_sec":        {},
+	"work_days":                {},
+	"work_start_hour":          {},
+	"work_start_minute":        {},
+	"work_end_hour":            {},
+	"work_end_minute":          {},
+	"voice":                    {},
+	"tts_engine":               {},
+	"tts_model":                {},
+	"tts_python_cmd":           {},
+	"ai_cli":                   {},
+	"break_screen_mode":        {},
+	"max_log_lines":            {},
+	"check_interval_sec":       {},
+	"notifications_enabled":    {},
+	"tts_enabled":              {},
+	"break_activities_enabled": {},
+	"ai_enabled":               {},
 }
 
 // ApplyYAMLChanges merges YAML changes into an existing config and validates the result.
@@ -169,6 +169,11 @@ func validateSchedule(cfg Config) error {
 	return nil
 }
 
+func hasNonNilKey(raw map[string]any, key string) bool {
+	value, ok := raw[key]
+	return ok && value != nil
+}
+
 // merge applies values from src to dst. raw is the unmarshaled map used to
 // detect which keys were explicitly set in the YAML file (needed for booleans and numeric zero values).
 func merge(dst, src *Config, raw map[string]any) {
@@ -187,16 +192,16 @@ func merge(dst, src *Config, raw map[string]any) {
 	if len(src.WorkDays) > 0 {
 		dst.WorkDays = src.WorkDays
 	}
-	if _, ok := raw["work_start_hour"]; ok {
+	if hasNonNilKey(raw, "work_start_hour") {
 		dst.WorkStartHour = src.WorkStartHour
 	}
-	if _, ok := raw["work_start_minute"]; ok {
+	if hasNonNilKey(raw, "work_start_minute") {
 		dst.WorkStartMinute = src.WorkStartMinute
 	}
-	if _, ok := raw["work_end_hour"]; ok {
+	if hasNonNilKey(raw, "work_end_hour") {
 		dst.WorkEndHour = src.WorkEndHour
 	}
-	if _, ok := raw["work_end_minute"]; ok {
+	if hasNonNilKey(raw, "work_end_minute") {
 		dst.WorkEndMinute = src.WorkEndMinute
 	}
 	if src.Voice != "" {

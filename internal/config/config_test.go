@@ -450,6 +450,22 @@ func TestApplyYAMLChangesRejectsUnknownKeys(t *testing.T) {
 	}
 }
 
+func TestApplyYAMLChangesRejectsNullScheduleFields(t *testing.T) {
+	base := Default()
+	base.WorkStartHour = 9
+	base.WorkStartMinute = 15
+	base.WorkEndHour = 18
+	base.WorkEndMinute = 45
+
+	updated, err := ApplyYAMLChanges(base, []byte("work_start_hour: null\nwork_start_minute: null\nwork_end_hour: null\nwork_end_minute: null\n"))
+	if err != nil {
+		t.Fatalf("ApplyYAMLChanges() error = %v", err)
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config for null schedule fields: got %+v want %+v", updated, base)
+	}
+}
+
 func TestApplyYAMLChangesRejectsEmptyChanges(t *testing.T) {
 	base := Default()
 
