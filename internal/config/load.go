@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -49,6 +50,9 @@ func Load() (Config, error) {
 	}
 
 	merge(&cfg, &fileCfg, raw)
+	if err := validateSchedule(cfg); err != nil {
+		return cfg, err
+	}
 	return cfg, nil
 }
 
@@ -78,6 +82,10 @@ func Save(cfg Config) error {
 		return err
 	}
 
+	if err := validateSchedule(cfg); err != nil {
+		return err
+	}
+
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
 		return err
@@ -86,8 +94,31 @@ func Save(cfg Config) error {
 	return os.WriteFile(ConfigPath(), data, 0o644)
 }
 
+func validateSchedule(cfg Config) error {
+	if cfg.WorkStartHour < 0 || cfg.WorkStartHour > 23 {
+		return fmt.Errorf("work_start_hour must be between 0 and 23")
+	}
+	if cfg.WorkEndHour < 0 || cfg.WorkEndHour > 23 {
+		return fmt.Errorf("work_end_hour must be between 0 and 23")
+	}
+	if cfg.WorkStartMinute < 0 || cfg.WorkStartMinute > 59 {
+		return fmt.Errorf("work_start_minute must be between 0 and 59")
+	}
+	if cfg.WorkEndMinute < 0 || cfg.WorkEndMinute > 59 {
+		return fmt.Errorf("work_end_minute must be between 0 and 59")
+	}
+
+	workStartMinute := cfg.WorkStartHour*60 + cfg.WorkStartMinute
+	workEndMinute := cfg.WorkEndHour*60 + cfg.WorkEndMinute
+	if workEndMinute <= workStartMinute {
+		return fmt.Errorf("work schedule must end after it starts")
+	}
+
+	return nil
+}
+
 // merge applies values from src to dst. raw is the unmarshaled map used to
-// detect which keys were explicitly set in the YAML file (needed for booleans).
+// detect which keys were explicitly set in the YAML file (needed for booleans and numeric zero values).
 func merge(dst, src *Config, raw map[string]any) {
 	if src.WorkDurationMin > 0 {
 		dst.WorkDurationMin = src.WorkDurationMin

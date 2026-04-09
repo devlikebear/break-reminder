@@ -300,6 +300,60 @@ func TestLoadLegacyScheduleWithoutMinuteFields(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsInvalidWorkSchedule(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name:    "negative start minute",
+			yaml:    "work_start_minute: -1\n",
+			wantErr: "work_start_minute must be between 0 and 59",
+		},
+		{
+			name:    "end minute above 59",
+			yaml:    "work_end_minute: 75\n",
+			wantErr: "work_end_minute must be between 0 and 59",
+		},
+		{
+			name:    "workday window must increase",
+			yaml:    "work_start_hour: 17\nwork_end_hour: 17\n",
+			wantErr: "work schedule must end after it starts",
+		},
+		{
+			name:    "workday window cannot wrap past midnight",
+			yaml:    "work_start_hour: 22\nwork_end_hour: 6\n",
+			wantErr: "work schedule must end after it starts",
+		},
+	}
+
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			configDir = tmpDir
+			if err := os.MkdirAll(filepath.Dir(ConfigPath()), 0o755); err != nil {
+				t.Fatalf("MkdirAll: %v", err)
+			}
+
+			if err := os.WriteFile(ConfigPath(), []byte(tt.yaml), 0o644); err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+
+			_, err := Load()
+			if err == nil {
+				t.Fatalf("Load() error = nil, want %q", tt.wantErr)
+			}
+			if err.Error() != tt.wantErr {
+				t.Fatalf("Load() error = %q, want %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestMergeTTSSettings(t *testing.T) {
 	yamlData := []byte("tts_engine: kittentts\ntts_model: KittenML/kitten-tts-micro-0.8\ntts_python_cmd: /tmp/venv/bin/python\nvoice: Jasper\n")
 
