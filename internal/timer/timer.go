@@ -90,7 +90,7 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 	case "work":
 		result = tickWork(cfg, result, elapsed, idleSec, unix)
 	case "break":
-		result = tickBreak(cfg, result, elapsed, unix)
+		result = tickBreak(cfg, result, elapsed, idleSec, unix)
 	}
 
 	return result
@@ -115,9 +115,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 			if cfg.TTSEnabled {
 				r.Actions = append(r.Actions, ActionSpeakBreakTime)
 			}
-			r.State.Mode = "break"
-			r.State.BreakStart = unix
-			r.State.WorkSeconds = 0
+			r.State = r.State.EnterBreak(unix)
 			return r
 		}
 
@@ -138,7 +136,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 	return r
 }
 
-func tickBreak(cfg config.Config, r TickResult, elapsed int, unix int64) TickResult {
+func tickBreak(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64) TickResult {
 	breakDur := cfg.BreakDurationSec()
 
 	r.State.TodayBreakSeconds += elapsed
@@ -147,9 +145,15 @@ func tickBreak(cfg config.Config, r TickResult, elapsed int, unix int64) TickRes
 
 	r.LogMsg = "Break mode... " + itoa(breakRemaining) + "min remaining"
 
-	// Warn if user is active during break (every 2 minutes)
-	if breakElapsed < breakDur && (breakElapsed%120) < 60 {
-		r.Actions = append(r.Actions, ActionNotifyStillOnBreak)
+	// Warn if the user is still active during break, but avoid warning immediately
+	// after the break begins. Use a fixed grace period so short configured breaks
+	// (for example 1 minute) can still emit at least one reminder.
+	if breakElapsed < breakDur && idleSec < cfg.IdleThresholdSec && breakElapsed >= 30 {
+		bucket := 1 + (breakElapsed-30)/120
+		if bucket > r.State.LastBreakWarningBucket {
+			r.Actions = append(r.Actions, ActionNotifyStillOnBreak)
+			r.State.LastBreakWarningBucket = bucket
+		}
 	}
 
 	// Break is over
@@ -161,6 +165,7 @@ func tickBreak(cfg config.Config, r TickResult, elapsed int, unix int64) TickRes
 		}
 		r.State.Mode = "work"
 		r.State.WorkSeconds = 0
+		r.State.LastBreakWarningBucket = 0
 	}
 
 	return r

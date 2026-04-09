@@ -211,3 +211,217 @@ func TestDailyResetNoHistoryWhenEmpty(t *testing.T) {
 		t.Error("should not emit ActionSaveDailyHistory when previous day had no data")
 	}
 }
+
+func TestBreakWarningRequiresActiveUser(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 10, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             now.Add(-3 * time.Minute).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:         now.Format("2006-01-02"),
+		LastBreakWarningBucket: 0,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec+30)
+
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			t.Fatal("expected no active-break warning while user is idle")
+		}
+	}
+	if result.State.LastBreakWarningBucket != 0 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 0", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestBreakWarningOnlyOncePerBucket(t *testing.T) {
+	cfg := config.Default()
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+	now := start.Add(100 * time.Second)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             start.Unix(),
+		LastCheck:              now.Add(-30 * time.Second).Unix(),
+		LastUpdateDate:         start.Format("2006-01-02"),
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, 5)
+
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			t.Fatal("expected no duplicate active-break warning in same bucket")
+		}
+	}
+	if result.State.LastBreakWarningBucket != 1 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 1", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestBreakWarningAdvancesOnNewBucket(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             now.Add(-(4*time.Minute + 5*time.Second)).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:         now.Format("2006-01-02"),
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, 5)
+
+	found := false
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("expected an active-break warning when entering a new 2-minute bucket")
+	}
+	if result.State.LastBreakWarningBucket != 2 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 2", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestWorkTickAtIdleThresholdDoesNotAccumulate(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       600,
+		TodayWorkSeconds:  1200,
+		LastCheck:         now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:    now.Format("2006-01-02"),
+		TodayBreakSeconds: 300,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec)
+
+	if result.State.WorkSeconds != s.WorkSeconds {
+		t.Fatalf("WorkSeconds = %d, want %d", result.State.WorkSeconds, s.WorkSeconds)
+	}
+	if result.State.TodayWorkSeconds != s.TodayWorkSeconds {
+		t.Fatalf("TodayWorkSeconds = %d, want %d", result.State.TodayWorkSeconds, s.TodayWorkSeconds)
+	}
+	for _, action := range result.Actions {
+		if action == ActionNotifyFiveMinWarning || action == ActionNotifyBreakTime {
+			t.Fatalf("unexpected action at idle threshold: %v", action)
+		}
+	}
+}
+
+func TestBreakWarningSuppressedAtIdleThresholdBoundary(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             now.Add(-(4*time.Minute + 5*time.Second)).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		LastUpdateDate:         now.Format("2006-01-02"),
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec)
+
+	for _, action := range result.Actions {
+		if action == ActionNotifyStillOnBreak {
+			t.Fatal("expected no active-break warning when idle time is exactly at threshold")
+		}
+	}
+	if result.State.LastBreakWarningBucket != 1 {
+		t.Fatalf("LastBreakWarningBucket = %d, want 1", result.State.LastBreakWarningBucket)
+	}
+}
+
+func TestShortBreakWarningRespectsGracePeriod(t *testing.T) {
+	cfg := config.Default()
+	cfg.BreakDurationMin = 1
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	t.Run("before grace period", func(t *testing.T) {
+		now := start.Add(20 * time.Second)
+		s := state.State{
+			Mode:                   "break",
+			BreakStart:             start.Unix(),
+			LastCheck:              now.Add(-10 * time.Second).Unix(),
+			LastUpdateDate:         now.Format("2006-01-02"),
+			LastBreakWarningBucket: 0,
+		}
+
+		result := Tick(cfg, s, now, 5)
+		for _, action := range result.Actions {
+			if action == ActionNotifyStillOnBreak {
+				t.Fatal("expected no warning before the fixed grace period elapses")
+			}
+		}
+	})
+
+	t.Run("warns after grace period", func(t *testing.T) {
+		now := start.Add(45 * time.Second)
+		s := state.State{
+			Mode:                   "break",
+			BreakStart:             start.Unix(),
+			LastCheck:              now.Add(-15 * time.Second).Unix(),
+			LastUpdateDate:         now.Format("2006-01-02"),
+			LastBreakWarningBucket: 0,
+		}
+
+		result := Tick(cfg, s, now, 5)
+		found := false
+		for _, action := range result.Actions {
+			if action == ActionNotifyStillOnBreak {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("expected a warning during a 1-minute break after the grace period")
+		}
+	})
+}
+
+func TestDailyResetWhileStillOnBreak(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 16, 0, 1, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:                   "break",
+		BreakStart:             time.Date(2025, 1, 15, 23, 58, 0, 0, time.Local).Unix(),
+		LastCheck:              now.Add(-60 * time.Second).Unix(),
+		TodayWorkSeconds:       5000,
+		TodayBreakSeconds:      900,
+		LastUpdateDate:         "2025-01-15",
+		LastBreakWarningBucket: 1,
+	}
+
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec+30)
+
+	if result.DayEndSummary == nil {
+		t.Fatal("expected DayEndSummary on rollover during break")
+	}
+	if result.DayEndSummary.Date != "2025-01-15" {
+		t.Fatalf("DayEndSummary.Date = %q, want 2025-01-15", result.DayEndSummary.Date)
+	}
+	if result.DayEndSummary.WorkSeconds != 5000 || result.DayEndSummary.BreakSeconds != 900 {
+		t.Fatalf("DayEndSummary = %+v, want prior-day totals", *result.DayEndSummary)
+	}
+	if result.State.Mode != "break" {
+		t.Fatalf("Mode = %q, want break", result.State.Mode)
+	}
+	if result.State.LastUpdateDate != "2025-01-16" {
+		t.Fatalf("LastUpdateDate = %q, want 2025-01-16", result.State.LastUpdateDate)
+	}
+	if result.State.TodayWorkSeconds != 0 {
+		t.Fatalf("TodayWorkSeconds = %d, want 0", result.State.TodayWorkSeconds)
+	}
+	if result.State.TodayBreakSeconds != 60 {
+		t.Fatalf("TodayBreakSeconds = %d, want 60", result.State.TodayBreakSeconds)
+	}
+}
