@@ -26,6 +26,9 @@ func IsWorkingTime(cfg config.Config, t time.Time) bool {
 		return false
 	}
 
-	hour := t.Hour()
-	return hour >= cfg.WorkStartHour && hour < cfg.WorkEndHour
+	currentMinute := t.Hour()*60 + t.Minute()
+	workStartMinute := cfg.WorkStartHour*60 + cfg.WorkStartMinute
+	workEndMinute := cfg.WorkEndHour*60 + cfg.WorkEndMinute
+
+	return currentMinute >= workStartMinute && currentMinute < workEndMinute
 }
