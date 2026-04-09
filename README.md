@@ -51,6 +51,8 @@ break-reminder check              # Single timer tick (used by launchd)
 break-reminder daemon             # Foreground loop
 break-reminder status             # Current state overview
 break-reminder reset              # Reset timer
+break-reminder snooze             # End the current break early and postpone the next one by 5 min
+break-reminder snooze --for 10m   # Postpone the next break by a custom duration
 
 # Dashboard
 break-reminder dashboard          # TUI dashboard
@@ -127,6 +129,20 @@ Session Work: 32min / 50min
 Daily Stats: Work 2h 5m / Break 30m
 Current idle: 3sec
 ```
+
+### Snoozing an active break
+
+Use `break-reminder snooze` during an active break to return to work mode immediately and postpone the next break without losing the postponement if the daemon updates state at the same time.
+
+```bash
+break-reminder snooze
+break-reminder snooze --for 10m
+```
+
+- `snooze` is only valid while a break is active.
+- It ends the current break early, resumes work immediately, and suppresses break reminders until the requested snooze window expires.
+- The default postpone duration is 5 minutes.
+- If the app is paused in a future state file, `snooze` exits safely instead of guessing.
 
 ## ⚙️ Configuration
 

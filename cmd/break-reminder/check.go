@@ -1,8 +1,6 @@
 package main
 
 import (
-	"time"
-
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
@@ -28,27 +26,40 @@ func newCheckCmd() *cobra.Command {
 }
 
 func runCheck() error {
-	now := time.Now()
+	now := nowFunc()
 	statePath := state.DefaultStatePath()
 	logPath := logging.DefaultLogPath()
 
 	// Check working hours
 	if !schedule.IsWorkingTime(cfg, now) {
-		s, _ := state.Load(statePath)
-		s.LastCheck = now.Unix()
-		return state.Save(statePath, s)
-	}
-
-	s, err := state.Load(statePath)
-	if err != nil {
-		log.Warn().Err(err).Msg("Failed to load state, using fresh state")
-		s = state.New()
+		if err := state.Update(statePath, func(s state.State) (state.State, error) {
+			if !s.Paused {
+				s.LastCheck = now.Unix()
+			}
+			return s, nil
+		}); err != nil {
+			log.Warn().Err(err).Msg("Failed to update state outside working hours, resetting state")
+			recovered := state.New()
+			recovered.LastCheck = now.Unix()
+			return state.Save(statePath, recovered)
+		}
+		return nil
 	}
 
 	detector := idle.NewDetector()
 	idleSec := detector.IdleSeconds()
 
-	result := timer.Tick(cfg, s, now, idleSec)
+	var result timer.TickResult
+	if err := state.Update(statePath, func(s state.State) (state.State, error) {
+		result = timer.Tick(cfg, s, now, idleSec)
+		return result.State, nil
+	}); err != nil {
+		log.Warn().Err(err).Msg("Failed to update state, using fresh state")
+		result = timer.Tick(cfg, state.New(), now, idleSec)
+		if saveErr := state.Save(statePath, result.State); saveErr != nil {
+			return saveErr
+		}
+	}
 
 	if result.LogMsg != "" {
 		logging.Log(logPath, result.LogMsg)
@@ -57,7 +68,7 @@ func runCheck() error {
 	executeActions(result.Actions, result.State, result.DayEndSummary)
 
 	logging.Rotate(logPath, cfg.MaxLogLines)
-	return state.Save(statePath, result.State)
+	return nil
 }
 
 func executeActions(actions []timer.Action, s state.State, daySummary *timer.DayEndSummary) {
