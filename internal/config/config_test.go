@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -351,6 +352,106 @@ func TestLoadRejectsInvalidWorkSchedule(t *testing.T) {
 				t.Fatalf("Load() error = %q, want %q", err.Error(), tt.wantErr)
 			}
 		})
+	}
+}
+
+func TestLoadReturnsMergedConfigWhenScheduleInvalid(t *testing.T) {
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	tmpDir := t.TempDir()
+	configDir = tmpDir
+	if err := os.MkdirAll(filepath.Dir(ConfigPath()), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	invalidButUseful := []byte("voice: Samantha\nnotifications_enabled: false\nwork_end_minute: 75\n")
+	if err := os.WriteFile(ConfigPath(), invalidButUseful, 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	loaded, err := Load()
+	if err == nil {
+		t.Fatal("Load() error = nil, want schedule validation error")
+	}
+	if err.Error() != "work_end_minute must be between 0 and 59" {
+		t.Fatalf("Load() error = %q, want schedule validation error", err.Error())
+	}
+	if loaded.Voice != "Samantha" {
+		t.Fatalf("Voice = %q, want Samantha", loaded.Voice)
+	}
+	if loaded.NotificationsEnabled {
+		t.Fatal("NotificationsEnabled = true, want false from existing config")
+	}
+}
+
+func TestApplyYAMLChangesRejectsInvalidScheduleAndPreservesInput(t *testing.T) {
+	base := Default()
+	base.Voice = "Samantha"
+	base.NotificationsEnabled = false
+
+	updated, err := ApplyYAMLChanges(base, []byte("work_end_minute: 75\n"))
+	if err == nil {
+		t.Fatal("ApplyYAMLChanges() error = nil, want schedule validation error")
+	}
+	if err.Error() != "work_end_minute must be between 0 and 59" {
+		t.Fatalf("ApplyYAMLChanges() error = %q, want schedule validation error", err.Error())
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config: got %+v want %+v", updated, base)
+	}
+}
+
+func TestApplyYAMLChangesMergesValidChanges(t *testing.T) {
+	base := Default()
+	base.Voice = "Samantha"
+	base.NotificationsEnabled = false
+
+	updated, err := ApplyYAMLChanges(base, []byte("work_start_minute: 30\nai_enabled: true\n"))
+	if err != nil {
+		t.Fatalf("ApplyYAMLChanges() error = %v", err)
+	}
+	if updated.WorkStartMinute != 30 {
+		t.Fatalf("WorkStartMinute = %d, want 30", updated.WorkStartMinute)
+	}
+	if !updated.AIEnabled {
+		t.Fatal("AIEnabled = false, want true")
+	}
+	if updated.Voice != "Samantha" {
+		t.Fatalf("Voice = %q, want Samantha", updated.Voice)
+	}
+	if updated.NotificationsEnabled {
+		t.Fatal("NotificationsEnabled = true, want preserved false")
+	}
+}
+
+func TestApplyYAMLChangesRejectsUnknownKeys(t *testing.T) {
+	base := Default()
+
+	updated, err := ApplyYAMLChanges(base, []byte("changes:\n  work_start_minute: 30\n"))
+	if err == nil {
+		t.Fatal("ApplyYAMLChanges() error = nil, want unknown key error")
+	}
+	if err.Error() != "unknown config key \"changes\"" {
+		t.Fatalf("ApplyYAMLChanges() error = %q, want unknown key error", err.Error())
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config: got %+v want %+v", updated, base)
+	}
+}
+
+func TestApplyYAMLChangesRejectsEmptyChanges(t *testing.T) {
+	base := Default()
+
+	updated, err := ApplyYAMLChanges(base, []byte("# nothing to apply\n"))
+	if err == nil {
+		t.Fatal("ApplyYAMLChanges() error = nil, want empty change error")
+	}
+	if err.Error() != "no config changes found" {
+		t.Fatalf("ApplyYAMLChanges() error = %q, want no config changes found", err.Error())
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config: got %+v want %+v", updated, base)
 	}
 }
 

@@ -94,6 +94,58 @@ func Save(cfg Config) error {
 	return os.WriteFile(ConfigPath(), data, 0o644)
 }
 
+var validConfigKeys = map[string]struct{}{
+	"work_duration_min":         {},
+	"break_duration_min":        {},
+	"idle_threshold_sec":        {},
+	"natural_break_sec":         {},
+	"work_days":                 {},
+	"work_start_hour":           {},
+	"work_start_minute":         {},
+	"work_end_hour":             {},
+	"work_end_minute":           {},
+	"voice":                     {},
+	"tts_engine":                {},
+	"tts_model":                 {},
+	"tts_python_cmd":            {},
+	"ai_cli":                    {},
+	"break_screen_mode":         {},
+	"max_log_lines":             {},
+	"check_interval_sec":        {},
+	"notifications_enabled":     {},
+	"tts_enabled":               {},
+	"break_activities_enabled":  {},
+	"ai_enabled":                {},
+}
+
+// ApplyYAMLChanges merges YAML changes into an existing config and validates the result.
+func ApplyYAMLChanges(base Config, changes []byte) (Config, error) {
+	var raw map[string]any
+	if err := yaml.Unmarshal(changes, &raw); err != nil {
+		return base, err
+	}
+	if len(raw) == 0 {
+		return base, fmt.Errorf("no config changes found")
+	}
+	for key := range raw {
+		if _, ok := validConfigKeys[key]; !ok {
+			return base, fmt.Errorf("unknown config key %q", key)
+		}
+	}
+
+	var patchCfg Config
+	if err := yaml.Unmarshal(changes, &patchCfg); err != nil {
+		return base, err
+	}
+
+	updated := base
+	merge(&updated, &patchCfg, raw)
+	if err := validateSchedule(updated); err != nil {
+		return base, err
+	}
+	return updated, nil
+}
+
 func validateSchedule(cfg Config) error {
 	if cfg.WorkStartHour < 0 || cfg.WorkStartHour > 23 {
 		return fmt.Errorf("work_start_hour must be between 0 and 23")

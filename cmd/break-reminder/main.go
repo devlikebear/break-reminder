@@ -12,9 +12,18 @@ import (
 )
 
 var (
-	version = "dev"
-	cfg     config.Config
+	version    = "dev"
+	cfg        config.Config
+	loadConfig = config.Load
 )
+
+func loadAppConfig() (config.Config, error) {
+	loadedCfg, err := loadConfig()
+	if err != nil {
+		log.Warn().Err(err).Msg("Loaded config with validation warnings")
+	}
+	return loadedCfg, err
+}
 
 func main() {
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
@@ -25,12 +34,7 @@ func main() {
 		Short: "Smart work/break cycle enforcer for macOS",
 		Long:  "Break Reminder - Work 50 minutes, rest 10 minutes, repeat!",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			var err error
-			cfg, err = config.Load()
-			if err != nil {
-				log.Warn().Err(err).Msg("Failed to load config, using defaults")
-				cfg = config.Default()
-			}
+			cfg, _ = loadAppConfig()
 			return nil
 		},
 		SilenceUsage: true,
