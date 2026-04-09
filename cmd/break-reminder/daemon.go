@@ -38,6 +38,8 @@ func newDaemonCmd() *cobra.Command {
 				case <-ticker.C:
 					if newCfg, err := config.Load(); err == nil {
 						cfg = newCfg
+					} else {
+						log.Warn().Err(err).Msg("Ignoring invalid config reload")
 					}
 					if err := runCheck(); err != nil {
 						log.Error().Err(err).Msg("Check failed")

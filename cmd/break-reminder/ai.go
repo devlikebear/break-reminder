@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -22,10 +21,8 @@ func newAICmd() *cobra.Command {
 		Short: "AI-powered features",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Load config explicitly (child PersistentPreRunE overrides parent's in Cobra)
-			var err error
-			cfg, err = config.Load()
-			if err != nil {
-				cfg = config.Default()
+			if err := setAppConfig(); err != nil {
+				return err
 			}
 			if !cfg.AIEnabled {
 				return fmt.Errorf("AI features are disabled. Enable with: break-reminder config edit (set ai_enabled: true)")
@@ -213,40 +210,15 @@ No explanation, just the YAML fields to change.`, string(currentYAML), descripti
 				return nil
 			}
 
-			// Merge changes into config file
-			if err := config.EnsureConfigFile(); err != nil {
-				return err
-			}
-
-			// Read existing, apply changes
-			existing, err := os.ReadFile(config.ConfigPath())
+			updatedCfg, err := config.ApplyYAMLChanges(cfg, []byte(resp))
 			if err != nil {
+				return fmt.Errorf("invalid configuration changes: %w", err)
+			}
+			if err := config.Save(updatedCfg); err != nil {
 				return err
 			}
 
-			var cfgMap map[string]any
-			if err := yaml.Unmarshal(existing, &cfgMap); err != nil {
-				cfgMap = make(map[string]any)
-			}
-
-			var changes map[string]any
-			if err := yaml.Unmarshal([]byte(resp), &changes); err != nil {
-				return fmt.Errorf("could not parse AI response as YAML: %w", err)
-			}
-
-			for k, v := range changes {
-				cfgMap[k] = v
-			}
-
-			data, err := yaml.Marshal(cfgMap)
-			if err != nil {
-				return err
-			}
-
-			if err := os.WriteFile(config.ConfigPath(), data, 0o644); err != nil {
-				return err
-			}
-
+			cfg = updatedCfg
 			fmt.Println("Configuration updated!")
 			return nil
 		},

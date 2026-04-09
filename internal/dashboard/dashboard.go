@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/rs/zerolog/log"
 
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/idle"
@@ -19,19 +20,22 @@ import (
 
 type tickMsg time.Time
 
+var loadConfig = config.Load
+
 type Model struct {
-	cfg     config.Config
-	state   state.State
-	idleSec int
-	logs    []string
-	width   int
-	height  int
+	cfg             config.Config
+	state           state.State
+	idleSec         int
+	logs            []string
+	width           int
+	height          int
+	lastConfigError string
 
 	// Break activity overlay
-	showBreakMenu    bool
-	breakMenuCursor  int
-	breakActivity    tea.Model
-	showingActivity  bool
+	showBreakMenu   bool
+	breakMenuCursor int
+	breakActivity   tea.Model
+	showingActivity bool
 }
 
 func New(cfg config.Config) Model {
@@ -75,8 +79,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 	case tickMsg:
-		if newCfg, err := config.Load(); err == nil {
+		if newCfg, err := loadConfig(); err == nil {
 			m.cfg = newCfg
+			m.lastConfigError = ""
+		} else {
+			if err.Error() != m.lastConfigError {
+				log.Warn().Err(err).Msg("Ignoring invalid config reload")
+				m.lastConfigError = err.Error()
+			}
 		}
 		m.state, _ = state.Load(state.DefaultStatePath())
 		m.idleSec = idle.NewDetector().IdleSeconds()

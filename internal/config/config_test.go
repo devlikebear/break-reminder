@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -21,6 +22,18 @@ func TestDefault(t *testing.T) {
 	}
 	if len(cfg.WorkDays) != 5 {
 		t.Errorf("WorkDays = %v, want 5 days", cfg.WorkDays)
+	}
+	if cfg.WorkStartHour != 9 {
+		t.Errorf("WorkStartHour = %d, want 9", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 0 {
+		t.Errorf("WorkStartMinute = %d, want 0", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 18 {
+		t.Errorf("WorkEndHour = %d, want 18", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 0 {
+		t.Errorf("WorkEndMinute = %d, want 0", cfg.WorkEndMinute)
 	}
 	if cfg.BreakScreenMode != "ask" {
 		t.Errorf("BreakScreenMode = %q, want 'ask'", cfg.BreakScreenMode)
@@ -139,6 +152,84 @@ func TestMergeBreakScreenModeUnset(t *testing.T) {
 	}
 }
 
+func TestMergeWorkScheduleMinutes(t *testing.T) {
+	yamlData := []byte("work_start_hour: 8\nwork_start_minute: 30\nwork_end_hour: 17\nwork_end_minute: 45\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.WorkStartHour != 8 {
+		t.Errorf("WorkStartHour = %d, want 8", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 30 {
+		t.Errorf("WorkStartMinute = %d, want 30", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 17 {
+		t.Errorf("WorkEndHour = %d, want 17", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 45 {
+		t.Errorf("WorkEndMinute = %d, want 45", cfg.WorkEndMinute)
+	}
+}
+
+func TestMergeWorkScheduleMinutesBackwardCompatible(t *testing.T) {
+	yamlData := []byte("work_start_hour: 8\nwork_end_hour: 17\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.WorkStartHour != 8 {
+		t.Errorf("WorkStartHour = %d, want 8", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 0 {
+		t.Errorf("WorkStartMinute = %d, want 0 default when unset", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 17 {
+		t.Errorf("WorkEndHour = %d, want 17", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 0 {
+		t.Errorf("WorkEndMinute = %d, want 0 default when unset", cfg.WorkEndMinute)
+	}
+}
+
+func TestMergeWorkScheduleAllowsMidnightHour(t *testing.T) {
+	yamlData := []byte("work_start_hour: 0\nwork_start_minute: 30\nwork_end_hour: 0\nwork_end_minute: 45\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.WorkStartHour != 0 {
+		t.Errorf("WorkStartHour = %d, want 0", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 30 {
+		t.Errorf("WorkStartMinute = %d, want 30", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 0 {
+		t.Errorf("WorkEndHour = %d, want 0", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 45 {
+		t.Errorf("WorkEndMinute = %d, want 45", cfg.WorkEndMinute)
+	}
+}
+
 func TestSaveAndLoad(t *testing.T) {
 	// Override config path for test
 	origDir := configDir
@@ -150,6 +241,8 @@ func TestSaveAndLoad(t *testing.T) {
 	cfg := Default()
 	cfg.BreakScreenMode = "block"
 	cfg.WorkDurationMin = 30
+	cfg.WorkStartMinute = 15
+	cfg.WorkEndMinute = 45
 
 	if err := Save(cfg); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -165,6 +258,226 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if loaded.WorkDurationMin != 30 {
 		t.Errorf("WorkDurationMin = %d, want 30", loaded.WorkDurationMin)
+	}
+	if loaded.WorkStartMinute != 15 {
+		t.Errorf("WorkStartMinute = %d, want 15", loaded.WorkStartMinute)
+	}
+	if loaded.WorkEndMinute != 45 {
+		t.Errorf("WorkEndMinute = %d, want 45", loaded.WorkEndMinute)
+	}
+}
+
+func TestLoadLegacyScheduleWithoutMinuteFields(t *testing.T) {
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	tmpDir := t.TempDir()
+	configDir = tmpDir
+	if err := os.MkdirAll(filepath.Dir(ConfigPath()), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	legacy := []byte("work_start_hour: 8\nwork_end_hour: 17\n")
+	if err := os.WriteFile(ConfigPath(), legacy, 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if loaded.WorkStartHour != 8 {
+		t.Errorf("WorkStartHour = %d, want 8", loaded.WorkStartHour)
+	}
+	if loaded.WorkStartMinute != 0 {
+		t.Errorf("WorkStartMinute = %d, want 0", loaded.WorkStartMinute)
+	}
+	if loaded.WorkEndHour != 17 {
+		t.Errorf("WorkEndHour = %d, want 17", loaded.WorkEndHour)
+	}
+	if loaded.WorkEndMinute != 0 {
+		t.Errorf("WorkEndMinute = %d, want 0", loaded.WorkEndMinute)
+	}
+}
+
+func TestLoadRejectsInvalidWorkSchedule(t *testing.T) {
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{
+			name:    "negative start minute",
+			yaml:    "work_start_minute: -1\n",
+			wantErr: "work_start_minute must be between 0 and 59",
+		},
+		{
+			name:    "end minute above 59",
+			yaml:    "work_end_minute: 75\n",
+			wantErr: "work_end_minute must be between 0 and 59",
+		},
+		{
+			name:    "start hour above 23",
+			yaml:    "work_start_hour: 25\n",
+			wantErr: "work_start_hour must be between 0 and 23",
+		},
+		{
+			name:    "end hour negative",
+			yaml:    "work_end_hour: -1\n",
+			wantErr: "work_end_hour must be between 0 and 23",
+		},
+		{
+			name:    "workday window must increase",
+			yaml:    "work_start_hour: 17\nwork_end_hour: 17\n",
+			wantErr: "work schedule must end after it starts",
+		},
+		{
+			name:    "workday window cannot wrap past midnight",
+			yaml:    "work_start_hour: 22\nwork_end_hour: 6\n",
+			wantErr: "work schedule must end after it starts",
+		},
+	}
+
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			configDir = tmpDir
+			if err := os.MkdirAll(filepath.Dir(ConfigPath()), 0o755); err != nil {
+				t.Fatalf("MkdirAll: %v", err)
+			}
+
+			if err := os.WriteFile(ConfigPath(), []byte(tt.yaml), 0o644); err != nil {
+				t.Fatalf("WriteFile: %v", err)
+			}
+
+			_, err := Load()
+			if err == nil {
+				t.Fatalf("Load() error = nil, want %q", tt.wantErr)
+			}
+			if err.Error() != tt.wantErr {
+				t.Fatalf("Load() error = %q, want %q", err.Error(), tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestLoadReturnsMergedConfigWhenScheduleInvalid(t *testing.T) {
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	tmpDir := t.TempDir()
+	configDir = tmpDir
+	if err := os.MkdirAll(filepath.Dir(ConfigPath()), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	invalidButUseful := []byte("voice: Samantha\nnotifications_enabled: false\nwork_end_minute: 75\n")
+	if err := os.WriteFile(ConfigPath(), invalidButUseful, 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	loaded, err := Load()
+	if err == nil {
+		t.Fatal("Load() error = nil, want schedule validation error")
+	}
+	if err.Error() != "work_end_minute must be between 0 and 59" {
+		t.Fatalf("Load() error = %q, want schedule validation error", err.Error())
+	}
+	if loaded.Voice != "Samantha" {
+		t.Fatalf("Voice = %q, want Samantha", loaded.Voice)
+	}
+	if loaded.NotificationsEnabled {
+		t.Fatal("NotificationsEnabled = true, want false from existing config")
+	}
+}
+
+func TestApplyYAMLChangesRejectsInvalidScheduleAndPreservesInput(t *testing.T) {
+	base := Default()
+	base.Voice = "Samantha"
+	base.NotificationsEnabled = false
+
+	updated, err := ApplyYAMLChanges(base, []byte("work_end_minute: 75\n"))
+	if err == nil {
+		t.Fatal("ApplyYAMLChanges() error = nil, want schedule validation error")
+	}
+	if err.Error() != "work_end_minute must be between 0 and 59" {
+		t.Fatalf("ApplyYAMLChanges() error = %q, want schedule validation error", err.Error())
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config: got %+v want %+v", updated, base)
+	}
+}
+
+func TestApplyYAMLChangesMergesValidChanges(t *testing.T) {
+	base := Default()
+	base.Voice = "Samantha"
+	base.NotificationsEnabled = false
+
+	updated, err := ApplyYAMLChanges(base, []byte("work_start_minute: 30\nai_enabled: true\n"))
+	if err != nil {
+		t.Fatalf("ApplyYAMLChanges() error = %v", err)
+	}
+	if updated.WorkStartMinute != 30 {
+		t.Fatalf("WorkStartMinute = %d, want 30", updated.WorkStartMinute)
+	}
+	if !updated.AIEnabled {
+		t.Fatal("AIEnabled = false, want true")
+	}
+	if updated.Voice != "Samantha" {
+		t.Fatalf("Voice = %q, want Samantha", updated.Voice)
+	}
+	if updated.NotificationsEnabled {
+		t.Fatal("NotificationsEnabled = true, want preserved false")
+	}
+}
+
+func TestApplyYAMLChangesRejectsUnknownKeys(t *testing.T) {
+	base := Default()
+
+	updated, err := ApplyYAMLChanges(base, []byte("changes:\n  work_start_minute: 30\n"))
+	if err == nil {
+		t.Fatal("ApplyYAMLChanges() error = nil, want unknown key error")
+	}
+	if err.Error() != "unknown config key \"changes\"" {
+		t.Fatalf("ApplyYAMLChanges() error = %q, want unknown key error", err.Error())
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config: got %+v want %+v", updated, base)
+	}
+}
+
+func TestApplyYAMLChangesRejectsNullScheduleFields(t *testing.T) {
+	base := Default()
+	base.WorkStartHour = 9
+	base.WorkStartMinute = 15
+	base.WorkEndHour = 18
+	base.WorkEndMinute = 45
+
+	updated, err := ApplyYAMLChanges(base, []byte("work_start_hour: null\nwork_start_minute: null\nwork_end_hour: null\nwork_end_minute: null\n"))
+	if err != nil {
+		t.Fatalf("ApplyYAMLChanges() error = %v", err)
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config for null schedule fields: got %+v want %+v", updated, base)
+	}
+}
+
+func TestApplyYAMLChangesRejectsEmptyChanges(t *testing.T) {
+	base := Default()
+
+	updated, err := ApplyYAMLChanges(base, []byte("# nothing to apply\n"))
+	if err == nil {
+		t.Fatal("ApplyYAMLChanges() error = nil, want empty change error")
+	}
+	if err.Error() != "no config changes found" {
+		t.Fatalf("ApplyYAMLChanges() error = %q, want no config changes found", err.Error())
+	}
+	if !reflect.DeepEqual(updated, base) {
+		t.Fatalf("ApplyYAMLChanges() returned mutated config: got %+v want %+v", updated, base)
 	}
 }
 
