@@ -239,16 +239,17 @@ func TestBreakWarningRequiresActiveUser(t *testing.T) {
 func TestBreakWarningOnlyOncePerBucket(t *testing.T) {
 	cfg := config.Default()
 	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+	now := start.Add(100 * time.Second)
 
 	s := state.State{
 		Mode:                   "break",
 		BreakStart:             start.Unix(),
-		LastCheck:              start.Add(2 * time.Minute).Unix(),
+		LastCheck:              now.Add(-30 * time.Second).Unix(),
 		LastUpdateDate:         start.Format("2006-01-02"),
 		LastBreakWarningBucket: 1,
 	}
 
-	result := Tick(cfg, s, start.Add(2*time.Minute+30*time.Second), 5)
+	result := Tick(cfg, s, now, 5)
 
 	for _, action := range result.Actions {
 		if action == ActionNotifyStillOnBreak {
@@ -338,6 +339,52 @@ func TestBreakWarningSuppressedAtIdleThresholdBoundary(t *testing.T) {
 	if result.State.LastBreakWarningBucket != 1 {
 		t.Fatalf("LastBreakWarningBucket = %d, want 1", result.State.LastBreakWarningBucket)
 	}
+}
+
+func TestShortBreakWarningRespectsGracePeriod(t *testing.T) {
+	cfg := config.Default()
+	cfg.BreakDurationMin = 1
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	t.Run("before grace period", func(t *testing.T) {
+		now := start.Add(20 * time.Second)
+		s := state.State{
+			Mode:                   "break",
+			BreakStart:             start.Unix(),
+			LastCheck:              now.Add(-10 * time.Second).Unix(),
+			LastUpdateDate:         now.Format("2006-01-02"),
+			LastBreakWarningBucket: 0,
+		}
+
+		result := Tick(cfg, s, now, 5)
+		for _, action := range result.Actions {
+			if action == ActionNotifyStillOnBreak {
+				t.Fatal("expected no warning before the fixed grace period elapses")
+			}
+		}
+	})
+
+	t.Run("warns after grace period", func(t *testing.T) {
+		now := start.Add(45 * time.Second)
+		s := state.State{
+			Mode:                   "break",
+			BreakStart:             start.Unix(),
+			LastCheck:              now.Add(-15 * time.Second).Unix(),
+			LastUpdateDate:         now.Format("2006-01-02"),
+			LastBreakWarningBucket: 0,
+		}
+
+		result := Tick(cfg, s, now, 5)
+		found := false
+		for _, action := range result.Actions {
+			if action == ActionNotifyStillOnBreak {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("expected a warning during a 1-minute break after the grace period")
+		}
+	})
 }
 
 func TestDailyResetWhileStillOnBreak(t *testing.T) {

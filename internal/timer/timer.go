@@ -145,10 +145,12 @@ func tickBreak(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64
 
 	r.LogMsg = "Break mode... " + itoa(breakRemaining) + "min remaining"
 
-	// Warn if the user is still active during break, but only once per 2-minute bucket.
-	if breakElapsed < breakDur && idleSec < cfg.IdleThresholdSec {
-		bucket := breakElapsed / 120
-		if bucket > 0 && bucket > r.State.LastBreakWarningBucket {
+	// Warn if the user is still active during break, but avoid warning immediately
+	// after the break begins. Use a fixed grace period so short configured breaks
+	// (for example 1 minute) can still emit at least one reminder.
+	if breakElapsed < breakDur && idleSec < cfg.IdleThresholdSec && breakElapsed >= 30 {
+		bucket := 1 + (breakElapsed-30)/120
+		if bucket > r.State.LastBreakWarningBucket {
 			r.Actions = append(r.Actions, ActionNotifyStillOnBreak)
 			r.State.LastBreakWarningBucket = bucket
 		}
