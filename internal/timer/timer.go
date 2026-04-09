@@ -61,6 +61,10 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 		result.State.LastUpdateDate = today
 	}
 
+	if s.Paused {
+		return result
+	}
+
 	elapsed := int(unix - s.LastCheck)
 
 	// Reset if too much time has passed (computer restart, sleep, etc.)

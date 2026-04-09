@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -16,6 +17,8 @@ type State struct {
 	Mode                   string `json:"mode"` // "work" or "break"
 	LastCheck              int64  `json:"last_check"`
 	BreakStart             int64  `json:"break_start"`
+	Paused                 bool   `json:"paused"`
+	PausedAt               int64  `json:"paused_at"`
 	TodayWorkSeconds       int    `json:"today_work_seconds"`
 	TodayBreakSeconds      int    `json:"today_break_seconds"`
 	LastUpdateDate         string `json:"last_update_date"`
@@ -43,7 +46,50 @@ func (s State) EnterBreak(at int64) State {
 	s.Mode = "break"
 	s.BreakStart = at
 	s.WorkSeconds = 0
+	s.Paused = false
+	s.PausedAt = 0
 	s.LastBreakWarningBucket = 0
+	return s
+}
+
+// Pause freezes the timer until Resume is called.
+func (s State) Pause(at int64) State {
+	if s.Paused {
+		return s
+	}
+	s.Paused = true
+	s.PausedAt = at
+	return s
+}
+
+// Resume unfreezes the timer and shifts time anchors so paused time is not counted.
+func (s State) Resume(at int64) State {
+	if !s.Paused {
+		return s
+	}
+	if s.PausedAt <= 0 {
+		if s.LastCheck > 0 {
+			s.LastCheck = at
+		}
+		if s.Mode == "break" && s.BreakStart > 0 {
+			s.BreakStart = at
+		}
+		s.Paused = false
+		s.PausedAt = 0
+		return s
+	}
+	gap := at - s.PausedAt
+	if gap < 0 {
+		gap = 0
+	}
+	if s.LastCheck > 0 {
+		s.LastCheck += gap
+	}
+	if s.Mode == "break" && s.BreakStart > 0 {
+		s.BreakStart += gap
+	}
+	s.Paused = false
+	s.PausedAt = 0
 	return s
 }
 
@@ -81,6 +127,12 @@ func Load(path string) (State, error) {
 			if value == "work" || value == "break" {
 				s.Mode = value
 			}
+		case "PAUSED":
+			s.Paused = value == "true"
+		case "PAUSED_AT":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.PausedAt = v
+			}
 		case "LAST_CHECK":
 			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
 				s.LastCheck = v
@@ -109,18 +161,84 @@ func Load(path string) (State, error) {
 	return s, scanner.Err()
 }
 
-// Save writes state in key=value format (compatible with bash version).
-func Save(path string, s State) error {
-	content := fmt.Sprintf(`WORK_SECONDS=%d
+func serialize(s State) string {
+	return fmt.Sprintf(`WORK_SECONDS=%d
 MODE=%s
 LAST_CHECK=%d
 BREAK_START=%d
+PAUSED=%t
+PAUSED_AT=%d
 TODAY_WORK_SECONDS=%d
 TODAY_BREAK_SECONDS=%d
 LAST_UPDATE_DATE=%s
 LAST_BREAK_WARNING_BUCKET=%d
 `, s.WorkSeconds, s.Mode, s.LastCheck, s.BreakStart,
-		s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate, s.LastBreakWarningBucket)
+		s.Paused, s.PausedAt, s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate, s.LastBreakWarningBucket)
+}
 
-	return os.WriteFile(path, []byte(content), 0o644)
+func saveUnlocked(path string, s State) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+
+	if _, err := tmp.WriteString(serialize(s)); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+func withStateLock(path string, fn func() error) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+
+	lockFile, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	defer lockFile.Close()
+
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
+		return err
+	}
+	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+
+	return fn()
+}
+
+// Update loads, mutates, and saves state under an exclusive file lock.
+func Update(path string, fn func(State) (State, error)) error {
+	return withStateLock(path, func() error {
+		s, err := Load(path)
+		if err != nil {
+			return err
+		}
+		updated, err := fn(s)
+		if err != nil {
+			return err
+		}
+		return saveUnlocked(path, updated)
+	})
+}
+
+// Save writes state in key=value format (compatible with bash version).
+func Save(path string, s State) error {
+	return withStateLock(path, func() error {
+		return saveUnlocked(path, s)
+	})
 }

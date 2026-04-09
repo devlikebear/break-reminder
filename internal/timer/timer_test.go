@@ -289,6 +289,36 @@ func TestBreakWarningAdvancesOnNewBucket(t *testing.T) {
 	}
 }
 
+func TestTickPausedSkipsCounting(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 20, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:             "work",
+		WorkSeconds:      25 * 60,
+		TodayWorkSeconds: 2 * 3600,
+		LastCheck:        now.Add(-15 * time.Minute).Unix(),
+		Paused:           true,
+		PausedAt:         now.Add(-10 * time.Minute).Unix(),
+		LastUpdateDate:   now.Format("2006-01-02"),
+	}
+
+	result := Tick(cfg, s, now, 0)
+
+	if result.State.WorkSeconds != s.WorkSeconds {
+		t.Fatalf("WorkSeconds = %d, want %d", result.State.WorkSeconds, s.WorkSeconds)
+	}
+	if result.State.TodayWorkSeconds != s.TodayWorkSeconds {
+		t.Fatalf("TodayWorkSeconds = %d, want %d", result.State.TodayWorkSeconds, s.TodayWorkSeconds)
+	}
+	if result.State.LastCheck != s.LastCheck {
+		t.Fatalf("LastCheck = %d, want %d", result.State.LastCheck, s.LastCheck)
+	}
+	if len(result.Actions) != 0 {
+		t.Fatalf("Actions = %v, want none", result.Actions)
+	}
+}
+
 func TestWorkTickAtIdleThresholdDoesNotAccumulate(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
