@@ -21,7 +21,9 @@ func newAICmd() *cobra.Command {
 		Short: "AI-powered features",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Load config explicitly (child PersistentPreRunE overrides parent's in Cobra)
-			cfg, _ = loadAppConfig()
+			if err := setAppConfig(); err != nil {
+				return err
+			}
 			if !cfg.AIEnabled {
 				return fmt.Errorf("AI features are disabled. Enable with: break-reminder config edit (set ai_enabled: true)")
 			}

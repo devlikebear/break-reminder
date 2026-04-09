@@ -8,6 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/rs/zerolog/log"
 
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/idle"
@@ -28,10 +29,10 @@ type Model struct {
 	height  int
 
 	// Break activity overlay
-	showBreakMenu    bool
-	breakMenuCursor  int
-	breakActivity    tea.Model
-	showingActivity  bool
+	showBreakMenu   bool
+	breakMenuCursor int
+	breakActivity   tea.Model
+	showingActivity bool
 }
 
 func New(cfg config.Config) Model {
@@ -77,6 +78,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tickMsg:
 		if newCfg, err := config.Load(); err == nil {
 			m.cfg = newCfg
+		} else {
+			log.Warn().Err(err).Msg("Ignoring invalid config reload")
 		}
 		m.state, _ = state.Load(state.DefaultStatePath())
 		m.idleSec = idle.NewDetector().IdleSeconds()

@@ -18,24 +18,25 @@ var (
 )
 
 func loadAppConfig() (config.Config, error) {
-	loadedCfg, err := loadConfig()
-	if err != nil {
-		log.Warn().Err(err).Msg("Loaded config with validation warnings")
-	}
-	return loadedCfg, err
+	return loadConfig()
 }
 
-func main() {
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+func setAppConfig() error {
+	loadedCfg, err := loadAppConfig()
+	if err != nil {
+		return err
+	}
+	cfg = loadedCfg
+	return nil
+}
 
+func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "break-reminder",
 		Short: "Smart work/break cycle enforcer for macOS",
 		Long:  "Break Reminder - Work 50 minutes, rest 10 minutes, repeat!",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			cfg, _ = loadAppConfig()
-			return nil
+			return setAppConfig()
 		},
 		SilenceUsage: true,
 	}
@@ -55,6 +56,14 @@ func main() {
 		newVersionCmd(),
 	)
 
+	return root
+}
+
+func main() {
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: "15:04:05"})
+
+	root := newRootCmd()
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
