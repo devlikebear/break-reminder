@@ -325,11 +325,9 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         circularProgress.needsDisplay = true
         timeLabel.stringValue = sp.remainingFormatted
 
-        let dailyWorkSec = isWork
-            ? state.todayWorkSeconds + max(Int(now - state.lastCheck), 0)
-            : state.todayWorkSeconds
-        let workMin = dailyWorkSec / 60
-        let breakMin = state.todayBreakSeconds / 60
+        let totals = todayTotals(state: state, now: now)
+        let workMin = totals.workMinutes
+        let breakMin = totals.breakMinutes
         dailyWorkLabel.stringValue = "Work: \(formatMinutes(workMin))"
         dailyBreakLabel.stringValue = "Break: \(formatMinutes(breakMin))"
 
@@ -352,13 +350,17 @@ class DashboardApp: NSObject, NSApplicationDelegate {
     @objc func resetTimer() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
+        let priorState = loadStateFromFile()
         let now = Int64(Date().timeIntervalSince1970)
+        let totals = todayTotals(state: priorState, now: now)
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         var s = AppState()
         s.lastCheck = now
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = df.string(from: Date())
-        try? serializeState(s).data(using: .utf8)?.write(to: path)
+        try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
 
@@ -367,14 +369,15 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let path = home.appendingPathComponent(".break-reminder-state")
         let state = loadStateFromFile()
         let now = Int64(Date().timeIntervalSince1970)
+        let totals = todayTotals(state: state, now: now)
         var s = AppState()
         s.mode = "break"
         s.lastCheck = now
         s.breakStart = now
-        s.todayWorkSeconds = state.todayWorkSeconds
-        s.todayBreakSeconds = state.todayBreakSeconds
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = state.lastUpdateDate
-        try? serializeState(s).data(using: .utf8)?.write(to: path)
+        try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
 

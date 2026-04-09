@@ -67,6 +67,7 @@ class MenuBarController: NSObject {
 
     // Keep strong refs to menu items that need live updates.
     private var statusMenuItem: NSMenuItem!
+    private var statsMenuItem: NSMenuItem!
 
     override init() {
         super.init()
@@ -88,6 +89,10 @@ class MenuBarController: NSObject {
         statusMenuItem = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
+
+        statsMenuItem = NSMenuItem(title: "Loading stats…", action: nil, keyEquivalent: "")
+        statsMenuItem.isEnabled = false
+        menu.addItem(statsMenuItem)
 
         menu.addItem(.separator())
 
@@ -127,24 +132,10 @@ class MenuBarController: NSObject {
         let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
 
-        let isWork = state.mode == "work"
-
-        // -- Title text --
-        let title: String
-        if isWork {
-            let sp = workProgress(state: state, config: config, now: now)
-            let elapsedMin = sp.elapsedSec / 60
-            title = "Work \(elapsedMin)m/\(config.workDurationMin)m"
-        } else {
-            let sp = breakProgress(state: state, config: config, now: now)
-            let remainMin = max(sp.remainingSec / 60, 0)
-            title = "Break \(remainMin)m left"
-        }
-
-        statusItem.button?.title = title
-
-        // -- Disabled status menu item --
-        statusMenuItem.title = isWork ? "Working…" : "On Break…"
+        let presentation = menuBarPresentation(state: state, config: config, now: now)
+        statusItem.button?.title = presentation.title
+        statusMenuItem.title = presentation.statusLine
+        statsMenuItem.title = presentation.statsLine
     }
 
     // MARK: Actions
@@ -165,12 +156,13 @@ class MenuBarController: NSObject {
         let path = home.appendingPathComponent(".break-reminder-state")
         let priorState = loadStateFromFile()
         let now = Int64(Date().timeIntervalSince1970)
+        let totals = todayTotals(state: priorState, now: now)
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         var s = AppState()
         s.lastCheck = now
-        s.todayWorkSeconds = priorState.todayWorkSeconds
-        s.todayBreakSeconds = priorState.todayBreakSeconds
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = df.string(from: Date())
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
@@ -181,12 +173,13 @@ class MenuBarController: NSObject {
         let path = home.appendingPathComponent(".break-reminder-state")
         let state = loadStateFromFile()
         let now = Int64(Date().timeIntervalSince1970)
+        let totals = todayTotals(state: state, now: now)
         var s = AppState()
         s.mode = "break"
         s.lastCheck = now
         s.breakStart = now
-        s.todayWorkSeconds = state.todayWorkSeconds
-        s.todayBreakSeconds = state.todayBreakSeconds
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = state.lastUpdateDate
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
