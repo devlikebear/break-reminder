@@ -17,6 +17,8 @@ var (
 	loadConfig = config.Load
 )
 
+const allowInvalidConfigAnnotation = "allow-invalid-config"
+
 func loadAppConfig() (config.Config, error) {
 	return loadConfig()
 }
@@ -30,12 +32,29 @@ func setAppConfig() error {
 	return nil
 }
 
+func allowInvalidConfig(cmd *cobra.Command) {
+	if cmd.Annotations == nil {
+		cmd.Annotations = map[string]string{}
+	}
+	cmd.Annotations[allowInvalidConfigAnnotation] = "true"
+}
+
+func commandAllowsInvalidConfig(cmd *cobra.Command) bool {
+	if cmd == nil {
+		return false
+	}
+	return cmd.Annotations[allowInvalidConfigAnnotation] == "true"
+}
+
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "break-reminder",
 		Short: "Smart work/break cycle enforcer for macOS",
 		Long:  "Break Reminder - Work 50 minutes, rest 10 minutes, repeat!",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if commandAllowsInvalidConfig(cmd) {
+				return nil
+			}
 			return setAppConfig()
 		},
 		SilenceUsage: true,
@@ -70,11 +89,13 @@ func main() {
 }
 
 func newVersionCmd() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "version",
 		Short: "Print version",
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("break-reminder", version)
 		},
 	}
+	allowInvalidConfig(cmd)
+	return cmd
 }
