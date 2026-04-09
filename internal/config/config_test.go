@@ -22,6 +22,18 @@ func TestDefault(t *testing.T) {
 	if len(cfg.WorkDays) != 5 {
 		t.Errorf("WorkDays = %v, want 5 days", cfg.WorkDays)
 	}
+	if cfg.WorkStartHour != 9 {
+		t.Errorf("WorkStartHour = %d, want 9", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 0 {
+		t.Errorf("WorkStartMinute = %d, want 0", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 18 {
+		t.Errorf("WorkEndHour = %d, want 18", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 0 {
+		t.Errorf("WorkEndMinute = %d, want 0", cfg.WorkEndMinute)
+	}
 	if cfg.BreakScreenMode != "ask" {
 		t.Errorf("BreakScreenMode = %q, want 'ask'", cfg.BreakScreenMode)
 	}
@@ -139,6 +151,84 @@ func TestMergeBreakScreenModeUnset(t *testing.T) {
 	}
 }
 
+func TestMergeWorkScheduleMinutes(t *testing.T) {
+	yamlData := []byte("work_start_hour: 8\nwork_start_minute: 30\nwork_end_hour: 17\nwork_end_minute: 45\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.WorkStartHour != 8 {
+		t.Errorf("WorkStartHour = %d, want 8", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 30 {
+		t.Errorf("WorkStartMinute = %d, want 30", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 17 {
+		t.Errorf("WorkEndHour = %d, want 17", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 45 {
+		t.Errorf("WorkEndMinute = %d, want 45", cfg.WorkEndMinute)
+	}
+}
+
+func TestMergeWorkScheduleMinutesBackwardCompatible(t *testing.T) {
+	yamlData := []byte("work_start_hour: 8\nwork_end_hour: 17\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.WorkStartHour != 8 {
+		t.Errorf("WorkStartHour = %d, want 8", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 0 {
+		t.Errorf("WorkStartMinute = %d, want 0 default when unset", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 17 {
+		t.Errorf("WorkEndHour = %d, want 17", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 0 {
+		t.Errorf("WorkEndMinute = %d, want 0 default when unset", cfg.WorkEndMinute)
+	}
+}
+
+func TestMergeWorkScheduleAllowsMidnightHour(t *testing.T) {
+	yamlData := []byte("work_start_hour: 0\nwork_start_minute: 30\nwork_end_hour: 0\nwork_end_minute: 45\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.WorkStartHour != 0 {
+		t.Errorf("WorkStartHour = %d, want 0", cfg.WorkStartHour)
+	}
+	if cfg.WorkStartMinute != 30 {
+		t.Errorf("WorkStartMinute = %d, want 30", cfg.WorkStartMinute)
+	}
+	if cfg.WorkEndHour != 0 {
+		t.Errorf("WorkEndHour = %d, want 0", cfg.WorkEndHour)
+	}
+	if cfg.WorkEndMinute != 45 {
+		t.Errorf("WorkEndMinute = %d, want 45", cfg.WorkEndMinute)
+	}
+}
+
 func TestSaveAndLoad(t *testing.T) {
 	// Override config path for test
 	origDir := configDir
@@ -150,6 +240,8 @@ func TestSaveAndLoad(t *testing.T) {
 	cfg := Default()
 	cfg.BreakScreenMode = "block"
 	cfg.WorkDurationMin = 30
+	cfg.WorkStartMinute = 15
+	cfg.WorkEndMinute = 45
 
 	if err := Save(cfg); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -165,6 +257,46 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if loaded.WorkDurationMin != 30 {
 		t.Errorf("WorkDurationMin = %d, want 30", loaded.WorkDurationMin)
+	}
+	if loaded.WorkStartMinute != 15 {
+		t.Errorf("WorkStartMinute = %d, want 15", loaded.WorkStartMinute)
+	}
+	if loaded.WorkEndMinute != 45 {
+		t.Errorf("WorkEndMinute = %d, want 45", loaded.WorkEndMinute)
+	}
+}
+
+func TestLoadLegacyScheduleWithoutMinuteFields(t *testing.T) {
+	origDir := configDir
+	defer func() { configDir = origDir }()
+
+	tmpDir := t.TempDir()
+	configDir = tmpDir
+	if err := os.MkdirAll(filepath.Dir(ConfigPath()), 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	legacy := []byte("work_start_hour: 8\nwork_end_hour: 17\n")
+	if err := os.WriteFile(ConfigPath(), legacy, 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if loaded.WorkStartHour != 8 {
+		t.Errorf("WorkStartHour = %d, want 8", loaded.WorkStartHour)
+	}
+	if loaded.WorkStartMinute != 0 {
+		t.Errorf("WorkStartMinute = %d, want 0", loaded.WorkStartMinute)
+	}
+	if loaded.WorkEndHour != 17 {
+		t.Errorf("WorkEndHour = %d, want 17", loaded.WorkEndHour)
+	}
+	if loaded.WorkEndMinute != 0 {
+		t.Errorf("WorkEndMinute = %d, want 0", loaded.WorkEndMinute)
 	}
 }
 

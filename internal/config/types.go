@@ -8,7 +8,9 @@ type Config struct {
 	NaturalBreakSec        int    `yaml:"natural_break_sec"`
 	WorkDays               []int  `yaml:"work_days"`
 	WorkStartHour          int    `yaml:"work_start_hour"`
+	WorkStartMinute        int    `yaml:"work_start_minute"`
 	WorkEndHour            int    `yaml:"work_end_hour"`
+	WorkEndMinute          int    `yaml:"work_end_minute"`
 	Voice                  string `yaml:"voice"`
 	TTSEngine              string `yaml:"tts_engine"`
 	TTSModel               string `yaml:"tts_model"`

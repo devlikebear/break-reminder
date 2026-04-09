@@ -104,11 +104,17 @@ func merge(dst, src *Config, raw map[string]any) {
 	if len(src.WorkDays) > 0 {
 		dst.WorkDays = src.WorkDays
 	}
-	if src.WorkStartHour > 0 {
+	if _, ok := raw["work_start_hour"]; ok {
 		dst.WorkStartHour = src.WorkStartHour
 	}
-	if src.WorkEndHour > 0 {
+	if _, ok := raw["work_start_minute"]; ok {
+		dst.WorkStartMinute = src.WorkStartMinute
+	}
+	if _, ok := raw["work_end_hour"]; ok {
 		dst.WorkEndHour = src.WorkEndHour
+	}
+	if _, ok := raw["work_end_minute"]; ok {
+		dst.WorkEndMinute = src.WorkEndMinute
 	}
 	if src.Voice != "" {
 		dst.Voice = src.Voice

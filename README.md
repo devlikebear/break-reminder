@@ -142,7 +142,9 @@ natural_break_sec: 300         # Auto-reset threshold (default: 5 min)
 # Smart Scheduling
 work_days: [1, 2, 3, 4, 5]    # ISO weekdays (1=Mon, 7=Sun)
 work_start_hour: 9
+work_start_minute: 0          # Optional minute precision for the work start boundary
 work_end_hour: 18
+work_end_minute: 0            # Optional minute precision for the work end boundary
 
 # Break Screen
 break_screen_mode: "ask"       # "ask" (choose once), "block" (fullscreen), "notify" (notification only)
