@@ -392,6 +392,38 @@ func TestWorkTickContinuesAccumulatingDuringSnoozeWithoutTriggeringBreak(t *test
 	}
 }
 
+func TestWorkTickDoesNotExpireSnoozeWhilePaused(t *testing.T) {
+	cfg := config.Default()
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	snoozed, err := (state.State{
+		Mode:           "break",
+		BreakStart:     start.Add(-2 * time.Minute).Unix(),
+		LastCheck:      start.Unix(),
+		LastUpdateDate: start.Format("2006-01-02"),
+	}).SnoozeBreak(start, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("SnoozeBreak() error = %v", err)
+	}
+
+	paused := snoozed.Pause(start.Add(30 * time.Second).Unix())
+	resumed := paused.Resume(start.Add(6 * time.Minute).Unix())
+
+	if resumed.SnoozeUntil != start.Add(10*time.Minute + 30*time.Second).Unix() {
+		t.Fatalf("SnoozeUntil after resume = %d, want %d", resumed.SnoozeUntil, start.Add(10*time.Minute+30*time.Second).Unix())
+	}
+
+	afterResume := Tick(cfg, resumed, start.Add(6*time.Minute+30*time.Second), 5)
+	if afterResume.State.Mode != "work" {
+		t.Fatalf("Mode after resuming mid-snooze = %q, want work", afterResume.State.Mode)
+	}
+	for _, action := range afterResume.Actions {
+		if action == ActionNotifyBreakTime {
+			t.Fatalf("unexpected break notification while snooze should still be frozen: %v", action)
+		}
+	}
+}
+
 func TestNaturalBreakClearsPendingSnooze(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)

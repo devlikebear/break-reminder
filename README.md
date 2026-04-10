@@ -52,7 +52,7 @@ break-reminder check              # Single timer tick (used by launchd)
 break-reminder daemon             # Foreground loop
 break-reminder status             # Current state overview
 break-reminder reset              # Reset timer
-break-reminder pause              # Pause the timer without losing progress
+break-reminder pause              # Pause the timer without losing progress or any active snooze postponement
 break-reminder resume             # Resume the previous work/break mode
 break-reminder snooze             # End the current break early and postpone the next one by 5 min
 break-reminder snooze --for 10m   # Postpone the next break by a custom duration

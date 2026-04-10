@@ -151,6 +151,9 @@ func (s State) Resume(at int64) State {
 	if s.Mode == "break" && s.BreakStart > 0 {
 		s.BreakStart += gap
 	}
+	if s.SnoozeUntil > 0 {
+		s.SnoozeUntil += gap
+	}
 	s.Paused = false
 	s.PausedAt = 0
 	return s

@@ -205,6 +205,32 @@ func TestPauseAndResumeRoundTrip(t *testing.T) {
 	}
 }
 
+func TestResumeShiftsPendingSnoozeWindowByPausedGap(t *testing.T) {
+	original := State{
+		Mode:           "work",
+		LastCheck:      1_700_000_000,
+		SnoozeUntil:    1_700_000_300,
+		Paused:         true,
+		PausedAt:       1_700_000_060,
+		LastUpdateDate: "2025-01-15",
+	}
+
+	resumed := original.Resume(1_700_000_660)
+
+	if resumed.Paused {
+		t.Fatal("Resume() should clear paused state")
+	}
+	if resumed.PausedAt != 0 {
+		t.Fatalf("PausedAt = %d, want 0", resumed.PausedAt)
+	}
+	if resumed.LastCheck != 1_700_000_600 {
+		t.Fatalf("LastCheck = %d, want %d", resumed.LastCheck, 1_700_000_600)
+	}
+	if resumed.SnoozeUntil != 1_700_000_900 {
+		t.Fatalf("SnoozeUntil = %d, want %d", resumed.SnoozeUntil, 1_700_000_900)
+	}
+}
+
 func TestPauseSettlesElapsedWorkBeforeFreezing(t *testing.T) {
 	original := State{
 		Mode:             "work",
