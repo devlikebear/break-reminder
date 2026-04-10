@@ -2,35 +2,37 @@ package breakscreen
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 )
 
-// FindHelper searches for a named helper binary in common locations.
-func FindHelper(name string) string {
-	// 1. Next to the main binary
-	if exe, err := os.Executable(); err == nil {
-		candidate := filepath.Join(filepath.Dir(exe), name)
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate
-		}
+var executablePath = os.Executable
+var userHomeDir = os.UserHomeDir
+
+func trustedHelperCandidates(name string) []string {
+	var candidates []string
+
+	if exe, err := executablePath(); err == nil && exe != "" {
+		candidates = append(candidates, filepath.Join(filepath.Dir(exe), name))
 	}
 
-	// 2. Common development / install paths
-	candidates := []string{
-		"bin/" + name,
-		filepath.Join(os.Getenv("HOME"), ".local", "bin", name),
+	if home, err := userHomeDir(); err == nil && home != "" {
+		candidates = append(candidates, filepath.Join(home, ".local", "bin", name))
 	}
-	for _, c := range candidates {
-		if _, err := os.Stat(c); err == nil {
-			abs, _ := filepath.Abs(c)
+
+	return candidates
+}
+
+// FindHelper searches for a named helper binary in trusted install locations.
+func FindHelper(name string) string {
+	for _, candidate := range trustedHelperCandidates(name) {
+		info, err := os.Stat(candidate)
+		if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
+			continue
+		}
+		if abs, err := filepath.Abs(candidate); err == nil {
 			return abs
 		}
-	}
-
-	// 3. In PATH
-	if p, err := exec.LookPath(name); err == nil {
-		return p
+		return candidate
 	}
 
 	return ""

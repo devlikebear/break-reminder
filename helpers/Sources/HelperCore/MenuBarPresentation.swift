@@ -3,6 +3,7 @@ import Foundation
 public struct TodayTotals: Equatable {
     public let workSeconds: Int
     public let breakSeconds: Int
+    public let date: String
 
     public var workMinutes: Int { workSeconds / 60 }
     public var breakMinutes: Int { breakSeconds / 60 }
@@ -14,23 +15,17 @@ public struct MenuBarPresentation: Equatable {
     public let statsLine: String
 }
 
-public func todayTotals(state: AppState, now: Int64) -> TodayTotals {
-    let sinceLastCheck = max(Int(now - state.lastCheck), 0)
-    let interpolatedWorkSeconds = state.mode == "work"
-        ? state.todayWorkSeconds + sinceLastCheck
-        : state.todayWorkSeconds
-    let interpolatedBreakSeconds = state.mode == "break"
-        ? state.todayBreakSeconds + sinceLastCheck
-        : state.todayBreakSeconds
-
+public func todayTotals(state: AppState, config: AppConfig, now: Int64) -> TodayTotals {
+    let live = liveDailyTotals(state: state, config: config, now: now)
     return TodayTotals(
-        workSeconds: max(interpolatedWorkSeconds, 0),
-        breakSeconds: max(interpolatedBreakSeconds, 0)
+        workSeconds: live.workSeconds,
+        breakSeconds: live.breakSeconds,
+        date: live.date
     )
 }
 
 public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) -> MenuBarPresentation {
-    let totals = todayTotals(state: state, now: now)
+    let totals = todayTotals(state: state, config: config, now: now)
 
     if state.mode == "break" {
         let progress = breakProgress(state: state, config: config, now: now)

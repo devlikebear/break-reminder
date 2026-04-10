@@ -198,6 +198,7 @@ class DashboardApp: NSObject, NSApplicationDelegate {
 
     func setupUI() {
         let content = window.contentView!
+        let controlsTopSpacing: CGFloat = 40
         var y: CGFloat = 470
 
         let title = makeLabel("Break Reminder", size: 20, weight: .bold, color: textColor)
@@ -285,7 +286,7 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         idleLabel = makeLabel("Idle: 0s", size: 12, weight: .regular, color: dimColor)
         idleLabel.frame = NSRect(x: 20, y: y, width: 320, height: 16)
         content.addSubview(idleLabel)
-        y -= 28
+        y -= controlsTopSpacing
 
         resetButton = makeStyledButton(title: "Reset", action: #selector(resetTimer))
         resetButton.frame = NSRect(x: 40, y: y, width: 120, height: 32)
@@ -325,9 +326,9 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         circularProgress.needsDisplay = true
         timeLabel.stringValue = sp.remainingFormatted
 
-        let totals = todayTotals(state: state, now: now)
-        let workMin = totals.workMinutes
-        let breakMin = totals.breakMinutes
+        let totals = liveDailyTotals(state: state, config: config, now: now)
+        let workMin = totals.workSeconds / 60
+        let breakMin = totals.breakSeconds / 60
         dailyWorkLabel.stringValue = "Work: \(formatMinutes(workMin))"
         dailyBreakLabel.stringValue = "Break: \(formatMinutes(breakMin))"
 
@@ -351,15 +352,14 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
         let priorState = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
-        let totals = todayTotals(state: priorState, now: now)
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
+        let totals = liveDailyTotals(state: priorState, config: config, now: now)
         var s = AppState()
         s.lastCheck = now
         s.todayWorkSeconds = totals.workSeconds
         s.todayBreakSeconds = totals.breakSeconds
-        s.lastUpdateDate = df.string(from: Date())
+        s.lastUpdateDate = totals.date
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
@@ -368,15 +368,16 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
         let state = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
-        let totals = todayTotals(state: state, now: now)
+        let totals = liveDailyTotals(state: state, config: config, now: now)
         var s = AppState()
         s.mode = "break"
         s.lastCheck = now
         s.breakStart = now
         s.todayWorkSeconds = totals.workSeconds
         s.todayBreakSeconds = totals.breakSeconds
-        s.lastUpdateDate = state.lastUpdateDate
+        s.lastUpdateDate = totals.date
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }

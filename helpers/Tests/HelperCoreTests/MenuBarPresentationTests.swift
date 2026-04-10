@@ -9,7 +9,10 @@ final class MenuBarPresentationTests: XCTestCase {
         state.todayWorkSeconds = 3_600
         state.todayBreakSeconds = 900
 
-        let totals = todayTotals(state: state, now: 1_090)
+        var config = AppConfig()
+        config.checkIntervalSec = 60
+
+        let totals = todayTotals(state: state, config: config, now: 1_090)
         XCTAssertEqual(totals.workSeconds, 3_690)
         XCTAssertEqual(totals.breakSeconds, 900)
     }
@@ -25,6 +28,7 @@ final class MenuBarPresentationTests: XCTestCase {
         var config = AppConfig()
         config.workDurationMin = 50
         config.breakDurationMin = 10
+        config.checkIntervalSec = 60
 
         let presentation = menuBarPresentation(state: state, config: config, now: 1_030)
 
@@ -41,7 +45,10 @@ final class MenuBarPresentationTests: XCTestCase {
         state.todayWorkSeconds = 7_200
         state.todayBreakSeconds = 600
 
-        let totals = todayTotals(state: state, now: 2_150)
+        var config = AppConfig()
+        config.checkIntervalSec = 60
+
+        let totals = todayTotals(state: state, config: config, now: 2_150)
         XCTAssertEqual(totals.workSeconds, 7_200)
         XCTAssertEqual(totals.breakSeconds, 650)
     }
@@ -57,11 +64,36 @@ final class MenuBarPresentationTests: XCTestCase {
         var config = AppConfig()
         config.workDurationMin = 50
         config.breakDurationMin = 10
+        config.checkIntervalSec = 60
 
         let presentation = menuBarPresentation(state: state, config: config, now: 2_150)
 
         XCTAssertEqual(presentation.title, "☕ 25% · 7m left")
         XCTAssertEqual(presentation.statusLine, "On break · 2m elapsed · 7m until work")
         XCTAssertEqual(presentation.statsLine, "Today · Work 2h · Break 10m")
+    }
+
+    func testTodayTotalsResetsStalePreviousDayTotals() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let nowDate = Calendar.current.startOfDay(for: Date()).addingTimeInterval(20)
+        let now = Int64(nowDate.timeIntervalSince1970)
+        let lastCheck = Int64(nowDate.addingTimeInterval(-30).timeIntervalSince1970)
+
+        var state = AppState()
+        state.mode = "work"
+        state.todayWorkSeconds = 7_200
+        state.todayBreakSeconds = 1_200
+        state.lastCheck = lastCheck
+        state.lastUpdateDate = formatter.string(from: nowDate.addingTimeInterval(-86_400))
+
+        var config = AppConfig()
+        config.checkIntervalSec = 60
+
+        let totals = todayTotals(state: state, config: config, now: now)
+        XCTAssertEqual(totals.workSeconds, 20)
+        XCTAssertEqual(totals.breakSeconds, 0)
+        XCTAssertEqual(totals.date, formatter.string(from: nowDate))
     }
 }

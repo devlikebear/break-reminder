@@ -113,12 +113,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case key.Matches(msg, keys.Reset):
 			s := state.New()
 			s.LastCheck = time.Now().Unix()
-			_ = state.Save(state.DefaultStatePath(), s)
+			_ = state.Update(state.DefaultStatePath(), func(state.State) (state.State, error) {
+				return s, nil
+			})
 			m.state = s
 		case key.Matches(msg, keys.Break):
 			// Force break mode
 			m.state = m.state.EnterBreak(time.Now().Unix())
-			_ = state.Save(state.DefaultStatePath(), m.state)
+			_ = state.Update(state.DefaultStatePath(), func(state.State) (state.State, error) {
+				return m.state, nil
+			})
 			if m.cfg.BreakActivitiesEnabled {
 				m.showBreakMenu = true
 				m.breakMenuCursor = 0
