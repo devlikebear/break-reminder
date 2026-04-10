@@ -317,6 +317,79 @@ func TestWorkTickAtIdleThresholdDoesNotAccumulate(t *testing.T) {
 	}
 }
 
+func TestWorkTickContinuesAccumulatingDuringSnoozeWithoutTriggeringBreak(t *testing.T) {
+	cfg := config.Default()
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	snoozed, err := (state.State{
+		Mode:           "break",
+		BreakStart:     start.Add(-2 * time.Minute).Unix(),
+		LastCheck:      start.Unix(),
+		LastUpdateDate: start.Format("2006-01-02"),
+	}).SnoozeBreak(start, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("SnoozeBreak() error = %v", err)
+	}
+
+	duringSnooze := Tick(cfg, snoozed, start.Add(2*time.Minute), 5)
+	if duringSnooze.State.WorkSeconds != 120 {
+		t.Fatalf("WorkSeconds during snooze = %d, want 120", duringSnooze.State.WorkSeconds)
+	}
+	if duringSnooze.State.TodayWorkSeconds != 120 {
+		t.Fatalf("TodayWorkSeconds during snooze = %d, want 120", duringSnooze.State.TodayWorkSeconds)
+	}
+	if duringSnooze.State.Mode != "work" {
+		t.Fatalf("Mode during snooze = %q, want work", duringSnooze.State.Mode)
+	}
+	if duringSnooze.State.SnoozeUntil != snoozed.SnoozeUntil {
+		t.Fatalf("SnoozeUntil during snooze = %d, want %d", duringSnooze.State.SnoozeUntil, snoozed.SnoozeUntil)
+	}
+	for _, action := range duringSnooze.Actions {
+		if action == ActionNotifyBreakTime || action == ActionNotifyFiveMinWarning {
+			t.Fatalf("unexpected action during snooze: %v", action)
+		}
+	}
+
+	afterSnooze := Tick(cfg, duringSnooze.State, start.Add(6*time.Minute), 5)
+	if afterSnooze.State.Mode != "break" {
+		t.Fatalf("Mode after snooze = %q, want break", afterSnooze.State.Mode)
+	}
+	if afterSnooze.State.BreakStart != start.Add(6*time.Minute).Unix() {
+		t.Fatalf("BreakStart after snooze = %d, want %d", afterSnooze.State.BreakStart, start.Add(6*time.Minute).Unix())
+	}
+	if afterSnooze.State.SnoozeUntil != 0 {
+		t.Fatalf("SnoozeUntil after snooze = %d, want 0", afterSnooze.State.SnoozeUntil)
+	}
+}
+
+func TestNaturalBreakClearsPendingSnooze(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       45 * 60,
+		LastCheck:         now.Add(-60 * time.Second).Unix(),
+		SnoozeUntil:       now.Add(2 * time.Minute).Unix(),
+		LastUpdateDate:    now.Format("2006-01-02"),
+		TodayWorkSeconds:  45 * 60,
+		TodayBreakSeconds: 300,
+	}
+
+	result := Tick(cfg, s, now, cfg.NaturalBreakSec+1)
+	if result.State.WorkSeconds != 0 {
+		t.Fatalf("WorkSeconds = %d, want 0", result.State.WorkSeconds)
+	}
+	if result.State.SnoozeUntil != 0 {
+		t.Fatalf("SnoozeUntil = %d, want 0", result.State.SnoozeUntil)
+	}
+	for _, action := range result.Actions {
+		if action == ActionNotifyBreakTime {
+			t.Fatalf("unexpected break notification after natural break: %v", action)
+		}
+	}
+}
+
 func TestBreakWarningSuppressedAtIdleThresholdBoundary(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)

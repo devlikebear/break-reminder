@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -15,6 +16,7 @@ var (
 	version    = "dev"
 	cfg        config.Config
 	loadConfig = config.Load
+	nowFunc    = time.Now
 )
 
 const allowInvalidConfigAnnotation = "allow-invalid-config"
@@ -69,6 +71,7 @@ func newRootCmd() *cobra.Command {
 		newDoctorCmd(),
 		newServiceCmd(),
 		newBreakCmd(),
+		newSnoozeCmd(),
 		newConfigCmd(),
 		newTTSCmd(),
 		newAICmd(),

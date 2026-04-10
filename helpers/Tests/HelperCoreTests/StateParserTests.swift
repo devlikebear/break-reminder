@@ -8,6 +8,9 @@ final class StateParserTests: XCTestCase {
         MODE=work
         LAST_CHECK=1710000000
         BREAK_START=0
+        SNOOZE_UNTIL=1710000300
+        PAUSED=true
+        PAUSED_AT=1710000200
         TODAY_WORK_SECONDS=3600
         TODAY_BREAK_SECONDS=600
         LAST_UPDATE_DATE=2026-03-18
@@ -17,6 +20,9 @@ final class StateParserTests: XCTestCase {
         XCTAssertEqual(s.mode, "work")
         XCTAssertEqual(s.lastCheck, 1710000000)
         XCTAssertEqual(s.breakStart, 0)
+        XCTAssertEqual(s.snoozeUntil, 1710000300)
+        XCTAssertTrue(s.paused)
+        XCTAssertEqual(s.pausedAt, 1710000200)
         XCTAssertEqual(s.todayWorkSeconds, 3600)
         XCTAssertEqual(s.todayBreakSeconds, 600)
         XCTAssertEqual(s.lastUpdateDate, "2026-03-18")
@@ -54,6 +60,9 @@ final class StateParserTests: XCTestCase {
         original.mode = "break"
         original.lastCheck = 1710000000
         original.breakStart = 1709999000
+        original.snoozeUntil = 1710000300
+        original.paused = true
+        original.pausedAt = 1710000200
         original.todayWorkSeconds = 7200
         original.todayBreakSeconds = 1200
         original.lastUpdateDate = "2026-03-18"

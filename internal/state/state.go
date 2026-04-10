@@ -2,12 +2,20 @@ package state
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+)
+
+var (
+	ErrBreakNotActive = errors.New("snooze requires an active break")
+	ErrStatePaused    = errors.New("cannot snooze while paused")
+	ErrInvalidSnooze  = errors.New("snooze duration must be greater than zero")
 )
 
 // State represents the application's current timer state.
@@ -16,6 +24,9 @@ type State struct {
 	Mode                   string `json:"mode"` // "work" or "break"
 	LastCheck              int64  `json:"last_check"`
 	BreakStart             int64  `json:"break_start"`
+	SnoozeUntil            int64  `json:"snooze_until"`
+	Paused                 bool   `json:"paused"`
+	PausedAt               int64  `json:"paused_at"`
 	TodayWorkSeconds       int    `json:"today_work_seconds"`
 	TodayBreakSeconds      int    `json:"today_break_seconds"`
 	LastUpdateDate         string `json:"last_update_date"`
@@ -42,9 +53,54 @@ func New() State {
 func (s State) EnterBreak(at int64) State {
 	s.Mode = "break"
 	s.BreakStart = at
+	s.SnoozeUntil = 0
 	s.WorkSeconds = 0
+	s.Paused = false
+	s.PausedAt = 0
 	s.LastBreakWarningBucket = 0
 	return s
+}
+
+// SnoozeBreak ends the current break and postpones the next break until now+d.
+func (s State) SnoozeBreak(now time.Time, d time.Duration) (State, error) {
+	if d <= 0 {
+		return s, ErrInvalidSnooze
+	}
+	if s.Paused || s.Mode == "paused" {
+		return s, ErrStatePaused
+	}
+	if s.Mode != "break" {
+		return s, ErrBreakNotActive
+	}
+
+	nowUnix := now.Unix()
+	today := now.Format("2006-01-02")
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).Unix()
+	if s.LastUpdateDate != today {
+		s.TodayWorkSeconds = 0
+		s.TodayBreakSeconds = 0
+		s.LastUpdateDate = today
+	} else if s.LastUpdateDate == "" {
+		s.LastUpdateDate = today
+	}
+
+	if s.LastCheck > 0 {
+		elapsedStart := s.LastCheck
+		if elapsedStart < startOfDay {
+			elapsedStart = startOfDay
+		}
+		if elapsed := int(nowUnix - elapsedStart); elapsed > 0 {
+			s.TodayBreakSeconds += elapsed
+		}
+	}
+
+	s.Mode = "work"
+	s.LastCheck = nowUnix
+	s.BreakStart = 0
+	s.SnoozeUntil = now.Add(d).Unix()
+	s.WorkSeconds = 0
+	s.LastBreakWarningBucket = 0
+	return s, nil
 }
 
 // Load reads state from the key=value file (compatible with bash version).
@@ -78,7 +134,7 @@ func Load(path string) (State, error) {
 				s.WorkSeconds = v
 			}
 		case "MODE":
-			if value == "work" || value == "break" {
+			if value == "work" || value == "break" || value == "paused" {
 				s.Mode = value
 			}
 		case "LAST_CHECK":
@@ -88,6 +144,16 @@ func Load(path string) (State, error) {
 		case "BREAK_START":
 			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
 				s.BreakStart = v
+			}
+		case "SNOOZE_UNTIL":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.SnoozeUntil = v
+			}
+		case "PAUSED":
+			s.Paused = value == "true"
+		case "PAUSED_AT":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.PausedAt = v
 			}
 		case "TODAY_WORK_SECONDS":
 			if v, err := strconv.Atoi(value); err == nil {
@@ -109,18 +175,85 @@ func Load(path string) (State, error) {
 	return s, scanner.Err()
 }
 
-// Save writes state in key=value format (compatible with bash version).
-func Save(path string, s State) error {
-	content := fmt.Sprintf(`WORK_SECONDS=%d
+func serialize(s State) string {
+	return fmt.Sprintf(`WORK_SECONDS=%d
 MODE=%s
 LAST_CHECK=%d
 BREAK_START=%d
+SNOOZE_UNTIL=%d
+PAUSED=%t
+PAUSED_AT=%d
 TODAY_WORK_SECONDS=%d
 TODAY_BREAK_SECONDS=%d
 LAST_UPDATE_DATE=%s
 LAST_BREAK_WARNING_BUCKET=%d
 `, s.WorkSeconds, s.Mode, s.LastCheck, s.BreakStart,
-		s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate, s.LastBreakWarningBucket)
+		s.SnoozeUntil, s.Paused, s.PausedAt, s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate, s.LastBreakWarningBucket)
+}
 
-	return os.WriteFile(path, []byte(content), 0o644)
+func saveUnlocked(path string, s State) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+
+	tmp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName)
+
+	if _, err := tmp.WriteString(serialize(s)); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmpName, path)
+}
+
+func withStateLock(path string, fn func() error) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+
+	lockFile, err := os.OpenFile(path+".lock", os.O_CREATE|os.O_RDWR, 0o644)
+	if err != nil {
+		return err
+	}
+	defer lockFile.Close()
+
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX); err != nil {
+		return err
+	}
+	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+
+	return fn()
+}
+
+// Update loads, mutates, and saves state under an exclusive file lock.
+func Update(path string, updateFn func(State) (State, error)) error {
+	return withStateLock(path, func() error {
+		s, err := Load(path)
+		if err != nil {
+			return err
+		}
+		updated, err := updateFn(s)
+		if err != nil {
+			return err
+		}
+		return saveUnlocked(path, updated)
+	})
+}
+
+// Save writes state in key=value format (compatible with bash version).
+func Save(path string, s State) error {
+	return withStateLock(path, func() error {
+		return saveUnlocked(path, s)
+	})
 }

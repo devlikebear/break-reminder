@@ -33,26 +33,37 @@ func newStatusCmd() *cobra.Command {
 			detector := idle.NewDetector()
 			idleSec := detector.IdleSeconds()
 			now := time.Now()
+			out := cmd.OutOrStdout()
 
-			fmt.Println("🐹 Break Reminder Status")
-			fmt.Println("========================")
-			fmt.Println("System:", launchd.Status())
+			fmt.Fprintln(out, "🐹 Break Reminder Status")
+			fmt.Fprintln(out, "========================")
+			fmt.Fprintln(out, "System:", launchd.Status())
 
 			if schedule.IsWorkingTime(cfg, now) {
-				fmt.Println("State:  Active (Within working hours)")
+				fmt.Fprintln(out, "State:  Active (Within working hours)")
 			} else {
-				fmt.Println("State:  Inactive (Outside working hours)")
+				fmt.Fprintln(out, "State:  Inactive (Outside working hours)")
 			}
 
-			fmt.Println("------------------------")
-			fmt.Println("Mode:", s.Mode)
-			fmt.Printf("Session Work: %dmin / %dmin\n", s.WorkSeconds/60, cfg.WorkDurationMin)
-			fmt.Printf("Daily Stats: Work %s / Break %s\n", fmtMin(s.TodayWorkSeconds/60), fmtMin(s.TodayBreakSeconds/60))
-			fmt.Printf("Current idle: %dsec\n", idleSec)
+			fmt.Fprintln(out, "------------------------")
+			modeLabel := s.Mode
+			if s.Paused {
+				modeLabel = fmt.Sprintf("paused (%s)", s.Mode)
+			}
+			fmt.Fprintln(out, "Mode:", modeLabel)
+			fmt.Fprintf(out, "Session Work: %dmin / %dmin\n", s.WorkSeconds/60, cfg.WorkDurationMin)
+			fmt.Fprintf(out, "Daily Stats: Work %s / Break %s\n", fmtMin(s.TodayWorkSeconds/60), fmtMin(s.TodayBreakSeconds/60))
+			fmt.Fprintf(out, "Current idle: %dsec\n", idleSec)
+			if s.Mode == "work" && s.SnoozeUntil > now.Unix() {
+				fmt.Fprintf(out, "Next break postponed until: %s\n", time.Unix(s.SnoozeUntil, 0).Format(time.RFC3339))
+			}
+			if s.Paused && s.PausedAt > 0 {
+				fmt.Fprintf(out, "Paused for: %s\n", now.Sub(time.Unix(s.PausedAt, 0)).Round(time.Second))
+			}
 
 			if s.Mode == "break" {
 				breakElapsed := int(now.Unix() - s.BreakStart)
-				fmt.Printf("Break elapsed: %dmin / %dmin\n", breakElapsed/60, cfg.BreakDurationMin)
+				fmt.Fprintf(out, "Break elapsed: %dmin / %dmin\n", breakElapsed/60, cfg.BreakDurationMin)
 			}
 
 			return nil
