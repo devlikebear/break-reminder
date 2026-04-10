@@ -198,6 +198,7 @@ class DashboardApp: NSObject, NSApplicationDelegate {
 
     func setupUI() {
         let content = window.contentView!
+        let controlsTopSpacing: CGFloat = 40
         var y: CGFloat = 470
 
         let title = makeLabel("Break Reminder", size: 20, weight: .bold, color: textColor)
@@ -285,7 +286,7 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         idleLabel = makeLabel("Idle: 0s", size: 12, weight: .regular, color: dimColor)
         idleLabel.frame = NSRect(x: 20, y: y, width: 320, height: 16)
         content.addSubview(idleLabel)
-        y -= 28
+        y -= controlsTopSpacing
 
         resetButton = makeStyledButton(title: "Reset", action: #selector(resetTimer))
         resetButton.frame = NSRect(x: 40, y: y, width: 120, height: 32)
