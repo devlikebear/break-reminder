@@ -25,6 +25,13 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🚀 Auto-start** — LaunchAgent service with 60-second check interval
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
+## 🆕 New In v0.5.0
+
+- **🍎 Native Menu Bar Workflow** — Launch `break-reminder menubar` for live progress, daily totals, and quick controls
+- **⏸️ Pause / Resume** — Freeze the current work or break session without losing progress
+- **😌 Deterministic Snooze** — End an active break early with `break-reminder snooze` and preserve the postponement across pause/resume
+- **📏 Sharper State Accuracy** — Paused state, day rollovers, and helper-side totals stay aligned across the menu bar, GUI dashboard, and status output
+
 ## 📦 Installation
 
 ### Homebrew (Recommended)

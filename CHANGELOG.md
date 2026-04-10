@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-11
+
+### Added
+- Native macOS menu bar app via `break-reminder menubar` with live progress, daily totals, and quick controls
+- Deterministic `break-reminder snooze` command for ending an active break early and postponing the next one
+- `break-reminder pause` and `break-reminder resume` commands that preserve active session state
+
+### Changed
+- Paused state now renders consistently across status output, TUI/GUI dashboards, and the menu bar app
+- Helper-side daily totals and progress interpolation now stay day-correct across rollovers and fresh starts
+- Release artifacts now ship the `break-menubar` helper alongside the existing binaries
+
+### Fixed
+- Active snooze windows no longer expire while the timer is paused
+- Menu bar and dashboard helper actions no longer rewrite stale totals back into the state file
+
+## [0.4.0] - 2026-04-09
+
+### Added
+- Minute-precision work schedule boundaries with `work_start_minute` and `work_end_minute`
+
+### Changed
+- Recovery-oriented commands remain available even when schedule config validation fails
+
+### Fixed
+- Active-break warning accounting now handles short breaks and timer edge cases more consistently
+- Invalid schedule config values are rejected without clobbering the last valid config state
+
 ## [0.3.0] - 2026-03-20
 
 ### Added

@@ -48,6 +48,7 @@ jobs:
           cd helpers && swift build -c release
           cp .build/release/BreakScreenApp ../bin/break-screen
           cp .build/release/DashboardApp ../bin/break-dashboard
+          cp .build/release/MenuBarApp ../bin/break-menubar
 
       - name: Run tests
         run: |
@@ -58,7 +59,7 @@ jobs:
         run: |
           cd bin
           tar czf break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz \
-            break-reminder break-screen break-dashboard
+            break-reminder break-screen break-dashboard break-menubar
           shasum -a 256 break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz \
             > break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz.sha256
 
