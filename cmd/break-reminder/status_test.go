@@ -38,6 +38,7 @@ func TestStatusShowsPausedBreakState(t *testing.T) {
 	}
 
 	cmd := newStatusCmd()
+	cmd.SetArgs(nil)
 	out := new(bytes.Buffer)
 	cmd.SetOut(out)
 	cmd.SetErr(new(bytes.Buffer))

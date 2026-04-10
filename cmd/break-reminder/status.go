@@ -57,6 +57,9 @@ func newStatusCmd() *cobra.Command {
 			fmt.Fprintf(out, "Session Work: %dmin / %dmin\n", s.WorkSeconds/60, cfg.WorkDurationMin)
 			fmt.Fprintf(out, "Daily Stats: Work %s / Break %s\n", fmtMin(s.TodayWorkSeconds/60), fmtMin(s.TodayBreakSeconds/60))
 			fmt.Fprintf(out, "Current idle: %dsec\n", idleSec)
+			if s.Mode == "work" && s.SnoozeUntil > now.Unix() {
+				fmt.Fprintf(out, "Next break postponed until: %s\n", time.Unix(s.SnoozeUntil, 0).Format(time.RFC3339))
+			}
 			if s.Paused && s.PausedAt > 0 {
 				fmt.Fprintf(out, "Paused for: %s\n", now.Sub(time.Unix(s.PausedAt, 0)).Round(time.Second))
 			}

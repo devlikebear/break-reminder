@@ -71,6 +71,7 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 	if elapsed > 3600 {
 		result.State.WorkSeconds = 0
 		result.State.Mode = "work"
+		result.State.SnoozeUntil = 0
 		result.State.LastCheck = unix
 		result.LogMsg = "Long gap detected, resetting..."
 		return result
@@ -112,8 +113,24 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 		remainMin := (workDur - r.State.WorkSeconds) / 60
 		r.LogMsg = "Working... " + itoa(workMin) + "min elapsed (" + itoa(remainMin) + "min remaining)"
 
+		snoozePending := r.State.SnoozeUntil > 0
+		snoozeActive := snoozePending && r.State.SnoozeUntil > unix
+		snoozeDue := snoozePending && r.State.SnoozeUntil <= unix
+
+		if snoozeDue {
+			r.LogMsg = "Snoozed break is due"
+			if idleSec < cfg.IdleThresholdSec {
+				r.Actions = append(r.Actions, ActionNotifyBreakTime)
+				if cfg.TTSEnabled {
+					r.Actions = append(r.Actions, ActionSpeakBreakTime)
+				}
+				r.State = r.State.EnterBreak(unix)
+				return r
+			}
+		}
+
 		// Break time!
-		if r.State.WorkSeconds >= workDur {
+		if !snoozePending && r.State.WorkSeconds >= workDur {
 			r.LogMsg = "Break time triggered!"
 			r.Actions = append(r.Actions, ActionNotifyBreakTime)
 			if cfg.TTSEnabled {
@@ -126,7 +143,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 		// 5-minute warning
 		warningStart := workDur - 5*60
 		warningEnd := warningStart + 60
-		if r.State.WorkSeconds >= warningStart && r.State.WorkSeconds < warningEnd {
+		if !snoozeActive && !snoozeDue && r.State.WorkSeconds >= warningStart && r.State.WorkSeconds < warningEnd {
 			r.Actions = append(r.Actions, ActionNotifyFiveMinWarning)
 		}
 	} else {
@@ -134,6 +151,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 		if idleSec > cfg.NaturalBreakSec {
 			r.LogMsg = "Natural break detected (idle " + itoa(idleSec) + "s), resetting work time"
 			r.State.WorkSeconds = 0
+			r.State.SnoozeUntil = 0
 		}
 	}
 

@@ -32,12 +32,18 @@ func runCheck() error {
 
 	// Check working hours
 	if !schedule.IsWorkingTime(cfg, now) {
-		return state.Update(statePath, func(s state.State) (state.State, error) {
+		if err := state.Update(statePath, func(s state.State) (state.State, error) {
 			if !s.Paused {
 				s.LastCheck = now.Unix()
 			}
 			return s, nil
-		})
+		}); err != nil {
+			log.Warn().Err(err).Msg("Failed to update state outside working hours, resetting state")
+			recovered := state.New()
+			recovered.LastCheck = now.Unix()
+			return state.Save(statePath, recovered)
+		}
+		return nil
 	}
 
 	detector := idle.NewDetector()

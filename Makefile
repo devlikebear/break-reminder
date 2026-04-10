@@ -13,6 +13,7 @@ build-helper:
 	cd helpers && swift build -c release
 	cp helpers/.build/release/BreakScreenApp $(BUILD_DIR)/$(HELPER)
 	cp helpers/.build/release/DashboardApp $(BUILD_DIR)/break-dashboard
+	cp helpers/.build/release/MenuBarApp $(BUILD_DIR)/break-menubar
 
 build: build-helper
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/break-reminder
@@ -22,6 +23,7 @@ install: build
 	cp $(BUILD_DIR)/$(BINARY) $(INSTALL_DIR)/
 	cp $(BUILD_DIR)/$(HELPER) $(INSTALL_DIR)/
 	cp $(BUILD_DIR)/break-dashboard $(INSTALL_DIR)/
+	cp $(BUILD_DIR)/break-menubar $(INSTALL_DIR)/
 	$(INSTALL_DIR)/$(BINARY) service install
 	@echo "Installed to $(INSTALL_DIR)/$(BINARY)"
 
@@ -36,7 +38,7 @@ test:
 
 release: build
 	@echo "Creating release archive $(VERSION)..."
-	cd $(BUILD_DIR) && tar czf $(BINARY)-$(VERSION)-darwin-arm64.tar.gz $(BINARY) $(HELPER) break-dashboard
+	cd $(BUILD_DIR) && tar czf $(BINARY)-$(VERSION)-darwin-arm64.tar.gz $(BINARY) $(HELPER) break-dashboard break-menubar
 	cd $(BUILD_DIR) && shasum -a 256 $(BINARY)-$(VERSION)-darwin-arm64.tar.gz > $(BINARY)-$(VERSION)-darwin-arm64.tar.gz.sha256
 	@echo "Archive: $(BUILD_DIR)/$(BINARY)-$(VERSION)-darwin-arm64.tar.gz"
 	@cat $(BUILD_DIR)/$(BINARY)-$(VERSION)-darwin-arm64.tar.gz.sha256

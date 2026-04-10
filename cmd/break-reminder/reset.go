@@ -15,9 +15,12 @@ func newResetCmd() *cobra.Command {
 		Use:   "reset",
 		Short: "Reset the timer",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			s := state.New()
-			s.LastCheck = time.Now().Unix()
-			if err := state.Save(state.DefaultStatePath(), s); err != nil {
+			now := time.Now()
+			if err := state.Update(state.DefaultStatePath(), func(state.State) (state.State, error) {
+				s := state.New()
+				s.LastCheck = now.Unix()
+				return s, nil
+			}); err != nil {
 				return err
 			}
 			logging.Log(logging.DefaultLogPath(), "Timer manually reset")

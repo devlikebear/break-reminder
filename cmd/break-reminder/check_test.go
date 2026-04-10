@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -80,6 +81,45 @@ func TestRunCheckOutsideWorkingHoursUpdatesUnpausedLastCheck(t *testing.T) {
 
 	if err := runCheck(); err != nil {
 		t.Fatalf("runCheck() error = %v", err)
+	}
+
+	loaded, err := state.Load(statePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.LastCheck != now.Unix() {
+		t.Fatalf("LastCheck = %d, want %d", loaded.LastCheck, now.Unix())
+	}
+}
+
+func TestRunCheckRecoversFromStateLoadFailure(t *testing.T) {
+	origCfg := cfg
+	origNow := nowFunc
+	defer func() {
+		cfg = origCfg
+		nowFunc = origNow
+	}()
+
+	cfg = config.Default()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+	nowFunc = func() time.Time { return now }
+
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	statePath := filepath.Join(tmpHome, ".break-reminder-state")
+	if err := os.MkdirAll(statePath, 0o755); err != nil {
+		t.Fatalf("MkdirAll: %v", err)
+	}
+
+	if err := runCheck(); err == nil {
+		t.Fatal("runCheck() error = nil, want state save failure for directory path")
+	}
+
+	if err := os.RemoveAll(statePath); err != nil {
+		t.Fatalf("RemoveAll: %v", err)
+	}
+	if err := runCheck(); err != nil {
+		t.Fatalf("runCheck() after cleanup error = %v", err)
 	}
 
 	loaded, err := state.Load(statePath)
