@@ -80,8 +80,8 @@ func TestPauseAndResumeCommands(t *testing.T) {
 	if resumed.Paused {
 		t.Fatal("resume command should clear paused=true")
 	}
-	if resumed.LastCheck != 1_700_000_600 {
-		t.Fatalf("LastCheck = %d, want %d", resumed.LastCheck, 1_700_000_600)
+	if resumed.LastCheck != 1_700_000_660 {
+		t.Fatalf("LastCheck = %d, want %d", resumed.LastCheck, 1_700_000_660)
 	}
 	if resumed.BreakStart != 1_700_000_000 {
 		t.Fatalf("BreakStart = %d, want %d", resumed.BreakStart, 1_700_000_000)

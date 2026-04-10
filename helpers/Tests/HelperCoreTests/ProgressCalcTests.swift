@@ -111,4 +111,33 @@ final class ProgressCalcTests: XCTestCase {
         let p = workProgress(state: state, config: config, now: 1000)
         XCTAssertEqual(p.progress, 0.0)
     }
+
+    func testPausedWorkProgressDoesNotKeepAdvancing() {
+        var state = AppState()
+        state.workSeconds = 900
+        state.lastCheck = 1000
+        state.paused = true
+        state.pausedAt = 1030
+
+        var config = AppConfig()
+        config.workDurationMin = 50
+
+        let p = workProgress(state: state, config: config, now: 1200)
+        XCTAssertEqual(p.elapsedSec, 900)
+        XCTAssertEqual(p.remainingSec, 2100)
+    }
+
+    func testPausedBreakProgressUsesPauseAnchor() {
+        var state = AppState()
+        state.breakStart = 1000
+        state.paused = true
+        state.pausedAt = 1180
+
+        var config = AppConfig()
+        config.breakDurationMin = 10
+
+        let p = breakProgress(state: state, config: config, now: 1600)
+        XCTAssertEqual(p.elapsedSec, 180)
+        XCTAssertEqual(p.remainingSec, 420)
+    }
 }

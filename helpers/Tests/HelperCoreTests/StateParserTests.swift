@@ -54,6 +54,8 @@ final class StateParserTests: XCTestCase {
         original.mode = "break"
         original.lastCheck = 1710000000
         original.breakStart = 1709999000
+        original.paused = true
+        original.pausedAt = 1710000300
         original.todayWorkSeconds = 7200
         original.todayBreakSeconds = 1200
         original.lastUpdateDate = "2026-03-18"
@@ -62,5 +64,12 @@ final class StateParserTests: XCTestCase {
         let parsed = parseState(from: serialized)
 
         XCTAssertEqual(parsed, original)
+    }
+
+    func testParsePausedFields() {
+        let content = "PAUSED=true\nPAUSED_AT=1710000300\n"
+        let s = parseState(from: content)
+        XCTAssertTrue(s.paused)
+        XCTAssertEqual(s.pausedAt, 1710000300)
     }
 }

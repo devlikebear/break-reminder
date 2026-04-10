@@ -186,8 +186,18 @@ func (m Model) View() string {
 	b.WriteString("System: " + launchd.Status() + "\n")
 
 	now := time.Now()
+	referenceNow := now
+	if m.state.Paused && m.state.PausedAt > 0 {
+		referenceNow = time.Unix(m.state.PausedAt, 0)
+	}
 	if !schedule.IsWorkingTime(m.cfg, now) {
 		b.WriteString("Status: " + yellowStyle.Render("SLEEPING (Outside Working Hours)") + "\n")
+	} else if m.state.Paused {
+		pausedMode := strings.ToUpper(m.state.Mode)
+		if pausedMode == "" {
+			pausedMode = "WORK"
+		}
+		b.WriteString("Status: " + yellowStyle.Render("PAUSED ("+pausedMode+")") + "\n")
 	} else if m.state.Mode == "work" {
 		b.WriteString("Status: " + greenStyle.Render("WORKING") + "\n")
 	} else {
@@ -211,7 +221,7 @@ func (m Model) View() string {
 			bar, m.state.WorkSeconds/60, m.cfg.WorkDurationMin))
 	} else {
 		breakDur := m.cfg.BreakDurationSec()
-		breakElapsed := int(now.Unix() - m.state.BreakStart)
+		breakElapsed := int(referenceNow.Unix() - m.state.BreakStart)
 		pct := 0
 		if breakDur > 0 {
 			pct = (breakElapsed * 100) / breakDur

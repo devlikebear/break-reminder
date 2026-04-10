@@ -13,7 +13,7 @@ public struct SessionProgress {
 /// Calculates work session progress, interpolating between check intervals.
 public func workProgress(state: AppState, config: AppConfig, now: Int64) -> SessionProgress {
     let totalSec = config.workDurationMin * 60
-    let sinceLastCheck = max(Int(now - state.lastCheck), 0)
+    let sinceLastCheck = state.paused ? 0 : max(Int(now - state.lastCheck), 0)
     let elapsed = state.workSeconds + sinceLastCheck
     let remaining = max(totalSec - elapsed, 0)
     let progress = totalSec > 0 ? min(Double(elapsed) / Double(totalSec), 1.0) : 0.0
@@ -24,7 +24,8 @@ public func workProgress(state: AppState, config: AppConfig, now: Int64) -> Sess
 /// Calculates break session progress.
 public func breakProgress(state: AppState, config: AppConfig, now: Int64) -> SessionProgress {
     let totalSec = config.breakDurationMin * 60
-    let elapsed = Int(now - state.breakStart)
+    let referenceNow = state.paused && state.pausedAt > 0 ? state.pausedAt : now
+    let elapsed = Int(referenceNow - state.breakStart)
     let remaining = max(totalSec - elapsed, 0)
     let progress = totalSec > 0 ? min(Double(elapsed) / Double(totalSec), 1.0) : 0.0
 

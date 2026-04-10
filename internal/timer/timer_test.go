@@ -455,3 +455,37 @@ func TestDailyResetWhileStillOnBreak(t *testing.T) {
 		t.Fatalf("TodayBreakSeconds = %d, want 60", result.State.TodayBreakSeconds)
 	}
 }
+
+func TestTickPausedOverMidnightOnlyRollsDailyTotals(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 16, 0, 5, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       1800,
+		TodayWorkSeconds:  7200,
+		TodayBreakSeconds: 900,
+		LastCheck:         time.Date(2025, 1, 15, 23, 55, 0, 0, time.Local).Unix(),
+		Paused:            true,
+		PausedAt:          time.Date(2025, 1, 15, 23, 58, 0, 0, time.Local).Unix(),
+		LastUpdateDate:    "2025-01-15",
+	}
+
+	result := Tick(cfg, s, now, 0)
+
+	if result.DayEndSummary == nil {
+		t.Fatal("expected DayEndSummary on rollover while paused")
+	}
+	if result.DayEndSummary.WorkSeconds != 7200 || result.DayEndSummary.BreakSeconds != 900 {
+		t.Fatalf("DayEndSummary = %+v, want prior-day totals", *result.DayEndSummary)
+	}
+	if result.State.TodayWorkSeconds != 0 || result.State.TodayBreakSeconds != 0 {
+		t.Fatalf("rolled-over totals = (%d,%d), want 0,0", result.State.TodayWorkSeconds, result.State.TodayBreakSeconds)
+	}
+	if result.State.LastCheck != s.LastCheck {
+		t.Fatalf("LastCheck = %d, want %d", result.State.LastCheck, s.LastCheck)
+	}
+	if !result.State.Paused {
+		t.Fatal("paused state should remain paused")
+	}
+}
