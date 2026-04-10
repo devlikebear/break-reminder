@@ -52,6 +52,8 @@ break-reminder check              # Single timer tick (used by launchd)
 break-reminder daemon             # Foreground loop
 break-reminder status             # Current state overview
 break-reminder reset              # Reset timer
+break-reminder pause              # Pause the timer without losing progress or any active snooze postponement
+break-reminder resume             # Resume the previous work/break mode
 break-reminder snooze             # End the current break early and postpone the next one by 5 min
 break-reminder snooze --for 10m   # Postpone the next break by a custom duration
 
@@ -126,10 +128,11 @@ Recent Logs:
 System: Installed & Running
 State:  Active (Within working hours)
 ------------------------
-Mode: work
+Mode: paused (work)
 Session Work: 32min / 50min
 Daily Stats: Work 2h 5m / Break 30m
 Current idle: 3sec
+Paused for: 4m12s
 ```
 
 ### Snoozing an active break

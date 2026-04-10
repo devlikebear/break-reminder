@@ -61,6 +61,104 @@ func (s State) EnterBreak(at int64) State {
 	return s
 }
 
+// Pause freezes the timer until Resume is called.
+func (s State) Pause(at int64) State {
+	if s.Paused {
+		return s
+	}
+	s = s.accrueUntil(at)
+	s.Paused = true
+	s.PausedAt = at
+	return s
+}
+
+func (s State) accrueUntil(at int64) State {
+	if at <= 0 {
+		return s
+	}
+	if s.LastUpdateDate == "" {
+		s.LastUpdateDate = time.Unix(at, 0).In(time.Local).Format("2006-01-02")
+	}
+	if s.LastCheck <= 0 || at <= s.LastCheck {
+		if s.LastCheck <= 0 {
+			s.LastCheck = at
+		}
+		return s
+	}
+
+	cursor := time.Unix(s.LastCheck, 0).In(time.Local)
+	target := time.Unix(at, 0).In(time.Local)
+	currentDate := cursor.Format("2006-01-02")
+	if s.LastUpdateDate == "" {
+		s.LastUpdateDate = currentDate
+	}
+
+	for currentDate != target.Format("2006-01-02") {
+		nextMidnight := time.Date(cursor.Year(), cursor.Month(), cursor.Day()+1, 0, 0, 0, 0, time.Local)
+		s = s.addElapsed(int(nextMidnight.Unix() - cursor.Unix()))
+		s.TodayWorkSeconds = 0
+		s.TodayBreakSeconds = 0
+		cursor = nextMidnight
+		currentDate = cursor.Format("2006-01-02")
+		s.LastUpdateDate = currentDate
+	}
+
+	s = s.addElapsed(int(target.Unix() - cursor.Unix()))
+	s.LastCheck = at
+	if s.LastUpdateDate == "" {
+		s.LastUpdateDate = target.Format("2006-01-02")
+	}
+	return s
+}
+
+func (s State) addElapsed(elapsed int) State {
+	if elapsed <= 0 {
+		return s
+	}
+	switch s.Mode {
+	case "break":
+		s.TodayBreakSeconds += elapsed
+	default:
+		s.WorkSeconds += elapsed
+		s.TodayWorkSeconds += elapsed
+	}
+	return s
+}
+
+// Resume unfreezes the timer and shifts time anchors so paused time is not counted.
+func (s State) Resume(at int64) State {
+	if !s.Paused {
+		return s
+	}
+	if s.PausedAt <= 0 {
+		if s.LastCheck > 0 {
+			s.LastCheck = at
+		}
+		if s.Mode == "break" && s.BreakStart > 0 {
+			s.BreakStart = at
+		}
+		s.Paused = false
+		s.PausedAt = 0
+		return s
+	}
+	gap := at - s.PausedAt
+	if gap < 0 {
+		gap = 0
+	}
+	if s.LastCheck > 0 {
+		s.LastCheck += gap
+	}
+	if s.Mode == "break" && s.BreakStart > 0 {
+		s.BreakStart += gap
+	}
+	if s.SnoozeUntil > 0 {
+		s.SnoozeUntil += gap
+	}
+	s.Paused = false
+	s.PausedAt = 0
+	return s
+}
+
 // SnoozeBreak ends the current break and postpones the next break until now+d.
 func (s State) SnoozeBreak(now time.Time, d time.Duration) (State, error) {
 	if d <= 0 {

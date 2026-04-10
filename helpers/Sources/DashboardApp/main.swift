@@ -304,25 +304,31 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let idleSec = getIdleSeconds()
 
         let isWork = state.mode == "work"
+        let isPaused = state.paused
         let activeColor = isWork ? workColor : breakColor
 
-        statusDot.layer?.backgroundColor = activeColor.cgColor
-        statusLabel.stringValue = isWork ? "WORKING" : "ON BREAK"
-        statusLabel.textColor = activeColor
+        statusDot.layer?.backgroundColor = (isPaused ? NSColor.systemYellow : activeColor).cgColor
+        if isPaused {
+            statusLabel.stringValue = "PAUSED (\(isWork ? "WORK" : "BREAK"))"
+            statusLabel.textColor = NSColor.systemYellow
+        } else {
+            statusLabel.stringValue = isWork ? "WORKING" : "ON BREAK"
+            statusLabel.textColor = activeColor
+        }
 
         let sp: SessionProgress
         if isWork {
             sp = workProgress(state: state, config: config, now: now)
             modeLabel.stringValue = "\(sp.elapsedSec / 60) / \(config.workDurationMin) min"
-            sessionInfoLabel.stringValue = "until break"
+            sessionInfoLabel.stringValue = isPaused ? "paused" : "until break"
         } else {
             sp = breakProgress(state: state, config: config, now: now)
             modeLabel.stringValue = "\(sp.elapsedSec / 60) / \(config.breakDurationMin) min"
-            sessionInfoLabel.stringValue = "until work"
+            sessionInfoLabel.stringValue = isPaused ? "paused" : "until work"
         }
 
         circularProgress.progress = CGFloat(sp.progress)
-        circularProgress.fillColor = activeColor
+        circularProgress.fillColor = isPaused ? NSColor.systemYellow : activeColor
         circularProgress.needsDisplay = true
         timeLabel.stringValue = sp.remainingFormatted
 

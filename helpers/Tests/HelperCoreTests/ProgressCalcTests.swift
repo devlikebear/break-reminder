@@ -21,13 +21,12 @@ final class ProgressCalcTests: XCTestCase {
 
     func testWorkProgressInterpolation() {
         var state = AppState()
-        state.workSeconds = 900  // 15 min from last check
+        state.workSeconds = 900
         state.lastCheck = 1000
 
         var config = AppConfig()
         config.workDurationMin = 50
 
-        // 30 seconds after last check → effective = 900 + 30 = 930s
         let p = workProgress(state: state, config: config, now: 1030)
         XCTAssertEqual(p.elapsedSec, 930)
         XCTAssertEqual(p.remainingSec, 3000 - 930)
@@ -73,6 +72,21 @@ final class ProgressCalcTests: XCTestCase {
         XCTAssertEqual(p.remainingFormatted, "25:00")
     }
 
+    func testPausedWorkProgressDoesNotKeepAdvancing() {
+        var state = AppState()
+        state.workSeconds = 900
+        state.lastCheck = 1000
+        state.paused = true
+        state.pausedAt = 1030
+
+        var config = AppConfig()
+        config.workDurationMin = 50
+
+        let p = workProgress(state: state, config: config, now: 1200)
+        XCTAssertEqual(p.elapsedSec, 900)
+        XCTAssertEqual(p.remainingSec, 2100)
+    }
+
     // MARK: - Break Progress
 
     func testBreakProgressAtStart() {
@@ -95,7 +109,6 @@ final class ProgressCalcTests: XCTestCase {
         var config = AppConfig()
         config.breakDurationMin = 10
 
-        // 5 minutes into break
         let p = breakProgress(state: state, config: config, now: 1300)
         XCTAssertEqual(p.progress, 0.5, accuracy: 0.001)
         XCTAssertEqual(p.remainingSec, 300)
@@ -125,6 +138,20 @@ final class ProgressCalcTests: XCTestCase {
         let p = breakProgress(state: state, config: config, now: 1700)
         XCTAssertEqual(p.progress, 1.0, accuracy: 0.001)
         XCTAssertEqual(p.remainingSec, 0)
+    }
+
+    func testPausedBreakProgressUsesPauseAnchor() {
+        var state = AppState()
+        state.breakStart = 1000
+        state.paused = true
+        state.pausedAt = 1180
+
+        var config = AppConfig()
+        config.breakDurationMin = 10
+
+        let p = breakProgress(state: state, config: config, now: 1600)
+        XCTAssertEqual(p.elapsedSec, 180)
+        XCTAssertEqual(p.remainingSec, 420)
     }
 
     func testZeroDurationConfig() {

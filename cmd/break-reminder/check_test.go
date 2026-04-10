@@ -11,22 +11,30 @@ import (
 )
 
 func TestRunCheckOutsideWorkingHoursPreservesPausedLastCheck(t *testing.T) {
+	origNowFunc := nowFunc
 	origCfg := cfg
-	origNow := nowFunc
 	defer func() {
+		nowFunc = origNowFunc
 		cfg = origCfg
-		nowFunc = origNow
 	}()
 
 	cfg = config.Default()
-	cfg.WorkDays = nil
-	now := time.Unix(1_700_000_000, 0)
-	nowFunc = func() time.Time { return now }
+	nowFunc = func() time.Time {
+		return time.Date(2025, 1, 15, 7, 30, 0, 0, time.Local)
+	}
 
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	statePath := filepath.Join(tmpHome, ".break-reminder-state")
-	if err := state.Save(statePath, state.State{Mode: "work", Paused: true, PausedAt: now.Add(-time.Minute).Unix(), LastCheck: now.Add(-2 * time.Hour).Unix(), LastUpdateDate: now.Format("2006-01-02")}); err != nil {
+
+	original := state.State{
+		Mode:           "work",
+		Paused:         true,
+		PausedAt:       1_700_000_060,
+		LastCheck:      1_700_000_000,
+		LastUpdateDate: "2025-01-15",
+	}
+	if err := state.Save(statePath, original); err != nil {
 		t.Fatalf("Save: %v", err)
 	}
 
@@ -38,11 +46,49 @@ func TestRunCheckOutsideWorkingHoursPreservesPausedLastCheck(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load: %v", err)
 	}
-	if loaded.LastCheck != now.Add(-2*time.Hour).Unix() {
-		t.Fatalf("LastCheck = %d, want %d", loaded.LastCheck, now.Add(-2*time.Hour).Unix())
+	if loaded.LastCheck != original.LastCheck {
+		t.Fatalf("LastCheck = %d, want %d", loaded.LastCheck, original.LastCheck)
 	}
 	if !loaded.Paused {
 		t.Fatal("Paused = false, want true")
+	}
+}
+
+func TestRunCheckOutsideWorkingHoursUpdatesUnpausedLastCheck(t *testing.T) {
+	origNowFunc := nowFunc
+	origCfg := cfg
+	defer func() {
+		nowFunc = origNowFunc
+		cfg = origCfg
+	}()
+
+	cfg = config.Default()
+	now := time.Date(2025, 1, 15, 7, 30, 0, 0, time.Local)
+	nowFunc = func() time.Time { return now }
+
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	statePath := filepath.Join(tmpHome, ".break-reminder-state")
+
+	original := state.State{
+		Mode:           "work",
+		LastCheck:      1_700_000_000,
+		LastUpdateDate: "2025-01-15",
+	}
+	if err := state.Save(statePath, original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	if err := runCheck(); err != nil {
+		t.Fatalf("runCheck() error = %v", err)
+	}
+
+	loaded, err := state.Load(statePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.LastCheck != now.Unix() {
+		t.Fatalf("LastCheck = %d, want %d", loaded.LastCheck, now.Unix())
 	}
 }
 
@@ -55,8 +101,7 @@ func TestRunCheckRecoversFromStateLoadFailure(t *testing.T) {
 	}()
 
 	cfg = config.Default()
-	cfg.WorkDays = nil
-	now := time.Unix(1_700_000_000, 0)
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
 	nowFunc = func() time.Time { return now }
 
 	tmpHome := t.TempDir()
