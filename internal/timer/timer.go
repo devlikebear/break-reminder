@@ -151,6 +151,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 		if idleSec > cfg.NaturalBreakSec {
 			r.LogMsg = "Natural break detected (idle " + itoa(idleSec) + "s), resetting work time"
 			r.State.WorkSeconds = 0
+			r.State.SnoozeUntil = 0
 		}
 	}
 

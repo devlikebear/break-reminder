@@ -161,6 +161,7 @@ func TestSnoozeBreakEndsBreakAndDefersNextWorkCycle(t *testing.T) {
 		WorkSeconds:            900,
 		SnoozeUntil:            now.Add(-time.Minute).Unix(),
 		TodayBreakSeconds:      120,
+		LastUpdateDate:         now.Format("2006-01-02"),
 		LastBreakWarningBucket: 2,
 	}).SnoozeBreak(now, 5*time.Minute)
 	if err != nil {
@@ -186,6 +187,30 @@ func TestSnoozeBreakEndsBreakAndDefersNextWorkCycle(t *testing.T) {
 	}
 	if updated.TodayBreakSeconds != 150 {
 		t.Fatalf("TodayBreakSeconds = %d, want 150", updated.TodayBreakSeconds)
+	}
+}
+
+func TestSnoozeBreakRollsOverDailyBreakTotalsBeforeAccumulating(t *testing.T) {
+	now := time.Date(2025, 1, 16, 0, 1, 0, 0, time.Local)
+	updated, err := (State{
+		Mode:              "break",
+		BreakStart:        time.Date(2025, 1, 15, 23, 58, 0, 0, time.Local).Unix(),
+		LastCheck:         now.Add(-60 * time.Second).Unix(),
+		TodayWorkSeconds:  5000,
+		TodayBreakSeconds: 900,
+		LastUpdateDate:    "2025-01-15",
+	}).SnoozeBreak(now, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("SnoozeBreak() error = %v", err)
+	}
+	if updated.LastUpdateDate != "2025-01-16" {
+		t.Fatalf("LastUpdateDate = %q, want 2025-01-16", updated.LastUpdateDate)
+	}
+	if updated.TodayWorkSeconds != 0 {
+		t.Fatalf("TodayWorkSeconds = %d, want 0", updated.TodayWorkSeconds)
+	}
+	if updated.TodayBreakSeconds != 60 {
+		t.Fatalf("TodayBreakSeconds = %d, want 60", updated.TodayBreakSeconds)
 	}
 }
 

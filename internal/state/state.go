@@ -73,14 +73,29 @@ func (s State) SnoozeBreak(now time.Time, d time.Duration) (State, error) {
 		return s, ErrBreakNotActive
 	}
 
+	nowUnix := now.Unix()
+	today := now.Format("2006-01-02")
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location()).Unix()
+	if s.LastUpdateDate != today {
+		s.TodayWorkSeconds = 0
+		s.TodayBreakSeconds = 0
+		s.LastUpdateDate = today
+	} else if s.LastUpdateDate == "" {
+		s.LastUpdateDate = today
+	}
+
 	if s.LastCheck > 0 {
-		if elapsed := int(now.Unix() - s.LastCheck); elapsed > 0 {
+		elapsedStart := s.LastCheck
+		if elapsedStart < startOfDay {
+			elapsedStart = startOfDay
+		}
+		if elapsed := int(nowUnix - elapsedStart); elapsed > 0 {
 			s.TodayBreakSeconds += elapsed
 		}
 	}
 
 	s.Mode = "work"
-	s.LastCheck = now.Unix()
+	s.LastCheck = nowUnix
 	s.BreakStart = 0
 	s.SnoozeUntil = now.Add(d).Unix()
 	s.WorkSeconds = 0

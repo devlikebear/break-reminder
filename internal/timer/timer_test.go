@@ -362,6 +362,34 @@ func TestWorkTickContinuesAccumulatingDuringSnoozeWithoutTriggeringBreak(t *test
 	}
 }
 
+func TestNaturalBreakClearsPendingSnooze(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       45 * 60,
+		LastCheck:         now.Add(-60 * time.Second).Unix(),
+		SnoozeUntil:       now.Add(2 * time.Minute).Unix(),
+		LastUpdateDate:    now.Format("2006-01-02"),
+		TodayWorkSeconds:  45 * 60,
+		TodayBreakSeconds: 300,
+	}
+
+	result := Tick(cfg, s, now, cfg.NaturalBreakSec+1)
+	if result.State.WorkSeconds != 0 {
+		t.Fatalf("WorkSeconds = %d, want 0", result.State.WorkSeconds)
+	}
+	if result.State.SnoozeUntil != 0 {
+		t.Fatalf("SnoozeUntil = %d, want 0", result.State.SnoozeUntil)
+	}
+	for _, action := range result.Actions {
+		if action == ActionNotifyBreakTime {
+			t.Fatalf("unexpected break notification after natural break: %v", action)
+		}
+	}
+}
+
 func TestBreakWarningSuppressedAtIdleThresholdBoundary(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
