@@ -1,9 +1,9 @@
 class BreakReminder < Formula
   desc "Smart work/break cycle enforcer for macOS with guided breaks and AI integration"
   homepage "https://github.com/devlikebear/break-reminder"
-  url "https://github.com/devlikebear/break-reminder/releases/download/v0.4.0/break-reminder-v0.4.0-darwin-arm64.tar.gz"
-  sha256 "aa08df5297c0fae7ccc2bc56ee5d52d9e7ba206bafec3daacf5df95e035bc277"
-  version "0.4.0"
+  url "https://github.com/devlikebear/break-reminder/releases/download/v0.5.0/break-reminder-v0.5.0-darwin-arm64.tar.gz"
+  sha256 "64ccd1052a047e41e16b4899ca8cf64ae00f26fda15fdb615566c7434fa11d10"
+  version "0.5.0"
   license "MIT"
 
   depends_on :macos
