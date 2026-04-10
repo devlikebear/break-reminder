@@ -120,6 +120,10 @@ Recent Logs:
 ──────────────────────────────────────────────────
 ```
 
+### Menu Bar (macOS)
+
+The native menu bar app now shows live mode/progress in the title (`🟢 31% · 34m left`, `☕ 25% · 7m left`) and exposes today's work/break totals inside the menu. For the smoothest updates, run it alongside the LaunchAgent/service so the state file stays current.
+
 ### Status Output
 
 ```
