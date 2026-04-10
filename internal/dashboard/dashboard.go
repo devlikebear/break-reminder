@@ -190,14 +190,14 @@ func (m Model) View() string {
 	if m.state.Paused && m.state.PausedAt > 0 {
 		referenceNow = time.Unix(m.state.PausedAt, 0)
 	}
-	if !schedule.IsWorkingTime(m.cfg, now) {
-		b.WriteString("Status: " + yellowStyle.Render("SLEEPING (Outside Working Hours)") + "\n")
-	} else if m.state.Paused {
+	if m.state.Paused {
 		pausedMode := strings.ToUpper(m.state.Mode)
 		if pausedMode == "" {
 			pausedMode = "WORK"
 		}
 		b.WriteString("Status: " + yellowStyle.Render("PAUSED ("+pausedMode+")") + "\n")
+	} else if !schedule.IsWorkingTime(m.cfg, now) {
+		b.WriteString("Status: " + yellowStyle.Render("SLEEPING (Outside Working Hours)") + "\n")
 	} else if m.state.Mode == "work" {
 		b.WriteString("Status: " + greenStyle.Render("WORKING") + "\n")
 	} else {
