@@ -26,6 +26,7 @@ public func todayTotals(state: AppState, config: AppConfig, now: Int64) -> Today
 
 public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) -> MenuBarPresentation {
     let totals = todayTotals(state: state, config: config, now: now)
+    let statsLine = "Today · Work \(formatMinutes(totals.workMinutes)) · Break \(formatMinutes(totals.breakMinutes))"
 
     if state.mode == "break" {
         let progress = breakProgress(state: state, config: config, now: now)
@@ -33,10 +34,18 @@ public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) 
         let elapsedMinutes = progress.elapsedSec / 60
         let remainingMinutes = progress.remainingSec / 60
 
+        if state.paused {
+            return MenuBarPresentation(
+                title: "PAUSED (BREAK) · \(remainingMinutes)m left",
+                statusLine: "PAUSED (BREAK) · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until work",
+                statsLine: statsLine
+            )
+        }
+
         return MenuBarPresentation(
             title: "☕ \(percent)% · \(remainingMinutes)m left",
             statusLine: "On break · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until work",
-            statsLine: "Today · Work \(formatMinutes(totals.workMinutes)) · Break \(formatMinutes(totals.breakMinutes))"
+            statsLine: statsLine
         )
     }
 
@@ -45,9 +54,17 @@ public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) 
     let elapsedMinutes = progress.elapsedSec / 60
     let remainingMinutes = progress.remainingSec / 60
 
+    if state.paused {
+        return MenuBarPresentation(
+            title: "PAUSED (WORK) · \(remainingMinutes)m left",
+            statusLine: "PAUSED (WORK) · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until break",
+            statsLine: statsLine
+        )
+    }
+
     return MenuBarPresentation(
         title: "🟢 \(percent)% · \(remainingMinutes)m left",
         statusLine: "Working · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until break",
-        statsLine: "Today · Work \(formatMinutes(totals.workMinutes)) · Break \(formatMinutes(totals.breakMinutes))"
+        statsLine: statsLine
     )
 }

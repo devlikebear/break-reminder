@@ -93,6 +93,59 @@ final class MenuBarPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.statsLine, "Today · Work 2h · Break 10m")
     }
 
+    func testMenuBarPresentationForPausedWorkMode() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let now: Int64 = 1_090
+
+        var state = AppState()
+        state.mode = "work"
+        state.paused = true
+        state.workSeconds = 900
+        state.lastCheck = 1_000
+        state.todayWorkSeconds = 3_600
+        state.todayBreakSeconds = 1_200
+        state.lastUpdateDate = formatter.string(from: Date(timeIntervalSince1970: TimeInterval(now)))
+
+        var config = AppConfig()
+        config.workDurationMin = 50
+        config.breakDurationMin = 10
+        config.checkIntervalSec = 60
+
+        let presentation = menuBarPresentation(state: state, config: config, now: now)
+
+        XCTAssertEqual(presentation.title, "PAUSED (WORK) · 35m left")
+        XCTAssertEqual(presentation.statusLine, "PAUSED (WORK) · 15m elapsed · 35m until break")
+        XCTAssertEqual(presentation.statsLine, "Today · Work 1h · Break 20m")
+    }
+
+    func testMenuBarPresentationForPausedBreakMode() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let now: Int64 = 2_210
+
+        var state = AppState()
+        state.mode = "break"
+        state.paused = true
+        state.breakStart = 2_000
+        state.pausedAt = 2_120
+        state.lastCheck = 2_100
+        state.todayWorkSeconds = 7_200
+        state.todayBreakSeconds = 600
+        state.lastUpdateDate = formatter.string(from: Date(timeIntervalSince1970: TimeInterval(now)))
+
+        var config = AppConfig()
+        config.workDurationMin = 50
+        config.breakDurationMin = 10
+        config.checkIntervalSec = 60
+
+        let presentation = menuBarPresentation(state: state, config: config, now: now)
+
+        XCTAssertEqual(presentation.title, "PAUSED (BREAK) · 8m left")
+        XCTAssertEqual(presentation.statusLine, "PAUSED (BREAK) · 2m elapsed · 8m until work")
+        XCTAssertEqual(presentation.statsLine, "Today · Work 2h · Break 10m")
+    }
+
     func testTodayTotalsResetsStalePreviousDayTotals() {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
