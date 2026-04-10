@@ -71,7 +71,6 @@ func TestLoadBashFormat(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bash-state")
 
-	// Simulate bash script's state file format
 	content := `WORK_SECONDS=2400
 MODE=break
 LAST_CHECK=1700000100
@@ -149,6 +148,153 @@ func TestEnterBreakResetsWarningBucket(t *testing.T) {
 	}
 	if updated.LastBreakWarningBucket != 0 {
 		t.Fatalf("LastBreakWarningBucket = %d, want 0", updated.LastBreakWarningBucket)
+	}
+}
+
+func TestResumeWithMissingPausedAtResetsAnchorsSafely(t *testing.T) {
+	updated := (State{
+		Mode:       "break",
+		Paused:     true,
+		PausedAt:   0,
+		LastCheck:  100,
+		BreakStart: 80,
+	}).Resume(250)
+
+	if updated.Paused {
+		t.Fatal("Paused = true, want false")
+	}
+	if updated.PausedAt != 0 {
+		t.Fatalf("PausedAt = %d, want 0", updated.PausedAt)
+	}
+	if updated.LastCheck != 250 {
+		t.Fatalf("LastCheck = %d, want 250", updated.LastCheck)
+	}
+	if updated.BreakStart != 250 {
+		t.Fatalf("BreakStart = %d, want 250", updated.BreakStart)
+	}
+}
+
+func TestPauseAndResumeRoundTrip(t *testing.T) {
+	original := State{
+		Mode:           "break",
+		LastCheck:      1_700_000_000,
+		BreakStart:     1_699_999_400,
+		LastUpdateDate: "2025-01-15",
+	}
+
+	paused := original.Pause(1_700_000_060)
+	if !paused.Paused {
+		t.Fatal("Pause() should mark the state as paused")
+	}
+	if paused.PausedAt != 1_700_000_060 {
+		t.Fatalf("PausedAt = %d, want %d", paused.PausedAt, 1_700_000_060)
+	}
+
+	resumed := paused.Resume(1_700_000_660)
+	if resumed.Paused {
+		t.Fatal("Resume() should clear paused state")
+	}
+	if resumed.PausedAt != 0 {
+		t.Fatalf("PausedAt = %d, want 0", resumed.PausedAt)
+	}
+	if resumed.LastCheck != 1_700_000_660 {
+		t.Fatalf("LastCheck = %d, want %d", resumed.LastCheck, 1_700_000_660)
+	}
+	if resumed.BreakStart != 1_700_000_000 {
+		t.Fatalf("BreakStart = %d, want %d", resumed.BreakStart, 1_700_000_000)
+	}
+}
+
+func TestResumeShiftsPendingSnoozeWindowByPausedGap(t *testing.T) {
+	original := State{
+		Mode:           "work",
+		LastCheck:      1_700_000_000,
+		SnoozeUntil:    1_700_000_300,
+		Paused:         true,
+		PausedAt:       1_700_000_060,
+		LastUpdateDate: "2025-01-15",
+	}
+
+	resumed := original.Resume(1_700_000_660)
+
+	if resumed.Paused {
+		t.Fatal("Resume() should clear paused state")
+	}
+	if resumed.PausedAt != 0 {
+		t.Fatalf("PausedAt = %d, want 0", resumed.PausedAt)
+	}
+	if resumed.LastCheck != 1_700_000_600 {
+		t.Fatalf("LastCheck = %d, want %d", resumed.LastCheck, 1_700_000_600)
+	}
+	if resumed.SnoozeUntil != 1_700_000_900 {
+		t.Fatalf("SnoozeUntil = %d, want %d", resumed.SnoozeUntil, 1_700_000_900)
+	}
+}
+
+func TestPauseSettlesElapsedWorkBeforeFreezing(t *testing.T) {
+	original := State{
+		Mode:             "work",
+		WorkSeconds:      900,
+		TodayWorkSeconds: 3600,
+		LastCheck:        1_700_000_000,
+		LastUpdateDate:   "2025-01-15",
+	}
+
+	paused := original.Pause(1_700_000_120)
+
+	if paused.WorkSeconds != 1020 {
+		t.Fatalf("WorkSeconds = %d, want 1020", paused.WorkSeconds)
+	}
+	if paused.TodayWorkSeconds != 3720 {
+		t.Fatalf("TodayWorkSeconds = %d, want 3720", paused.TodayWorkSeconds)
+	}
+	if paused.LastCheck != 1_700_000_120 {
+		t.Fatalf("LastCheck = %d, want 1700000120", paused.LastCheck)
+	}
+	if !paused.Paused {
+		t.Fatal("Pause() should mark the state as paused")
+	}
+}
+
+func TestPauseSettlesElapsedBreakAcrossMidnight(t *testing.T) {
+	original := State{
+		Mode:              "break",
+		BreakStart:        time.Date(2025, 1, 15, 23, 45, 0, 0, time.Local).Unix(),
+		LastCheck:         time.Date(2025, 1, 15, 23, 59, 0, 0, time.Local).Unix(),
+		TodayWorkSeconds:  5000,
+		TodayBreakSeconds: 900,
+		LastUpdateDate:    "2025-01-15",
+	}
+
+	pausedAt := time.Date(2025, 1, 16, 0, 1, 0, 0, time.Local).Unix()
+	paused := original.Pause(pausedAt)
+
+	if paused.TodayBreakSeconds != 60 {
+		t.Fatalf("TodayBreakSeconds = %d, want 60", paused.TodayBreakSeconds)
+	}
+	if paused.LastUpdateDate != "2025-01-16" {
+		t.Fatalf("LastUpdateDate = %q, want 2025-01-16", paused.LastUpdateDate)
+	}
+	if paused.LastCheck != pausedAt {
+		t.Fatalf("LastCheck = %d, want %d", paused.LastCheck, pausedAt)
+	}
+	if !paused.Paused {
+		t.Fatal("Pause() should mark the state as paused")
+	}
+}
+
+func TestPauseAlreadyPausedIsNoOp(t *testing.T) {
+	paused := State{Mode: "work", Paused: true, PausedAt: 123}.Pause(456)
+	if paused.PausedAt != 123 {
+		t.Fatalf("PausedAt = %d, want 123", paused.PausedAt)
+	}
+
+	resumed := (State{Mode: "work", LastCheck: 789}).Resume(999)
+	if resumed.LastCheck != 789 {
+		t.Fatalf("LastCheck = %d, want 789", resumed.LastCheck)
+	}
+	if resumed.Paused {
+		t.Fatal("Resume() should not mark an unpaused state as paused")
 	}
 }
 

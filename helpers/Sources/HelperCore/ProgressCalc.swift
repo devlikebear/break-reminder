@@ -32,6 +32,7 @@ private func maxExpectedElapsed(config: AppConfig) -> Int {
 }
 
 private func activeElapsedSinceLastCheck(state: AppState, config: AppConfig, now: Int64) -> Int {
+    guard !state.paused else { return 0 }
     guard state.lastCheck > 0 else { return 0 }
     let elapsed = max(Int(now - state.lastCheck), 0)
     guard elapsed <= maxExpectedElapsed(config: config) else { return 0 }
@@ -39,6 +40,7 @@ private func activeElapsedSinceLastCheck(state: AppState, config: AppConfig, now
 }
 
 private func currentDayActiveElapsed(state: AppState, config: AppConfig, now: Int64) -> Int {
+    guard !state.paused else { return 0 }
     guard state.lastCheck > 0 else { return 0 }
     let elapsed = max(Int(now - state.lastCheck), 0)
     guard elapsed <= maxExpectedElapsed(config: config) else { return 0 }
@@ -99,7 +101,8 @@ public func workProgress(state: AppState, config: AppConfig, now: Int64) -> Sess
 /// Calculates break session progress.
 public func breakProgress(state: AppState, config: AppConfig, now: Int64) -> SessionProgress {
     let totalSec = config.breakDurationMin * 60
-    let elapsed = state.breakStart > 0 ? max(Int(now - state.breakStart), 0) : 0
+    let referenceNow = state.paused && state.pausedAt > 0 ? state.pausedAt : now
+    let elapsed = state.breakStart > 0 ? max(Int(referenceNow - state.breakStart), 0) : 0
     let remaining = max(totalSec - elapsed, 0)
     let progress = totalSec > 0 ? min(Double(elapsed) / Double(totalSec), 1.0) : 0.0
 

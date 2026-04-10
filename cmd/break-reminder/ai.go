@@ -105,7 +105,7 @@ func newAISummaryCmd() *cobra.Command {
 			s, _ := state.Load(state.DefaultStatePath())
 			now := time.Now().Unix()
 			todayWorkSec := s.TodayWorkSeconds
-			if s.Mode == "work" && s.LastCheck > 0 {
+			if s.Mode == "work" && !s.Paused && s.LastCheck > 0 {
 				todayWorkSec += int(now - s.LastCheck)
 			}
 			todaySummary := ai.DailySummary{

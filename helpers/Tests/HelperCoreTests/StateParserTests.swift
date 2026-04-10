@@ -72,4 +72,11 @@ final class StateParserTests: XCTestCase {
 
         XCTAssertEqual(parsed, original)
     }
+
+    func testParsePausedFields() {
+        let content = "PAUSED=true\nPAUSED_AT=1710000300\n"
+        let s = parseState(from: content)
+        XCTAssertTrue(s.paused)
+        XCTAssertEqual(s.pausedAt, 1710000300)
+    }
 }

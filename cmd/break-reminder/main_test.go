@@ -33,7 +33,7 @@ func TestRootCommandAllowsRecoveryCommandsWithInvalidConfig(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	for _, args := range [][]string{{"version"}, {"config", "path"}, {"config", "edit"}} {
+	for _, args := range [][]string{{"version"}, {"config", "path"}, {"config", "edit"}, {"pause"}, {"resume"}} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			cmd := newRootCmd()
 			cmd.SetArgs(args)

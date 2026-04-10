@@ -127,3 +127,30 @@ func TestUpdateLogsInvalidConfigReloadAgainAfterRecovery(t *testing.T) {
 		t.Fatalf("WorkStartMinute = %d, want 30 from recovered config", model.cfg.WorkStartMinute)
 	}
 }
+
+func TestViewShowsPausedStateAndFrozenBreakProgress(t *testing.T) {
+	pausedAt := time.Now().Add(-2 * time.Minute).Unix()
+	breakStart := time.Unix(pausedAt, 0).Add(-3 * time.Minute).Unix()
+	m := Model{
+		cfg: config.Default(),
+		state: state.State{
+			Mode:              "break",
+			Paused:            true,
+			PausedAt:          pausedAt,
+			BreakStart:        breakStart,
+			TodayWorkSeconds:  3600,
+			TodayBreakSeconds: 600,
+		},
+	}
+
+	view := m.View()
+	if !strings.Contains(view, "PAUSED") {
+		t.Fatalf("view = %q, want paused indicator", view)
+	}
+	if !strings.Contains(view, "Break Timer") {
+		t.Fatalf("view = %q, want break timer section", view)
+	}
+	if !strings.Contains(view, "3 / 10 min") {
+		t.Fatalf("view = %q, want frozen break progress based on pause time", view)
+	}
+}

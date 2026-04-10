@@ -289,6 +289,36 @@ func TestBreakWarningAdvancesOnNewBucket(t *testing.T) {
 	}
 }
 
+func TestTickPausedSkipsCounting(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 15, 10, 20, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:             "work",
+		WorkSeconds:      25 * 60,
+		TodayWorkSeconds: 2 * 3600,
+		LastCheck:        now.Add(-15 * time.Minute).Unix(),
+		Paused:           true,
+		PausedAt:         now.Add(-10 * time.Minute).Unix(),
+		LastUpdateDate:   now.Format("2006-01-02"),
+	}
+
+	result := Tick(cfg, s, now, 0)
+
+	if result.State.WorkSeconds != s.WorkSeconds {
+		t.Fatalf("WorkSeconds = %d, want %d", result.State.WorkSeconds, s.WorkSeconds)
+	}
+	if result.State.TodayWorkSeconds != s.TodayWorkSeconds {
+		t.Fatalf("TodayWorkSeconds = %d, want %d", result.State.TodayWorkSeconds, s.TodayWorkSeconds)
+	}
+	if result.State.LastCheck != s.LastCheck {
+		t.Fatalf("LastCheck = %d, want %d", result.State.LastCheck, s.LastCheck)
+	}
+	if len(result.Actions) != 0 {
+		t.Fatalf("Actions = %v, want none", result.Actions)
+	}
+}
+
 func TestWorkTickAtIdleThresholdDoesNotAccumulate(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
@@ -359,6 +389,38 @@ func TestWorkTickContinuesAccumulatingDuringSnoozeWithoutTriggeringBreak(t *test
 	}
 	if afterSnooze.State.SnoozeUntil != 0 {
 		t.Fatalf("SnoozeUntil after snooze = %d, want 0", afterSnooze.State.SnoozeUntil)
+	}
+}
+
+func TestWorkTickDoesNotExpireSnoozeWhilePaused(t *testing.T) {
+	cfg := config.Default()
+	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	snoozed, err := (state.State{
+		Mode:           "break",
+		BreakStart:     start.Add(-2 * time.Minute).Unix(),
+		LastCheck:      start.Unix(),
+		LastUpdateDate: start.Format("2006-01-02"),
+	}).SnoozeBreak(start, 5*time.Minute)
+	if err != nil {
+		t.Fatalf("SnoozeBreak() error = %v", err)
+	}
+
+	paused := snoozed.Pause(start.Add(30 * time.Second).Unix())
+	resumed := paused.Resume(start.Add(6 * time.Minute).Unix())
+
+	if resumed.SnoozeUntil != start.Add(10*time.Minute + 30*time.Second).Unix() {
+		t.Fatalf("SnoozeUntil after resume = %d, want %d", resumed.SnoozeUntil, start.Add(10*time.Minute+30*time.Second).Unix())
+	}
+
+	afterResume := Tick(cfg, resumed, start.Add(6*time.Minute+30*time.Second), 5)
+	if afterResume.State.Mode != "work" {
+		t.Fatalf("Mode after resuming mid-snooze = %q, want work", afterResume.State.Mode)
+	}
+	for _, action := range afterResume.Actions {
+		if action == ActionNotifyBreakTime {
+			t.Fatalf("unexpected break notification while snooze should still be frozen: %v", action)
+		}
 	}
 }
 
@@ -496,5 +558,39 @@ func TestDailyResetWhileStillOnBreak(t *testing.T) {
 	}
 	if result.State.TodayBreakSeconds != 60 {
 		t.Fatalf("TodayBreakSeconds = %d, want 60", result.State.TodayBreakSeconds)
+	}
+}
+
+func TestTickPausedOverMidnightOnlyRollsDailyTotals(t *testing.T) {
+	cfg := config.Default()
+	now := time.Date(2025, 1, 16, 0, 5, 0, 0, time.Local)
+
+	s := state.State{
+		Mode:              "work",
+		WorkSeconds:       1800,
+		TodayWorkSeconds:  7200,
+		TodayBreakSeconds: 900,
+		LastCheck:         time.Date(2025, 1, 15, 23, 55, 0, 0, time.Local).Unix(),
+		Paused:            true,
+		PausedAt:          time.Date(2025, 1, 15, 23, 58, 0, 0, time.Local).Unix(),
+		LastUpdateDate:    "2025-01-15",
+	}
+
+	result := Tick(cfg, s, now, 0)
+
+	if result.DayEndSummary == nil {
+		t.Fatal("expected DayEndSummary on rollover while paused")
+	}
+	if result.DayEndSummary.WorkSeconds != 7200 || result.DayEndSummary.BreakSeconds != 900 {
+		t.Fatalf("DayEndSummary = %+v, want prior-day totals", *result.DayEndSummary)
+	}
+	if result.State.TodayWorkSeconds != 0 || result.State.TodayBreakSeconds != 0 {
+		t.Fatalf("rolled-over totals = (%d,%d), want 0,0", result.State.TodayWorkSeconds, result.State.TodayBreakSeconds)
+	}
+	if result.State.LastCheck != s.LastCheck {
+		t.Fatalf("LastCheck = %d, want %d", result.State.LastCheck, s.LastCheck)
+	}
+	if !result.State.Paused {
+		t.Fatal("paused state should remain paused")
 	}
 }
