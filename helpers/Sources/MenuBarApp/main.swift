@@ -20,40 +20,29 @@ func loadConfigFromFile() -> AppConfig {
 
 // MARK: - Helper discovery
 
-/// Returns the path of a helper binary by searching next to the running
-/// executable, then bin/, then ~/.local/bin/, then PATH.
-func findHelper(_ name: String) -> String? {
+private func trustedHelperCandidates(named name: String) -> [String] {
+    var candidates: [String] = []
+
     if let exe = Bundle.main.executablePath {
-        let candidate = URL(fileURLWithPath: exe)
-            .deletingLastPathComponent()
-            .appendingPathComponent(name).path
-        if FileManager.default.fileExists(atPath: candidate) { return candidate }
+        candidates.append(
+            URL(fileURLWithPath: exe)
+                .deletingLastPathComponent()
+                .appendingPathComponent(name)
+                .path
+        )
     }
 
     let home = FileManager.default.homeDirectoryForCurrentUser.path
-    let candidates = [
-        "bin/\(name)",
-        "\(home)/.local/bin/\(name)",
-    ]
-    for c in candidates {
-        if FileManager.default.fileExists(atPath: c) { return c }
-    }
+    candidates.append("\(home)/.local/bin/\(name)")
 
-    // Fall back to PATH lookup
-    let task = Process()
-    task.launchPath = "/usr/bin/which"
-    task.arguments = [name]
-    let pipe = Pipe()
-    task.standardOutput = pipe
-    task.standardError = FileHandle.nullDevice
-    if (try? task.run()) != nil {
-        task.waitUntilExit()
-        if task.terminationStatus == 0 {
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let p = String(data: data, encoding: .utf8)?
-                .trimmingCharacters(in: .whitespacesAndNewlines), !p.isEmpty {
-                return p
-            }
+    return candidates
+}
+
+/// Returns the path of a helper binary from trusted install locations only.
+func findHelper(_ name: String) -> String? {
+    for candidate in trustedHelperCandidates(named: name) {
+        if FileManager.default.isExecutableFile(atPath: candidate) {
+            return candidate
         }
     }
     return nil
@@ -152,7 +141,7 @@ class MenuBarController: NSObject {
     @objc private func openDashboard() {
         guard let helperPath = findHelper("break-dashboard") else {
             showAlert(message: "break-dashboard helper not found.",
-                      info: "Run 'make build-helper' to build it.")
+                      info: "Run 'make build' or 'make install' so helpers are placed next to the break-reminder binary.")
             return
         }
         let task = Process()
@@ -164,14 +153,14 @@ class MenuBarController: NSObject {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
         let priorState = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
+        let totals = liveDailyTotals(state: priorState, config: config, now: now)
         var s = AppState()
         s.lastCheck = now
-        s.todayWorkSeconds = priorState.todayWorkSeconds
-        s.todayBreakSeconds = priorState.todayBreakSeconds
-        s.lastUpdateDate = df.string(from: Date())
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
+        s.lastUpdateDate = totals.date
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
@@ -180,14 +169,16 @@ class MenuBarController: NSObject {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
         let state = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
+        let totals = liveDailyTotals(state: state, config: config, now: now)
         var s = AppState()
         s.mode = "break"
         s.lastCheck = now
         s.breakStart = now
-        s.todayWorkSeconds = state.todayWorkSeconds
-        s.todayBreakSeconds = state.todayBreakSeconds
-        s.lastUpdateDate = state.lastUpdateDate
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
+        s.lastUpdateDate = totals.date
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }

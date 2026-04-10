@@ -24,7 +24,7 @@ func newMenuBarCmd() *cobra.Command {
 func runMenuBarApp() error {
 	helperPath := breakscreen.FindHelper("break-menubar")
 	if helperPath == "" {
-		return fmt.Errorf("break-menubar helper not found. Run 'make build-helper' to build it")
+		return fmt.Errorf("break-menubar helper not found. Run 'make build' or 'make install' so helpers are placed next to the break-reminder binary")
 	}
 
 	log.Info().Str("helper", helperPath).Msg("Launching menu bar app")

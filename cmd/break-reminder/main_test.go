@@ -108,7 +108,7 @@ func TestMenuBarCmdReturnsHelpfulErrorWhenHelperMissing(t *testing.T) {
 	if err == nil {
 		t.Fatal("runMenuBarApp() error = nil, want missing helper error")
 	}
-	if err.Error() != "break-menubar helper not found. Run 'make build-helper' to build it" {
+	if err.Error() != "break-menubar helper not found. Run 'make build' or 'make install' so helpers are placed next to the break-reminder binary" {
 		t.Fatalf("runMenuBarApp() error = %q, want missing helper guidance", err.Error())
 	}
 }

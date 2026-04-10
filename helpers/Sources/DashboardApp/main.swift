@@ -325,11 +325,9 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         circularProgress.needsDisplay = true
         timeLabel.stringValue = sp.remainingFormatted
 
-        let dailyWorkSec = isWork
-            ? state.todayWorkSeconds + max(Int(now - state.lastCheck), 0)
-            : state.todayWorkSeconds
-        let workMin = dailyWorkSec / 60
-        let breakMin = state.todayBreakSeconds / 60
+        let totals = liveDailyTotals(state: state, config: config, now: now)
+        let workMin = totals.workSeconds / 60
+        let breakMin = totals.breakSeconds / 60
         dailyWorkLabel.stringValue = "Work: \(formatMinutes(workMin))"
         dailyBreakLabel.stringValue = "Break: \(formatMinutes(breakMin))"
 
@@ -352,13 +350,16 @@ class DashboardApp: NSObject, NSApplicationDelegate {
     @objc func resetTimer() {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
+        let priorState = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
-        let df = DateFormatter()
-        df.dateFormat = "yyyy-MM-dd"
+        let totals = liveDailyTotals(state: priorState, config: config, now: now)
         var s = AppState()
         s.lastCheck = now
-        s.lastUpdateDate = df.string(from: Date())
-        try? serializeState(s).data(using: .utf8)?.write(to: path)
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
+        s.lastUpdateDate = totals.date
+        try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
 
@@ -366,15 +367,17 @@ class DashboardApp: NSObject, NSApplicationDelegate {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let path = home.appendingPathComponent(".break-reminder-state")
         let state = loadStateFromFile()
+        let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
+        let totals = liveDailyTotals(state: state, config: config, now: now)
         var s = AppState()
         s.mode = "break"
         s.lastCheck = now
         s.breakStart = now
-        s.todayWorkSeconds = state.todayWorkSeconds
-        s.todayBreakSeconds = state.todayBreakSeconds
-        s.lastUpdateDate = state.lastUpdateDate
-        try? serializeState(s).data(using: .utf8)?.write(to: path)
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
+        s.lastUpdateDate = totals.date
+        try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
 
