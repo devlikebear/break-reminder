@@ -39,7 +39,7 @@ func newDashboardCmd() *cobra.Command {
 func runGUIDashboard() error {
 	helperPath := breakscreen.FindHelper("break-dashboard")
 	if helperPath == "" {
-		return fmt.Errorf("break-dashboard helper not found. Run 'make build' or 'make install' so helpers are placed next to the break-reminder binary")
+		return helperNotFoundError("break-dashboard")
 	}
 
 	log.Info().Str("helper", helperPath).Msg("Launching GUI dashboard")

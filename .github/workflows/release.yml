@@ -91,16 +91,12 @@ jobs:
       - name: Update Homebrew tap
         if: env.TAP_TOKEN != ''
         run: |
-          SHA256=$(cat bin/break-reminder-${{ steps.version.outputs.VERSION }}-darwin-arm64.tar.gz.sha256 | awk '{print $1}')
-          VERSION=${{ steps.version.outputs.VERSION }}
           cd /tmp
           git clone https://x-access-token:${TAP_TOKEN}@github.com/devlikebear/homebrew-tap.git
           cd homebrew-tap
-          sed -i '' "s|url \".*\"|url \"https://github.com/devlikebear/break-reminder/releases/download/${VERSION}/break-reminder-${VERSION}-darwin-arm64.tar.gz\"|" Formula/break-reminder.rb
-          sed -i '' "s|sha256 \".*\"|sha256 \"${SHA256}\"|" Formula/break-reminder.rb
-          sed -i '' "s|version \".*\"|version \"${VERSION#v}\"|" Formula/break-reminder.rb
+          cp "${GITHUB_WORKSPACE}/Formula/break-reminder.rb" Formula/break-reminder.rb
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Formula/break-reminder.rb
-          git diff --cached --quiet || git commit -m "Update break-reminder to ${VERSION}"
+          git diff --cached --quiet || git commit -m "Update break-reminder to ${{ steps.version.outputs.VERSION }}"
           git push
