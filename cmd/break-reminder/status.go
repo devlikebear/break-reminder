@@ -45,6 +45,7 @@ func newStatusCmd() *cobra.Command {
 			fmt.Fprintln(out, "🐹 Break Reminder Status")
 			fmt.Fprintln(out, "========================")
 			fmt.Fprintln(out, "System:", launchd.Status())
+			fmt.Fprintln(out, "Menu Bar:", launchd.MenuBarStatus())
 
 			if schedule.IsWorkingTime(cfg, now) {
 				fmt.Fprintln(out, "State:  Active (Within working hours)")

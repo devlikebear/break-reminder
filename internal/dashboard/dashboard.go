@@ -188,6 +188,7 @@ func (m Model) View() string {
 
 	// System status
 	b.WriteString("System: " + launchd.Status() + "\n")
+	b.WriteString("Menu Bar: " + launchd.MenuBarStatus() + "\n")
 
 	now := time.Now()
 	referenceNow := now

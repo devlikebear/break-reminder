@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/devlikebear/break-reminder/internal/breakscreen"
 	"github.com/devlikebear/break-reminder/internal/launchd"
 )
 
@@ -24,11 +25,18 @@ func newServiceCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("resolve executable path: %w", err)
 				}
-				if err := launchd.Install(exe); err != nil {
+				menuBarPath := breakscreen.FindHelper("break-menubar")
+				menuBarInstalled, err := launchd.Install(exe, menuBarPath)
+				if err != nil {
 					return err
 				}
 				fmt.Println("Successfully installed and loaded break-reminder agent!")
 				fmt.Println("It will now run every minute in the background.")
+				if menuBarInstalled {
+					fmt.Println("Menu bar app auto-start is enabled and will stay running in the background.")
+				} else {
+					fmt.Println("Menu bar auto-start skipped because break-menubar helper was not found.")
+				}
 				return nil
 			},
 		},
@@ -61,7 +69,8 @@ func newServiceCmd() *cobra.Command {
 			Use:   "status",
 			Short: "Show agent status",
 			Run: func(cmd *cobra.Command, args []string) {
-				fmt.Println(launchd.Status())
+				fmt.Println("Timer:", launchd.Status())
+				fmt.Println("Menu Bar:", launchd.MenuBarStatus())
 			},
 		},
 	)

@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-11
+
+### Added
+- `break-reminder service install` now auto-registers the native menu bar app as a separate LaunchAgent when the `break-menubar` helper is installed
+- Service-managed installs now keep the menu bar app running in the background after the launching terminal exits
+
+### Changed
+- Launchd management now tracks the timer daemon and menu bar app as separate agents with distinct plist files and status reporting
+- `status`, `dashboard`, `doctor`, and `service status` now surface menu bar auto-start state alongside the timer agent state
+
+### Fixed
+- Homebrew/tap synchronization now preserves the full formula so helper install entries like `break-menubar` are not dropped in future releases
+
 ## [0.5.0] - 2026-04-11
 
 ### Added

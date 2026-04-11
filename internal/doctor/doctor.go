@@ -110,6 +110,14 @@ func Run(cfg config.Config) Report {
 		r.add("ok", "LaunchAgent", status)
 	}
 
+	menuBarStatus := launchd.MenuBarStatus()
+	switch {
+	case menuBarStatus == "Not Installed":
+		r.add("info", "Menu bar auto-start", "not installed")
+	default:
+		r.add("ok", "Menu bar auto-start", menuBarStatus)
+	}
+
 	// Working hours
 	if schedule.IsWorkingTime(cfg, time.Now()) {
 		r.add("ok", "Working hours", "within working hours")

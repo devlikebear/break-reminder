@@ -22,15 +22,15 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
 - **📈 Daily Stats** — Track work/break time with gap detection for accurate tracking
 - **🔔 Notifications** — Visual + voice alerts (`say`, KittenTTS, or Supertonic)
-- **🚀 Auto-start** — LaunchAgent service with 60-second check interval
+- **🚀 Auto-start** — LaunchAgent timer with 60-second check interval plus optional menu bar auto-start
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
-## 🆕 New In v0.5.0
+## 🆕 New In v0.6.0
 
-- **🍎 Native Menu Bar Workflow** — Launch `break-reminder menubar` for live progress, daily totals, and quick controls
-- **⏸️ Pause / Resume** — Freeze the current work or break session without losing progress
-- **😌 Deterministic Snooze** — End an active break early with `break-reminder snooze` and preserve the postponement across pause/resume
-- **📏 Sharper State Accuracy** — Paused state, day rollovers, and helper-side totals stay aligned across the menu bar, GUI dashboard, and status output
+- **🍎 Menu Bar Auto-Start** — `break-reminder service install` now keeps the native menu bar app running in the background when `break-menubar` is installed
+- **🧩 Split LaunchAgents** — Timer checks and the menu bar app are managed as separate launchd jobs, so status and recovery are clearer
+- **🏥 Richer Diagnostics** — `status`, `dashboard`, `doctor`, and `service status` now show menu bar auto-start state separately from the timer daemon
+- **📦 Safer Homebrew Sync** — Release automation now copies the full formula into the tap so helper install entries stay intact
 
 ## 📦 Installation
 
@@ -46,7 +46,7 @@ brew install devlikebear/tap/break-reminder
 git clone https://github.com/devlikebear/break-reminder.git
 cd break-reminder
 make build      # Build Go binary + Swift helpers (break-screen, break-dashboard, break-menubar)
-make install    # Install to ~/.local/bin/ + register LaunchAgent
+make install    # Install to ~/.local/bin/ + register timer/menu bar LaunchAgents
 ```
 
 ## 🚀 Usage
@@ -70,8 +70,8 @@ break-reminder dashboard --gui    # Native macOS GUI
 break-reminder menubar            # Native macOS menu bar app
 
 # Service Management
-break-reminder service install    # Register LaunchAgent
-break-reminder service uninstall  # Remove LaunchAgent
+break-reminder service install    # Register timer LaunchAgent + menu bar auto-start when helper is installed
+break-reminder service uninstall  # Remove LaunchAgents
 break-reminder service start      # Start service
 break-reminder service stop       # Stop service
 break-reminder service status     # Check service status
@@ -111,6 +111,7 @@ break-reminder version            # Show version
 🐹 Break Reminder Dashboard (q:quit r:reset b:break)
 ══════════════════════════════════════════════════
 System: Installed & Running
+Menu Bar: Installed & Running
 Status: WORKING
 Idle: 3s / Limit: 120s
 
@@ -129,7 +130,7 @@ Recent Logs:
 
 ### Menu Bar (macOS)
 
-The native menu bar app now shows live mode/progress in the title (`🟢 31% · 34m left`, `☕ 25% · 7m left`) and exposes today's work/break totals inside the menu. For the smoothest updates, run it alongside the LaunchAgent/service so the state file stays current.
+The native menu bar app shows live mode/progress in the title (`🟢 31% · 34m left`, `☕ 25% · 7m left`) and exposes today's work/break totals inside the menu. After `break-reminder service install`, it is auto-registered as a separate LaunchAgent when the `break-menubar` helper is available, so it stays running after the launching terminal exits.
 
 ### Status Output
 
@@ -137,6 +138,7 @@ The native menu bar app now shows live mode/progress in the title (`🟢 31% · 
 🐹 Break Reminder Status
 ========================
 System: Installed & Running
+Menu Bar: Installed & Running
 State:  Active (Within working hours)
 ------------------------
 Mode: paused (work)
@@ -237,7 +239,8 @@ Formula/                      # Homebrew formula
 | State file | `~/.break-reminder-state` |
 | Log file | `~/.break-reminder.log` |
 | History | `~/.break-reminder-history.json` |
-| LaunchAgent | `~/Library/LaunchAgents/com.devlikebear.break-reminder.plist` |
+| Timer LaunchAgent | `~/Library/LaunchAgents/com.devlikebear.break-reminder.plist` |
+| Menu bar LaunchAgent | `~/Library/LaunchAgents/com.devlikebear.break-reminder.menubar.plist` |
 
 ## 🌏 Localization
 
