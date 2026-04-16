@@ -100,7 +100,8 @@ break-reminder tts uninstall supertonic  # Remove the managed Supertonic venv
 
 # Gemini 3.1 Flash TTS (no install — just config + API key)
 export GEMINI_API_KEY=your_api_key
-break-reminder config edit   # set tts_engine: gemini, voice: Zephyr
+break-reminder tts set-api-key $GEMINI_API_KEY   # save to config with 0600 perms
+break-reminder config edit                       # set tts_engine: gemini, voice: Zephyr
 break-reminder config path        # Show config file path
 
 # Diagnostics
@@ -308,13 +309,25 @@ break-reminder tts uninstall supertonic
 To use Gemini 3.1 Flash TTS (cloud, no install required):
 
 ```bash
-export GEMINI_API_KEY=your_api_key     # or set tts_api_key in config
+# Save the API key to config (sets 0600 permissions automatically)
+export GEMINI_API_KEY=your_api_key
+break-reminder tts set-api-key $GEMINI_API_KEY
+# or read from stdin:  echo $GEMINI_API_KEY | break-reminder tts set-api-key
+# or pass directly:    break-reminder tts set-api-key AIzaSy...
+
+# Switch engine
 break-reminder config edit
 # tts_engine: "gemini"
 # tts_model: "gemini-3.1-flash-tts-preview"
 # voice: "Zephyr"
+
 break-reminder tts test "안녕하세요"
 ```
+
+> 💡 **launchd note**: background timer checks don't inherit your shell env, so
+> `export GEMINI_API_KEY=...` alone is not enough for the scheduled break alerts
+> to speak. `tts set-api-key` persists the key into the config file, which is
+> read by both interactive commands and the LaunchAgent.
 
 Supported Gemini voices: `Zephyr`, `Puck`, `Charon`, `Kore`, `Fenrir`, `Leda`, `Orus`, `Aoede`, `Callirrhoe`, `Autonoe`, `Enceladus`, `Iapetus`, `Umbriel`, `Algieba`, `Despina`, `Erinome`, `Algenib`, `Rasalgethi`, `Laomedeia`, `Achernar`, `Alnilam`, `Schedar`, `Gacrux`, `Pulcherrima`, `Achird`, `Zubenelgenubi`, `Vindemiatrix`, `Sadachbia`, `Sadaltager`, `Sulafat` (70+ languages, model selects automatically).
 

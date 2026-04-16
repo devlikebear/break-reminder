@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,6 +12,13 @@ import (
 
 	"github.com/devlikebear/break-reminder/internal/config"
 )
+
+func withTempConfigDir(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+	return dir
+}
 
 func findTTSSubcommand(t *testing.T, name string) *cobra.Command {
 	t.Helper()
@@ -21,6 +30,179 @@ func findTTSSubcommand(t *testing.T, name string) *cobra.Command {
 	}
 	t.Fatalf("subcommand %q not found", name)
 	return nil
+}
+
+func TestSetAPIKeyFromArg(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return true }
+
+	if err := runSetAPIKey([]string{"AIzaSy-test-key"}); err != nil {
+		t.Fatalf("runSetAPIKey() error = %v", err)
+	}
+	if cfg.TTSAPIKey != "AIzaSy-test-key" {
+		t.Fatalf("in-memory cfg.TTSAPIKey = %q, want AIzaSy-test-key", cfg.TTSAPIKey)
+	}
+
+	loaded, err := config.Load()
+	if err != nil {
+		t.Fatalf("config.Load() error = %v", err)
+	}
+	if loaded.TTSAPIKey != "AIzaSy-test-key" {
+		t.Fatalf("loaded cfg.TTSAPIKey = %q, want AIzaSy-test-key", loaded.TTSAPIKey)
+	}
+
+	info, err := os.Stat(config.ConfigPath())
+	if err != nil {
+		t.Fatalf("stat config: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("config perm = %o, want 0600", perm)
+	}
+}
+
+func TestSetAPIKeyFromStdin(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	origStdin := stdinForSetAPIKey
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+		stdinForSetAPIKey = origStdin
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return false }
+	stdinForSetAPIKey = strings.NewReader("piped-key-123\n")
+
+	if err := runSetAPIKey(nil); err != nil {
+		t.Fatalf("runSetAPIKey() error = %v", err)
+	}
+	if cfg.TTSAPIKey != "piped-key-123" {
+		t.Fatalf("cfg.TTSAPIKey = %q, want piped-key-123", cfg.TTSAPIKey)
+	}
+}
+
+func TestSetAPIKeyTrimsWhitespace(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return true }
+
+	if err := runSetAPIKey([]string{"  padded-key  "}); err != nil {
+		t.Fatalf("runSetAPIKey() error = %v", err)
+	}
+	if cfg.TTSAPIKey != "padded-key" {
+		t.Fatalf("cfg.TTSAPIKey = %q, want padded-key", cfg.TTSAPIKey)
+	}
+}
+
+func TestSetAPIKeyRejectsEmpty(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return true }
+
+	err := runSetAPIKey([]string{"   "})
+	if err == nil {
+		t.Fatal("expected error for empty key")
+	}
+	if !strings.Contains(err.Error(), "must not be empty") {
+		t.Fatalf("err = %v, want 'must not be empty'", err)
+	}
+}
+
+func TestSetAPIKeyRejectsNewlineInArg(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return true }
+
+	err := runSetAPIKey([]string{"line1\nline2"})
+	if err == nil {
+		t.Fatal("expected error for multi-line key")
+	}
+	if !strings.Contains(err.Error(), "newline") {
+		t.Fatalf("err = %v, want mention of newline", err)
+	}
+}
+
+func TestSetAPIKeyRefusesTTYWithoutArg(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return true }
+
+	err := runSetAPIKey(nil)
+	if err == nil {
+		t.Fatal("expected error when tty and no arg")
+	}
+	if !strings.Contains(err.Error(), "pass key as argument") {
+		t.Fatalf("err = %v, want 'pass key as argument' hint", err)
+	}
+}
+
+func TestSetAPIKeyOutputDoesNotLeakKey(t *testing.T) {
+	withTempConfigDir(t)
+	origCfg := cfg
+	origTerm := stdinIsTerminal
+	defer func() {
+		cfg = origCfg
+		stdinIsTerminal = origTerm
+	}()
+	cfg = config.Default()
+	stdinIsTerminal = func() bool { return true }
+
+	// Capture stdout
+	origStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	defer func() { os.Stdout = origStdout }()
+
+	secret := "super-secret-AIzaSy"
+	if err := runSetAPIKey([]string{secret}); err != nil {
+		t.Fatalf("runSetAPIKey() error = %v", err)
+	}
+	_ = w.Close()
+	var buf bytes.Buffer
+	_, _ = buf.ReadFrom(r)
+	if strings.Contains(buf.String(), secret) {
+		t.Fatalf("stdout leaked secret key: %q", buf.String())
+	}
+}
+
+func TestConfigPathResolvesUnderTempHome(t *testing.T) {
+	dir := withTempConfigDir(t)
+	want := filepath.Join(dir, ".config", "break-reminder", "config.yaml")
+	if got := config.ConfigPath(); got != want {
+		t.Fatalf("ConfigPath() = %q, want %q (t.Setenv HOME honored?)", got, want)
+	}
 }
 
 func TestTTSInstallRejectsGemini(t *testing.T) {

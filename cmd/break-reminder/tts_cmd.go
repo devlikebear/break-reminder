@@ -1,13 +1,29 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/tts"
 )
+
+// stdinForSetAPIKey is overridden in tests.
+var stdinForSetAPIKey io.Reader = os.Stdin
+
+// stdinIsTerminal reports whether os.Stdin is attached to a terminal. Overridden in tests.
+var stdinIsTerminal = func() bool {
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeCharDevice != 0
+}
 
 var newTTSSpeaker = tts.NewSpeaker
 var ttsVoiceAvailable = tts.VoiceAvailable
@@ -164,6 +180,71 @@ func newTTSCmd() *cobra.Command {
 		},
 	}
 
-	cmd.AddCommand(installCmd, testCmd, uninstallCmd)
+	setAPIKeyCmd := &cobra.Command{
+		Use:   "set-api-key [key]",
+		Short: "Save the Gemini API key to config (permissions 0600)",
+		Long: "Save the Gemini API key to the config file with restricted permissions.\n" +
+			"If no key is provided as an argument, the command reads one line from stdin\n" +
+			"(piped input). When stdin is a terminal, the command refuses and asks you\n" +
+			"to pass the key as an argument instead. The stored key never appears in\n" +
+			"command output.",
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runSetAPIKey(args)
+		},
+	}
+
+	cmd.AddCommand(installCmd, testCmd, uninstallCmd, setAPIKeyCmd)
 	return cmd
+}
+
+func runSetAPIKey(args []string) error {
+	key, err := readAPIKey(args)
+	if err != nil {
+		return err
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return fmt.Errorf("api key must not be empty")
+	}
+	if strings.ContainsAny(key, "\n\r") {
+		return fmt.Errorf("api key must not contain newline characters")
+	}
+
+	if err := config.EnsureConfigFile(); err != nil {
+		return fmt.Errorf("ensure config file: %w", err)
+	}
+
+	updated := cfg
+	updated.TTSAPIKey = key
+	if err := config.Save(updated); err != nil {
+		return fmt.Errorf("save config: %w", err)
+	}
+	cfg = updated
+
+	path := config.ConfigPath()
+	if err := os.Chmod(path, 0o600); err != nil {
+		return fmt.Errorf("restrict permissions on %s: %w", path, err)
+	}
+
+	fmt.Printf("Gemini API key saved (%d chars) to %s with permissions 0600\n", len(key), path)
+	return nil
+}
+
+func readAPIKey(args []string) (string, error) {
+	if len(args) == 1 {
+		return args[0], nil
+	}
+	if stdinIsTerminal() {
+		return "", fmt.Errorf("pass key as argument: break-reminder tts set-api-key $GEMINI_API_KEY (or pipe it via stdin)")
+	}
+	scanner := bufio.NewScanner(stdinForSetAPIKey)
+	scanner.Buffer(make([]byte, 0, 4096), 1<<20)
+	if scanner.Scan() {
+		return scanner.Text(), nil
+	}
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("read stdin: %w", err)
+	}
+	return "", fmt.Errorf("no api key provided on stdin")
 }
