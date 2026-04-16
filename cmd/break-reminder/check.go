@@ -86,9 +86,13 @@ func executeActions(actions []timer.Action, s state.State, daySummary *timer.Day
 		case timer.ActionNotifyStillOnBreak:
 			_ = notifier.Send("Still on break!", "Keep resting!", "")
 		case timer.ActionSpeakBreakTime:
-			_ = speaker.Speak(cfg.Voice, "Time for a break! You've been working for 50 minutes.")
+			if err := speaker.Speak(cfg.Voice, "Time for a break! You've been working for 50 minutes."); err != nil {
+				log.Warn().Err(err).Msg("TTS speak failed (break time)")
+			}
 		case timer.ActionSpeakBreakOver:
-			_ = speaker.Speak(cfg.Voice, "Break time is over! Let's get back to work!")
+			if err := speaker.Speak(cfg.Voice, "Break time is over! Let's get back to work!"); err != nil {
+				log.Warn().Err(err).Msg("TTS speak failed (break over)")
+			}
 		case timer.ActionSaveDailyHistory:
 			if daySummary != nil {
 				_ = ai.AppendHistory(ai.DailySummary{

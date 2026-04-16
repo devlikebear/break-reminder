@@ -28,37 +28,22 @@ func NewSpeaker(engine, model, pythonCmd, apiKey string) Speaker {
 }
 
 func (s *DarwinSpeaker) Speak(voice, message string) error {
-	return s.speak(voice, message, false)
-}
-
-func (s *DarwinSpeaker) speak(voice, message string, wait bool) error {
 	if err := s.validate(voice); err != nil {
 		return err
 	}
 
 	if s.engine == engineGemini {
-		return s.speakGemini(voice, message, wait)
+		return s.speakGemini(voice, message)
 	}
 
 	cmd, err := buildSpeakCommand(s.engine, s.model, s.pythonCmd, voice, message)
 	if err != nil {
 		return err
 	}
-
-	if wait {
-		return cmd.Run()
-	}
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-	go func() {
-		_ = cmd.Wait()
-	}()
-	return nil
+	return cmd.Run()
 }
 
-func (s *DarwinSpeaker) speakGemini(voice, message string, wait bool) error {
+func (s *DarwinSpeaker) speakGemini(voice, message string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), geminiHTTPTimeout+5*time.Second)
 	defer cancel()
 
@@ -66,22 +51,9 @@ func (s *DarwinSpeaker) speakGemini(voice, message string, wait bool) error {
 	if err != nil {
 		return err
 	}
+	defer os.Remove(path)
 
-	cmd := exec.Command("afplay", path)
-	if wait {
-		defer os.Remove(path)
-		return cmd.Run()
-	}
-
-	if err := cmd.Start(); err != nil {
-		_ = os.Remove(path)
-		return err
-	}
-	go func() {
-		_ = cmd.Wait()
-		_ = os.Remove(path)
-	}()
-	return nil
+	return exec.Command("afplay", path).Run()
 }
 
 func (s *DarwinSpeaker) Available(voice string) bool {
@@ -236,11 +208,5 @@ func VoiceAvailable(engine, model, pythonCmd, apiKey, voice string) bool {
 }
 
 func SpeakAndWait(engine, model, pythonCmd, apiKey, voice, message string) error {
-	speaker := &DarwinSpeaker{
-		engine:    normalizeEngine(engine),
-		model:     normalizeModelForEngine(engine, model),
-		pythonCmd: normalizePythonCommand(pythonCmd),
-		apiKey:    strings.TrimSpace(apiKey),
-	}
-	return speaker.speak(voice, message, true)
+	return NewSpeaker(engine, model, pythonCmd, apiKey).Speak(voice, message)
 }
