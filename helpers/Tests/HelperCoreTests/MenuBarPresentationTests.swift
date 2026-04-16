@@ -42,7 +42,7 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
 
-        XCTAssertEqual(presentation.title, "🟢 31% · 34m left")
+        XCTAssertEqual(presentation.title, "🐹 31% · 34m left")
         XCTAssertEqual(presentation.statusLine, "Working · 15m elapsed · 34m until break")
         XCTAssertEqual(presentation.statsLine, "Today · Work 1h · Break 20m")
     }

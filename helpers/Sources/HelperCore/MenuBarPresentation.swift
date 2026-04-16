@@ -63,7 +63,7 @@ public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) 
     }
 
     return MenuBarPresentation(
-        title: "🟢 \(percent)% · \(remainingMinutes)m left",
+        title: "🐹 \(percent)% · \(remainingMinutes)m left",
         statusLine: "Working · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until break",
         statsLine: statsLine
     )

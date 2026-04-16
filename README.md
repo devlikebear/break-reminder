@@ -134,7 +134,7 @@ Recent Logs:
 
 ### Menu Bar (macOS)
 
-The native menu bar app shows live mode/progress in the title (`🟢 31% · 34m left`, `☕ 25% · 7m left`) and exposes today's work/break totals inside the menu. After `break-reminder service install`, it is auto-registered as a separate LaunchAgent when the `break-menubar` helper is available, so it stays running after the launching terminal exits.
+The native menu bar app shows live mode/progress in the title (`🐹 31% · 34m left`, `☕ 25% · 7m left`) and exposes today's work/break totals inside the menu. After `break-reminder service install`, it is auto-registered as a separate LaunchAgent when the `break-menubar` helper is available, so it stays running after the launching terminal exits.
 
 ### Status Output
 
