@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-04-16
+
+### Added
+- `break-reminder tts set-api-key [key]` command saves the Gemini API key to the config with `0600` permissions. Supports argument, piped stdin, and refuses to prompt interactively on a TTY (so the key never lands in shell history by accident).
+
+### Fixed
+- LaunchAgent break alerts could stay silent with `tts_engine: gemini` when only `GEMINI_API_KEY` was exported in the shell, because launchd does not inherit shell env. The new command persists the key into the config file (which `ResolveAPIKey` reads first), so background timer alerts speak reliably.
+
 ## [0.7.0] - 2026-04-16
 
 ### Added
