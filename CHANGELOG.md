@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-04-16
+
+### Added
+- Gemini 3.1 Flash TTS engine (`tts_engine: gemini`) with 30 prebuilt voices and native 70+ language support
+- `tts_api_key` config field with `GEMINI_API_KEY` environment variable fallback via `tts.ResolveAPIKey`
+- `break-reminder tts install gemini` now prints a clear message directing users to set the API key instead of running an install
+
+### Changed
+- `tts.NewSpeaker`, `tts.VoiceAvailable`, and `tts.SpeakAndWait` now take an additional `apiKey` parameter to support cloud engines
+- `doctor` now surfaces a Gemini-specific install hint when the voice is unavailable
+
 ## [0.6.0] - 2026-04-11
 
 ### Added
