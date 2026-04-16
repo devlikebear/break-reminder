@@ -11,6 +11,14 @@ voice: "Yuna"
 tts_engine: "say"
 tts_model: "KittenML/kitten-tts-nano-0.8"
 tts_python_cmd: "python3"
+
+# Gemini 3.1 Flash TTS (optional — requires Google AI API access)
+# Messages are sent to Google's servers. Uncomment and set API key to enable.
+# tts_engine: "gemini"
+# tts_model: "gemini-3.1-flash-tts-preview"
+# voice: "Zephyr"        # Gemini voices: Zephyr, Puck, Kore, Charon, Leda, ...
+# tts_api_key: ""        # or export GEMINI_API_KEY env var instead
+
 notifications_enabled: true
 tts_enabled: true
 break_activities_enabled: true

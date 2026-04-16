@@ -15,6 +15,7 @@ type Config struct {
 	TTSEngine              string `yaml:"tts_engine"`
 	TTSModel               string `yaml:"tts_model"`
 	TTSPythonCmd           string `yaml:"tts_python_cmd"`
+	TTSAPIKey              string `yaml:"tts_api_key"`
 	NotificationsEnabled   bool   `yaml:"notifications_enabled"`
 	TTSEnabled             bool   `yaml:"tts_enabled"`
 	BreakActivitiesEnabled bool   `yaml:"break_activities_enabled"`

@@ -16,6 +16,7 @@ func Default() Config {
 		TTSEngine:              "say",
 		TTSModel:               "KittenML/kitten-tts-nano-0.8",
 		TTSPythonCmd:           "python3",
+		TTSAPIKey:              "",
 		NotificationsEnabled:   true,
 		TTSEnabled:             true,
 		BreakActivitiesEnabled: true,

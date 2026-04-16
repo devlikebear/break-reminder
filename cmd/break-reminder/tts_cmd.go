@@ -14,10 +14,11 @@ var ttsVoiceAvailable = tts.VoiceAvailable
 var ttsSpeakAndWait = tts.SpeakAndWait
 
 func runTTSTest(message string) error {
-	if !ttsVoiceAvailable(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, cfg.Voice) {
+	apiKey := tts.ResolveAPIKey(cfg)
+	if !ttsVoiceAvailable(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice) {
 		return fmt.Errorf("voice %q is not available for engine %q", cfg.Voice, cfg.TTSEngine)
 	}
-	return ttsSpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, cfg.Voice, message)
+	return ttsSpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice, message)
 }
 
 func newTTSCmd() *cobra.Command {
@@ -33,7 +34,7 @@ func newTTSCmd() *cobra.Command {
 
 	installCmd := &cobra.Command{
 		Use:       "install [engine]",
-		Short:     "Install an optional TTS backend into a managed environment",
+		Short:     "Install an optional TTS backend into a managed environment (gemini is config-only, no install needed)",
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: []string{"kittentts", "supertonic"},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -63,6 +64,8 @@ func newTTSCmd() *cobra.Command {
 			case "supertonic":
 				label = "Supertonic"
 				updatedCfg, result, err = tts.InstallSupertonic(cfg, opts)
+			case "gemini":
+				return fmt.Errorf("gemini engine requires no install; set tts_engine: gemini and GEMINI_API_KEY (or tts_api_key in config)")
 			default:
 				return fmt.Errorf("unsupported TTS engine %q", args[0])
 			}
@@ -97,7 +100,7 @@ func newTTSCmd() *cobra.Command {
 
 	testCmd := &cobra.Command{
 		Use:   "test [message]",
-		Short: "Speak a test phrase with the current TTS configuration",
+		Short: "Speak a test phrase with the current TTS configuration (say, kittentts, supertonic, gemini)",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := runTTSTest(args[0]); err != nil {

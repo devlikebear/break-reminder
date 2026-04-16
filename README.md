@@ -21,16 +21,15 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
 - **📈 Daily Stats** — Track work/break time with gap detection for accurate tracking
-- **🔔 Notifications** — Visual + voice alerts (`say`, KittenTTS, or Supertonic)
+- **🔔 Notifications** — Visual + voice alerts (`say`, KittenTTS, Supertonic, or Gemini 3.1 Flash TTS)
 - **🚀 Auto-start** — LaunchAgent timer with 60-second check interval plus optional menu bar auto-start
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
-## 🆕 New In v0.6.0
+## 🆕 New In v0.7.0
 
-- **🍎 Menu Bar Auto-Start** — `break-reminder service install` now keeps the native menu bar app running in the background when `break-menubar` is installed
-- **🧩 Split LaunchAgents** — Timer checks and the menu bar app are managed as separate launchd jobs, so status and recovery are clearer
-- **🏥 Richer Diagnostics** — `status`, `dashboard`, `doctor`, and `service status` now show menu bar auto-start state separately from the timer daemon
-- **📦 Safer Homebrew Sync** — Release automation now copies the full formula into the tap so helper install entries stay intact
+- **☁️ Gemini 3.1 Flash TTS** — New cloud TTS engine with 30 expressive voices (Zephyr, Puck, Kore, ...) and native 70+ language support, no local install required
+- **🔑 API Key Config** — `tts_api_key` YAML field or `GEMINI_API_KEY` env var powers the new engine
+- **🎙️ Engine Parity** — `tts test`, `doctor`, and runtime break alerts all speak through Gemini when configured
 
 ## 📦 Installation
 
@@ -98,6 +97,10 @@ break-reminder tts install supertonic  # Install Supertonic into a managed venv
 break-reminder tts test "안녕하세요"  # Speak a phrase with the current TTS config
 break-reminder tts uninstall kittentts   # Remove the managed KittenTTS venv
 break-reminder tts uninstall supertonic  # Remove the managed Supertonic venv
+
+# Gemini 3.1 Flash TTS (no install — just config + API key)
+export GEMINI_API_KEY=your_api_key
+break-reminder config edit   # set tts_engine: gemini, voice: Zephyr
 break-reminder config path        # Show config file path
 
 # Diagnostics
@@ -187,9 +190,10 @@ break_activities_enabled: true  # Show guided activity menu on break
 
 # Voice & Notifications
 voice: "Yuna"                  # Voice name for the selected TTS engine
-tts_engine: "say"              # "say", "kittentts", or "supertonic"
-tts_model: "KittenML/kitten-tts-nano-0.8"  # Used by KittenTTS; Supertonic currently uses a fixed model bundle
-tts_python_cmd: "python3"      # Python with the selected optional TTS package installed
+tts_engine: "say"              # "say", "kittentts", "supertonic", or "gemini"
+tts_model: "KittenML/kitten-tts-nano-0.8"  # KittenTTS model; Supertonic uses a fixed bundle; Gemini uses "gemini-3.1-flash-tts-preview"
+tts_python_cmd: "python3"      # Python with the selected optional TTS package installed (not used by gemini)
+tts_api_key: ""                # Gemini API key (or export GEMINI_API_KEY env instead)
 tts_enabled: true
 notifications_enabled: true
 
@@ -214,7 +218,7 @@ internal/                     # Go internal packages
   state/                      # Key-value state file persistence
   idle/                       # Idle detection (ioreg on macOS)
   notify/                     # macOS notifications (osascript)
-  tts/                        # Text-to-speech (say / KittenTTS / Supertonic)
+  tts/                        # Text-to-speech (say / KittenTTS / Supertonic / Gemini)
   breakscreen/                # Break screen orchestration
   dashboard/                  # TUI dashboard + break activities
   ai/                         # AI CLI wrapper + history
@@ -300,6 +304,21 @@ To remove the managed Supertonic environment and restore `say` defaults:
 ```bash
 break-reminder tts uninstall supertonic
 ```
+
+To use Gemini 3.1 Flash TTS (cloud, no install required):
+
+```bash
+export GEMINI_API_KEY=your_api_key     # or set tts_api_key in config
+break-reminder config edit
+# tts_engine: "gemini"
+# tts_model: "gemini-3.1-flash-tts-preview"
+# voice: "Zephyr"
+break-reminder tts test "안녕하세요"
+```
+
+Supported Gemini voices: `Zephyr`, `Puck`, `Charon`, `Kore`, `Fenrir`, `Leda`, `Orus`, `Aoede`, `Callirrhoe`, `Autonoe`, `Enceladus`, `Iapetus`, `Umbriel`, `Algieba`, `Despina`, `Erinome`, `Algenib`, `Rasalgethi`, `Laomedeia`, `Achernar`, `Alnilam`, `Schedar`, `Gacrux`, `Pulcherrima`, `Achird`, `Zubenelgenubi`, `Vindemiatrix`, `Sadachbia`, `Sadaltager`, `Sulafat` (70+ languages, model selects automatically).
+
+> ⚠️ **Privacy note**: Gemini is a cloud service. Break reminder text ("Time for a break!" etc.) is sent to Google's servers on each playback. Choose a local engine (`say` / KittenTTS / Supertonic) if this is a concern.
 
 ## 🤝 Contributing
 

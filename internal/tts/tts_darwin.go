@@ -3,22 +3,27 @@
 package tts
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 type DarwinSpeaker struct {
 	engine    string
 	model     string
 	pythonCmd string
+	apiKey    string
 }
 
-func NewSpeaker(engine, model, pythonCmd string) Speaker {
+func NewSpeaker(engine, model, pythonCmd, apiKey string) Speaker {
 	return &DarwinSpeaker{
 		engine:    normalizeEngine(engine),
 		model:     normalizeModelForEngine(engine, model),
 		pythonCmd: normalizePythonCommand(pythonCmd),
+		apiKey:    strings.TrimSpace(apiKey),
 	}
 }
 
@@ -29,6 +34,10 @@ func (s *DarwinSpeaker) Speak(voice, message string) error {
 func (s *DarwinSpeaker) speak(voice, message string, wait bool) error {
 	if err := s.validate(voice); err != nil {
 		return err
+	}
+
+	if s.engine == engineGemini {
+		return s.speakGemini(voice, message, wait)
 	}
 
 	cmd, err := buildSpeakCommand(s.engine, s.model, s.pythonCmd, voice, message)
@@ -45,6 +54,32 @@ func (s *DarwinSpeaker) speak(voice, message string, wait bool) error {
 	}
 	go func() {
 		_ = cmd.Wait()
+	}()
+	return nil
+}
+
+func (s *DarwinSpeaker) speakGemini(voice, message string, wait bool) error {
+	ctx, cancel := context.WithTimeout(context.Background(), geminiHTTPTimeout+5*time.Second)
+	defer cancel()
+
+	path, err := synthesizeGemini(ctx, s.apiKey, s.model, voice, message)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.Command("afplay", path)
+	if wait {
+		defer os.Remove(path)
+		return cmd.Run()
+	}
+
+	if err := cmd.Start(); err != nil {
+		_ = os.Remove(path)
+		return err
+	}
+	go func() {
+		_ = cmd.Wait()
+		_ = os.Remove(path)
 	}()
 	return nil
 }
@@ -77,6 +112,17 @@ func (s *DarwinSpeaker) Available(voice string) bool {
 		}
 		ok, err := supertonicModuleInstalled(s.pythonCmd)
 		return err == nil && ok
+	case engineGemini:
+		if !geminiVoiceAvailable(voice) {
+			return false
+		}
+		if s.apiKey == "" {
+			return false
+		}
+		if _, err := exec.LookPath("afplay"); err != nil {
+			return false
+		}
+		return true
 	default:
 		return false
 	}
@@ -127,6 +173,16 @@ func (s *DarwinSpeaker) validate(voice string) error {
 		if !ok {
 			return fmt.Errorf("supertonic is not installed for %s", s.pythonCmd)
 		}
+	case engineGemini:
+		if !geminiVoiceAvailable(voice) {
+			return fmt.Errorf("voice %q not supported by Gemini TTS", voice)
+		}
+		if s.apiKey == "" {
+			return fmt.Errorf("GEMINI_API_KEY is not set; export env or set tts_api_key in config")
+		}
+		if _, err := exec.LookPath("afplay"); err != nil {
+			return fmt.Errorf("afplay command not found")
+		}
 	default:
 		return fmt.Errorf("unsupported TTS engine %q", s.engine)
 	}
@@ -175,15 +231,16 @@ func pythonModuleInstalled(pythonCmd, module string) (bool, error) {
 	return true, nil
 }
 
-func VoiceAvailable(engine, model, pythonCmd, voice string) bool {
-	return NewSpeaker(engine, model, pythonCmd).Available(voice)
+func VoiceAvailable(engine, model, pythonCmd, apiKey, voice string) bool {
+	return NewSpeaker(engine, model, pythonCmd, apiKey).Available(voice)
 }
 
-func SpeakAndWait(engine, model, pythonCmd, voice, message string) error {
+func SpeakAndWait(engine, model, pythonCmd, apiKey, voice, message string) error {
 	speaker := &DarwinSpeaker{
 		engine:    normalizeEngine(engine),
 		model:     normalizeModelForEngine(engine, model),
 		pythonCmd: normalizePythonCommand(pythonCmd),
+		apiKey:    strings.TrimSpace(apiKey),
 	}
 	return speaker.speak(voice, message, true)
 }

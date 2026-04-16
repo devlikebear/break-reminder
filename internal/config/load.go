@@ -108,6 +108,7 @@ var validConfigKeys = map[string]struct{}{
 	"tts_engine":               {},
 	"tts_model":                {},
 	"tts_python_cmd":           {},
+	"tts_api_key":              {},
 	"ai_cli":                   {},
 	"break_screen_mode":        {},
 	"max_log_lines":            {},
@@ -215,6 +216,9 @@ func merge(dst, src *Config, raw map[string]any) {
 	}
 	if src.TTSPythonCmd != "" {
 		dst.TTSPythonCmd = src.TTSPythonCmd
+	}
+	if src.TTSAPIKey != "" {
+		dst.TTSAPIKey = src.TTSAPIKey
 	}
 	if src.AICLI != "" {
 		dst.AICLI = src.AICLI

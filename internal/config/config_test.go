@@ -506,3 +506,38 @@ func TestMergeTTSSettings(t *testing.T) {
 		t.Errorf("Voice = %q, want Jasper", cfg.Voice)
 	}
 }
+
+func TestMergeTTSAPIKey(t *testing.T) {
+	yamlData := []byte("tts_engine: gemini\ntts_api_key: sk-secret\nvoice: Zephyr\n")
+
+	var fileCfg Config
+	_ = yaml.Unmarshal(yamlData, &fileCfg)
+
+	var raw map[string]any
+	_ = yaml.Unmarshal(yamlData, &raw)
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+
+	if cfg.TTSEngine != "gemini" {
+		t.Errorf("TTSEngine = %q, want gemini", cfg.TTSEngine)
+	}
+	if cfg.TTSAPIKey != "sk-secret" {
+		t.Errorf("TTSAPIKey = %q, want sk-secret", cfg.TTSAPIKey)
+	}
+	if cfg.Voice != "Zephyr" {
+		t.Errorf("Voice = %q, want Zephyr", cfg.Voice)
+	}
+}
+
+func TestApplyYAMLChangesAcceptsTTSAPIKey(t *testing.T) {
+	base := Default()
+
+	updated, err := ApplyYAMLChanges(base, []byte("tts_api_key: new-key\n"))
+	if err != nil {
+		t.Fatalf("ApplyYAMLChanges() error = %v", err)
+	}
+	if updated.TTSAPIKey != "new-key" {
+		t.Fatalf("TTSAPIKey = %q, want new-key", updated.TTSAPIKey)
+	}
+}

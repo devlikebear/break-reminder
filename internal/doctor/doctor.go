@@ -49,7 +49,8 @@ func Run(cfg config.Config) Report {
 	installHint := ttsInstallHint(cfg.TTSEngine)
 
 	// Voice availability
-	speaker := tts.NewSpeaker(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd)
+	apiKey := tts.ResolveAPIKey(cfg)
+	speaker := tts.NewSpeaker(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey)
 	voiceLabel := cfg.TTSEngine + ":" + cfg.Voice
 	if speaker.Available(cfg.Voice) {
 		r.add("ok", "Voice ("+voiceLabel+")", "available")
@@ -62,7 +63,7 @@ func Run(cfg config.Config) Report {
 	}
 
 	// TTS
-	if err := tts.SpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, cfg.Voice, "테스트"); err != nil {
+	if err := tts.SpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice, "테스트"); err != nil {
 		detail := err.Error()
 		if installHint != "" && !strings.Contains(detail, installHint) {
 			detail += " (" + installHint + ")"
@@ -141,6 +142,8 @@ func ttsInstallHint(engine string) string {
 		return "run 'break-reminder tts install kittentts'"
 	case "supertonic":
 		return "run 'break-reminder tts install supertonic'"
+	case "gemini":
+		return "set GEMINI_API_KEY env or tts_api_key in config"
 	default:
 		return ""
 	}

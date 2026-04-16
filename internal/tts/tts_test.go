@@ -13,6 +13,8 @@ func TestNormalizeEngine(t *testing.T) {
 		{name: "kitten alias", input: "kitten", expect: engineKittenTTS},
 		{name: "kitten canonical", input: "kittentts", expect: engineKittenTTS},
 		{name: "supertonic canonical", input: "supertonic", expect: engineSupertonic},
+		{name: "gemini canonical", input: "gemini", expect: engineGemini},
+		{name: "gemini trim and upper", input: "  GEMINI  ", expect: engineGemini},
 		{name: "trim and lower", input: "  KiTTeNtts  ", expect: engineKittenTTS},
 	}
 

@@ -11,8 +11,10 @@ const (
 	engineSay              = "say"
 	engineKittenTTS        = "kittentts"
 	engineSupertonic       = "supertonic"
+	engineGemini           = "gemini"
 	defaultKittenModel     = "KittenML/kitten-tts-nano-0.8"
 	defaultSupertonicModel = "Supertone/supertonic-2"
+	defaultGeminiModel     = "gemini-3.1-flash-tts-preview"
 	defaultPythonCommand   = "python3"
 )
 
@@ -38,6 +40,39 @@ var supertonicVoices = map[string]string{
 	"m3": "M3",
 	"m4": "M4",
 	"m5": "M5",
+}
+
+var geminiVoices = map[string]string{
+	"zephyr":        "Zephyr",
+	"puck":          "Puck",
+	"charon":        "Charon",
+	"kore":          "Kore",
+	"fenrir":        "Fenrir",
+	"leda":          "Leda",
+	"orus":          "Orus",
+	"aoede":         "Aoede",
+	"callirrhoe":    "Callirrhoe",
+	"autonoe":       "Autonoe",
+	"enceladus":     "Enceladus",
+	"iapetus":       "Iapetus",
+	"umbriel":       "Umbriel",
+	"algieba":       "Algieba",
+	"despina":       "Despina",
+	"erinome":       "Erinome",
+	"algenib":       "Algenib",
+	"rasalgethi":    "Rasalgethi",
+	"laomedeia":     "Laomedeia",
+	"achernar":      "Achernar",
+	"alnilam":       "Alnilam",
+	"schedar":       "Schedar",
+	"gacrux":        "Gacrux",
+	"pulcherrima":   "Pulcherrima",
+	"achird":        "Achird",
+	"zubenelgenubi": "Zubenelgenubi",
+	"vindemiatrix":  "Vindemiatrix",
+	"sadachbia":     "Sadachbia",
+	"sadaltager":    "Sadaltager",
+	"sulafat":       "Sulafat",
 }
 
 const kittenTTSPythonScript = `
@@ -96,6 +131,8 @@ func normalizeEngine(engine string) string {
 		return engineKittenTTS
 	case engineSupertonic:
 		return engineSupertonic
+	case engineGemini:
+		return engineGemini
 	default:
 		return strings.ToLower(strings.TrimSpace(engine))
 	}
@@ -114,6 +151,8 @@ func normalizeModelForEngine(engine, model string) string {
 		return normalizeKittenModel(model)
 	case engineSupertonic:
 		return normalizeSupertonicModel(model)
+	case engineGemini:
+		return normalizeGeminiModel(model)
 	default:
 		return strings.TrimSpace(model)
 	}
@@ -150,6 +189,23 @@ func supertonicVoiceAvailable(voice string) bool {
 
 func canonicalSupertonicVoice(voice string) (string, bool) {
 	canonical, ok := supertonicVoices[strings.ToLower(strings.TrimSpace(voice))]
+	return canonical, ok
+}
+
+func normalizeGeminiModel(model string) string {
+	if strings.TrimSpace(model) == "" {
+		return defaultGeminiModel
+	}
+	return strings.TrimSpace(model)
+}
+
+func geminiVoiceAvailable(voice string) bool {
+	_, ok := canonicalGeminiVoice(voice)
+	return ok
+}
+
+func canonicalGeminiVoice(voice string) (string, bool) {
+	canonical, ok := geminiVoices[strings.ToLower(strings.TrimSpace(voice))]
 	return canonical, ok
 }
 

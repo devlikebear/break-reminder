@@ -8,7 +8,7 @@ type StubSpeaker struct {
 	engine string
 }
 
-func NewSpeaker(engine, model, pythonCmd string) Speaker {
+func NewSpeaker(engine, model, pythonCmd, apiKey string) Speaker {
 	return &StubSpeaker{engine: normalizeEngine(engine)}
 }
 
@@ -21,10 +21,10 @@ func (s *StubSpeaker) Available(voice string) bool {
 	return false
 }
 
-func VoiceAvailable(engine, model, pythonCmd, voice string) bool {
-	return NewSpeaker(engine, model, pythonCmd).Available(voice)
+func VoiceAvailable(engine, model, pythonCmd, apiKey, voice string) bool {
+	return NewSpeaker(engine, model, pythonCmd, apiKey).Available(voice)
 }
 
-func SpeakAndWait(engine, model, pythonCmd, voice, message string) error {
-	return NewSpeaker(engine, model, pythonCmd).Speak(voice, message)
+func SpeakAndWait(engine, model, pythonCmd, apiKey, voice, message string) error {
+	return NewSpeaker(engine, model, pythonCmd, apiKey).Speak(voice, message)
 }
