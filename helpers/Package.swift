@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "BreakReminderHelpers",
-    platforms: [.macOS(.v12)],
+    platforms: [.macOS(.v13)],
     targets: [
         .target(
             name: "HelperCore"
