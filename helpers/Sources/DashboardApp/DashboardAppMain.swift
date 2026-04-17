@@ -5,13 +5,17 @@ import HelperCore
 @main
 struct DashboardAppEntry: App {
     @StateObject private var vm = DashboardViewModel()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
         Window("Break Reminder", id: "dashboard") {
             DashboardContentView(vm: vm)
                 .frame(width: 360, height: 600)
                 .background(Color(red: 0.1, green: 0.1, blue: 0.12))
-                .onAppear { vm.start() }
+                .onAppear {
+                    vm.start()
+                    configureWindow()
+                }
                 .onDisappear { vm.stop() }
                 .onKeyPress("q") { NSApp.terminate(nil); return .handled }
                 .onKeyPress("r") { vm.resetTimer(); return .handled }
@@ -21,6 +25,20 @@ struct DashboardAppEntry: App {
         .windowResizability(.contentSize)
         .defaultPosition(.topTrailing)
     }
+
+    private func configureWindow() {
+        DispatchQueue.main.async {
+            guard let window = NSApp.windows.first(where: { $0.title == "Break Reminder" }) else { return }
+            window.level = .floating
+            window.isMovableByWindowBackground = true
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+        }
+    }
+}
+
+class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
 struct DashboardContentView: View {
