@@ -39,6 +39,10 @@ final class DashboardViewModel: ObservableObject {
         liveDailyTotals(state: state, config: config, now: now)
     }
 
+    var currentMascot: Mascot {
+        mascotFor(state: state, config: config, now: now)
+    }
+
     var statusText: String {
         if isPaused {
             return "PAUSED (\(isWork ? "WORK" : "BREAK"))"

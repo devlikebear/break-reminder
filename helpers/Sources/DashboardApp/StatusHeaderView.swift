@@ -45,9 +45,31 @@ struct StatusHeaderView: View {
                         .foregroundColor(theme.textSecondary)
                 }
             }
+
+            mascotRow
         }
         .padding(.horizontal, 20)
         .padding(.top, 16)
         .padding(.bottom, 12)
+    }
+
+    private var mascotRow: some View {
+        HStack(spacing: 8) {
+            Text(vm.currentMascot.emoji)
+                .font(.system(size: 22))
+                .id(vm.currentMascot.emoji) // Trigger transition on emoji change
+
+            Text(vm.currentMascot.message)
+                .font(.system(size: 11))
+                .foregroundColor(theme.textSecondary)
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(theme.surface)
+        )
+        .frame(maxWidth: .infinity)
     }
 }
