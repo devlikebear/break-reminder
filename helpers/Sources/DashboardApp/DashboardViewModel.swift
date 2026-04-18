@@ -8,7 +8,6 @@ final class DashboardViewModel: ObservableObject {
     @Published var config: AppConfig = AppConfig()
     @Published var idleSeconds: Int = 0
     @Published var launchdStatusText: String = "Unknown"
-    @Published var isWindowActive: Bool = true
 
     private var timer: Timer?
 

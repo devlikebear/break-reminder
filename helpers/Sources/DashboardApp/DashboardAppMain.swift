@@ -15,15 +15,8 @@ struct DashboardAppEntry: App {
                 .onAppear {
                     vm.start()
                     configureWindow()
-                    installKeyMonitor()
                 }
                 .onDisappear { vm.stop() }
-                .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
-                    vm.isWindowActive = true
-                }
-                .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
-                    vm.isWindowActive = false
-                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -41,25 +34,23 @@ struct DashboardAppEntry: App {
             window.makeKeyAndOrderFront(nil)
         }
     }
-
-    private func installKeyMonitor() {
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            switch event.charactersIgnoringModifiers {
-            case "q": NSApp.terminate(nil); return nil
-            case "r": vm.resetTimer(); return nil
-            case "b": vm.forceBreak(); return nil
-            default: return event
-            }
-        }
-    }
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
 }
 
 struct DashboardContentView: View {
     @ObservedObject var vm: DashboardViewModel
+    @FocusState private var isFocused: Bool
+    @Environment(\.controlActiveState) private var controlActiveState
+
+    private var isWindowActive: Bool {
+        controlActiveState == .key || controlActiveState == .active
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,14 +58,29 @@ struct DashboardContentView: View {
             Divider().background(Color(white: 0.2))
             TimerTabView(vm: vm)
         }
-        .opacity(vm.isWindowActive ? 1.0 : 0.55)
-        .animation(.easeInOut(duration: 0.2), value: vm.isWindowActive)
+        .opacity(isWindowActive ? 1.0 : 0.55)
+        .animation(.easeInOut(duration: 0.2), value: isWindowActive)
+        .focusable()
+        .focused($isFocused)
+        .focusEffectDisabled()
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                isFocused = true
+            }
+        }
+        .onChange(of: isWindowActive) { _, newValue in
+            if newValue { isFocused = true }
+        }
+        .onKeyPress("q") { NSApp.terminate(nil); return .handled }
+        .onKeyPress("r") { vm.resetTimer(); return .handled }
+        .onKeyPress("b") { vm.forceBreak(); return .handled }
         .contentShape(Rectangle())
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
             if let window = NSApp.windows.first(where: { $0.title == "Break Reminder" }) {
                 window.makeKeyAndOrderFront(nil)
             }
+            isFocused = true
         }
     }
 }
