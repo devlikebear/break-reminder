@@ -37,6 +37,8 @@ struct StatsTabView: View {
                 workBreakChart
                 Divider().background(Color(white: 0.2))
                 heatmapView
+                Divider().background(Color(white: 0.2))
+                summaryCards
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -174,5 +176,33 @@ struct StatsTabView: View {
         weekdayFormatter.locale = Locale(identifier: "ko_KR")
         weekdayFormatter.dateFormat = "E"
         return weekdayFormatter.string(from: date)
+    }
+
+    private var summaryCards: some View {
+        let totalWork = filteredHistory.reduce(0) { $0 + $1.workMin }
+        let totalBreak = filteredHistory.reduce(0) { $0 + $1.breakMin }
+        let total = totalWork + totalBreak
+        let ratio = total > 0 ? (totalWork * 100) / total : 0
+
+        return HStack(spacing: 8) {
+            summaryCard(label: "\(period.rawValue) 작업", value: formatMinutes(totalWork), color: Color(red: 0.3, green: 0.8, blue: 0.5))
+            summaryCard(label: "\(period.rawValue) 휴식", value: formatMinutes(totalBreak), color: Color(red: 0.4, green: 0.7, blue: 1.0))
+            summaryCard(label: "작업 비율", value: "\(ratio)%", color: Color(red: 1.0, green: 0.8, blue: 0.4))
+        }
+    }
+
+    private func summaryCard(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(color)
+            Text(label)
+                .font(.system(size: 9))
+                .foregroundColor(.gray)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 10)
+        .background(Color(white: 0.15))
+        .cornerRadius(8)
     }
 }
