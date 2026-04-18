@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-04-18
+
+### Added
+- **DashboardApp v2** — Native macOS dashboard fully migrated to SwiftUI with tabbed navigation (Timer / Stats / Insights)
+- **Stats tab** powered by Swift Charts: weekly/monthly/all period selector, work/break bar chart, hourly focus heatmap (9–18), weekly summary cards
+- **Hourly work tracking**: `DailySummary.hourly_work` field persists per-hour work minutes in `~/.break-reminder-history.json` (backward compatible)
+- **AI Summary**: new `internal/insights` package builds prompts from recent history and parses claude/codex CLI responses into structured daily reports + pattern insights
+- **`break-reminder insights [--refresh]`** CLI subcommand: show cached insights or force regeneration
+- Auto-generation of insights on day-end (fire-and-forget goroutine when `ai_enabled: true`)
+- **Theme system** (`theme: auto | dark | light` config field) with 8 color tokens via `ThemeManager`, syncs with macOS system appearance in auto mode
+- **Mascot** 🐹 in status header — state-aware emoji + Korean messages (working / break / long-session warning / paused / goal-achieved)
+- **Animations**: state-transition color morph, progress ring glow, tab slide transitions, mascot spring bounce, confetti on daily goal (4h)
+- Window opacity dims to 55% when dashboard loses focus for clearer active/inactive signaling
+- IME-independent keyboard shortcuts (physical keyCode matching — works in 한글 input mode)
+
+### Changed
+- **Minimum macOS version: 14 (Sonoma)** for Swift Charts, `onKeyPress`, `controlActiveState`, Canvas+TimelineView
+- Dashboard window is now 360×600 (from 360×520) to accommodate tab bar + mascot row
+- Timer tick accumulates per-hour work buckets and propagates them to `DayEndSummary` → `DailySummary`
+- Insights tab buttons and refresh action shell out to `break-reminder insights --refresh`
+
 ## [0.7.1] - 2026-04-16
 
 ### Added
