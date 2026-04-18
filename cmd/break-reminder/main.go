@@ -72,6 +72,7 @@ func newRootCmd() *cobra.Command {
 		newPauseCmd(),
 		newResumeCmd(),
 		newDoctorCmd(),
+		newInsightsCmd(),
 		newServiceCmd(),
 		newBreakCmd(),
 		newSnoozeCmd(),
