@@ -75,12 +75,16 @@ struct DashboardContentView: View {
                 switch vm.selectedTab {
                 case .timer:
                     TimerTabView(vm: vm)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 case .stats:
                     StatsTabView(vm: vm)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 case .insights:
                     InsightsTabView(vm: vm)
+                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                 }
             }
+            .animation(.easeInOut(duration: 0.25), value: vm.selectedTab)
         }
         .opacity(isWindowActive ? 1.0 : 0.55)
         .animation(.easeInOut(duration: 0.2), value: isWindowActive)
