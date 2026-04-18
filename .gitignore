@@ -18,3 +18,9 @@ helpers/.build/
 
 # Source Analyzer
 .analysis/sessions/
+
+# Superpowers brainstorm sessions
+.superpowers/
+
+# Claude Code local settings
+.claude/

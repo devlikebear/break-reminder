@@ -1,0 +1,95 @@
+import Foundation
+import SwiftUI
+import HelperCore
+
+@MainActor
+final class DashboardViewModel: ObservableObject {
+    @Published var state: AppState = AppState()
+    @Published var config: AppConfig = AppConfig()
+    @Published var idleSeconds: Int = 0
+    @Published var launchdStatusText: String = "Unknown"
+
+    private var timer: Timer?
+
+    var isWork: Bool { state.mode == "work" }
+    var isPaused: Bool { state.paused }
+    var now: Int64 { Int64(Date().timeIntervalSince1970) }
+
+    var sessionProgress: SessionProgress {
+        if isWork {
+            return workProgress(state: state, config: config, now: now)
+        } else {
+            return breakProgress(state: state, config: config, now: now)
+        }
+    }
+
+    var dailyTotals: LiveDailyTotals {
+        liveDailyTotals(state: state, config: config, now: now)
+    }
+
+    var statusText: String {
+        if isPaused {
+            return "PAUSED (\(isWork ? "WORK" : "BREAK"))"
+        }
+        return isWork ? "WORKING" : "ON BREAK"
+    }
+
+    var modeDetail: String {
+        let sp = sessionProgress
+        if isWork {
+            return "\(sp.elapsedSec / 60) / \(config.workDurationMin) min"
+        } else {
+            return "\(sp.elapsedSec / 60) / \(config.breakDurationMin) min"
+        }
+    }
+
+    var sessionSubtitle: String {
+        if isPaused { return "paused" }
+        return isWork ? "until break" : "until work"
+    }
+
+    func start() {
+        refresh()
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.refresh()
+            }
+        }
+    }
+
+    func stop() {
+        timer?.invalidate()
+        timer = nil
+    }
+
+    func refresh() {
+        state = loadStateFromDisk()
+        config = loadConfigFromDisk()
+        idleSeconds = getIdleSecondsFromSystem()
+        launchdStatusText = queryLaunchdStatus()
+    }
+
+    func resetTimer() {
+        let totals = dailyTotals
+        var s = AppState()
+        s.lastCheck = now
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
+        s.lastUpdateDate = totals.date
+        writeStateToDisk(s)
+        refresh()
+    }
+
+    func forceBreak() {
+        let totals = dailyTotals
+        var s = AppState()
+        s.mode = "break"
+        s.lastCheck = now
+        s.breakStart = now
+        s.todayWorkSeconds = totals.workSeconds
+        s.todayBreakSeconds = totals.breakSeconds
+        s.lastUpdateDate = totals.date
+        writeStateToDisk(s)
+        refresh()
+    }
+}
