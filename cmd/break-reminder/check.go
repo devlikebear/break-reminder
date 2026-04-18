@@ -95,10 +95,15 @@ func executeActions(actions []timer.Action, s state.State, daySummary *timer.Day
 			}
 		case timer.ActionSaveDailyHistory:
 			if daySummary != nil {
+				var hourlyMin [24]int
+				for i, s := range daySummary.HourlyWork {
+					hourlyMin[i] = s / 60
+				}
 				_ = ai.AppendHistory(ai.DailySummary{
-					Date:     daySummary.Date,
-					WorkMin:  daySummary.WorkSeconds / 60,
-					BreakMin: daySummary.BreakSeconds / 60,
+					Date:       daySummary.Date,
+					WorkMin:    daySummary.WorkSeconds / 60,
+					BreakMin:   daySummary.BreakSeconds / 60,
+					HourlyWork: hourlyMin,
 				})
 			}
 		}
