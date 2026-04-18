@@ -561,6 +561,84 @@ func TestDailyResetWhileStillOnBreak(t *testing.T) {
 	}
 }
 
+func TestTickWorkAccumulatesHourlyWork(t *testing.T) {
+	cfg := config.Default()
+	s := state.New()
+	s.Mode = "work"
+	// Simulate 10:30 AM local time
+	now := time.Date(2026, 4, 17, 10, 30, 0, 0, time.Local)
+	s.LastCheck = now.Add(-60 * time.Second).Unix()
+	s.LastUpdateDate = now.Format("2006-01-02")
+
+	result := Tick(cfg, s, now, 0) // idle = 0 → user active
+	if result.State.HourlyWork[10] < 60 {
+		t.Errorf("HourlyWork[10] = %d, want >= 60 after 60s active work", result.State.HourlyWork[10])
+	}
+	// Other hours should be untouched
+	for i, v := range result.State.HourlyWork {
+		if i == 10 {
+			continue
+		}
+		if v != 0 {
+			t.Errorf("HourlyWork[%d] = %d, want 0 (only hour 10 should accumulate)", i, v)
+		}
+	}
+}
+
+func TestTickIdleDoesNotAccumulateHourly(t *testing.T) {
+	cfg := config.Default()
+	s := state.New()
+	s.Mode = "work"
+	now := time.Date(2026, 4, 17, 10, 30, 0, 0, time.Local)
+	s.LastCheck = now.Add(-60 * time.Second).Unix()
+	s.LastUpdateDate = now.Format("2006-01-02")
+
+	// idle >= threshold → user inactive → no hourly accum
+	result := Tick(cfg, s, now, cfg.IdleThresholdSec+1)
+	for i, v := range result.State.HourlyWork {
+		if v != 0 {
+			t.Errorf("HourlyWork[%d] = %d, want 0 when user idle", i, v)
+		}
+	}
+}
+
+func TestTickDailyResetClearsHourlyAndPreservesInSummary(t *testing.T) {
+	cfg := config.Default()
+	s := state.New()
+	s.Mode = "work"
+	s.LastUpdateDate = "2025-01-14"
+	s.TodayWorkSeconds = 1800
+	s.TodayBreakSeconds = 600
+	s.HourlyWork[10] = 600
+	s.HourlyWork[14] = 1200
+
+	// Next day at 9:00 AM
+	now := time.Date(2025, 1, 15, 9, 0, 0, 0, time.Local)
+	s.LastCheck = now.Add(-60 * time.Second).Unix()
+
+	result := Tick(cfg, s, now, 0)
+
+	if result.DayEndSummary == nil {
+		t.Fatal("expected DayEndSummary on daily reset")
+	}
+	if result.DayEndSummary.HourlyWork[10] != 600 {
+		t.Errorf("DayEndSummary.HourlyWork[10] = %d, want 600", result.DayEndSummary.HourlyWork[10])
+	}
+	if result.DayEndSummary.HourlyWork[14] != 1200 {
+		t.Errorf("DayEndSummary.HourlyWork[14] = %d, want 1200", result.DayEndSummary.HourlyWork[14])
+	}
+	// State should be reset
+	for i, v := range result.State.HourlyWork {
+		// The tick may have accumulated into the new day's hour[9] bucket
+		if i == 9 {
+			continue
+		}
+		if v != 0 {
+			t.Errorf("result.State.HourlyWork[%d] = %d after reset, want 0", i, v)
+		}
+	}
+}
+
 func TestTickPausedOverMidnightOnlyRollsDailyTotals(t *testing.T) {
 	cfg := config.Default()
 	now := time.Date(2025, 1, 16, 0, 5, 0, 0, time.Local)
