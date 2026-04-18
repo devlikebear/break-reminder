@@ -2,12 +2,22 @@ import Foundation
 import SwiftUI
 import HelperCore
 
+enum DashboardTab: String, CaseIterable, Identifiable {
+    case timer = "타이머"
+    case stats = "통계"
+    case insights = "인사이트"
+
+    var id: String { rawValue }
+}
+
 @MainActor
 final class DashboardViewModel: ObservableObject {
     @Published var state: AppState = AppState()
     @Published var config: AppConfig = AppConfig()
     @Published var idleSeconds: Int = 0
     @Published var launchdStatusText: String = "Unknown"
+    @Published var selectedTab: DashboardTab = .timer
+    @Published var history: [HistoryEntry] = []
 
     private var timer: Timer?
 
@@ -50,6 +60,7 @@ final class DashboardViewModel: ObservableObject {
 
     func start() {
         refresh()
+        loadHistory()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
@@ -67,6 +78,11 @@ final class DashboardViewModel: ObservableObject {
         config = loadConfigFromDisk()
         idleSeconds = getIdleSecondsFromSystem()
         launchdStatusText = queryLaunchdStatus()
+        loadHistory()
+    }
+
+    func loadHistory() {
+        history = loadHistoryFromDisk()
     }
 
     func resetTimer() {
