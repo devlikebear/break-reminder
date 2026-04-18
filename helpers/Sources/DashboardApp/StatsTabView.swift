@@ -34,9 +34,7 @@ struct StatsTabView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 periodSelector
-                Text("Loading charts...")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 12))
+                workBreakChart
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -50,5 +48,54 @@ struct StatsTabView: View {
             }
         }
         .pickerStyle(.segmented)
+    }
+
+    private var workBreakChart: some View {
+        let workColor = Color(red: 0.3, green: 0.8, blue: 0.5)
+        let breakColor = Color(red: 0.4, green: 0.7, blue: 1.0)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("작업 / 휴식 시간")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color(white: 0.9))
+
+            Chart {
+                ForEach(filteredHistory, id: \.date) { entry in
+                    BarMark(
+                        x: .value("날짜", shortDate(entry.date)),
+                        y: .value("분", entry.workMin)
+                    )
+                    .foregroundStyle(workColor)
+
+                    BarMark(
+                        x: .value("날짜", shortDate(entry.date)),
+                        y: .value("분", entry.breakMin)
+                    )
+                    .foregroundStyle(breakColor)
+                }
+            }
+            .frame(height: 140)
+
+            HStack(spacing: 16) {
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(workColor)
+                        .frame(width: 8, height: 8)
+                    Text("작업").font(.system(size: 10)).foregroundColor(.gray)
+                }
+                HStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(breakColor)
+                        .frame(width: 8, height: 8)
+                    Text("휴식").font(.system(size: 10)).foregroundColor(.gray)
+                }
+            }
+        }
+    }
+
+    private func shortDate(_ iso: String) -> String {
+        let parts = iso.split(separator: "-")
+        guard parts.count == 3 else { return iso }
+        return "\(Int(parts[1]) ?? 0)/\(Int(parts[2]) ?? 0)"
     }
 }
