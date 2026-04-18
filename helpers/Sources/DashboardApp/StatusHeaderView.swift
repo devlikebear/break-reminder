@@ -51,12 +51,16 @@ struct StatusHeaderView: View {
         .padding(.horizontal, 20)
         .padding(.top, 16)
         .padding(.bottom, 12)
+        .animation(.easeInOut(duration: 0.5), value: vm.isWork)
+        .animation(.easeInOut(duration: 0.3), value: vm.isPaused)
     }
 
     private var mascotRow: some View {
         HStack(spacing: 8) {
             Text(vm.currentMascot.emoji)
                 .font(.system(size: 22))
+                .scaleEffect(vm.isPaused ? 0.9 : 1.0)
+                .animation(.spring(response: 0.4, dampingFraction: 0.6), value: vm.currentMascot.emoji)
                 .id(vm.currentMascot.emoji) // Trigger transition on emoji change
 
             Text(vm.currentMascot.message)
