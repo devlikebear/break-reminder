@@ -5,18 +5,24 @@ import HelperCore
 @main
 struct DashboardAppEntry: App {
     @StateObject private var vm = DashboardViewModel()
+    @StateObject private var theme = ThemeManager()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
         Window("Break Reminder", id: "dashboard") {
             DashboardContentView(vm: vm)
+                .environmentObject(theme)
                 .frame(width: 360, height: 600)
-                .background(Color(red: 0.1, green: 0.1, blue: 0.12))
+                .background(theme.background)
                 .onAppear {
                     vm.start()
+                    theme.mode = ThemeMode(raw: vm.config.theme)
                     configureWindow()
                 }
                 .onDisappear { vm.stop() }
+                .onChange(of: vm.config.theme) { _, newValue in
+                    theme.mode = ThemeMode(raw: newValue)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -45,16 +51,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct DashboardContentView: View {
     @ObservedObject var vm: DashboardViewModel
+    @EnvironmentObject var theme: ThemeManager
     @FocusState private var isFocused: Bool
     @Environment(\.controlActiveState) private var controlActiveState
+    @Environment(\.colorScheme) private var systemColorScheme
 
     private var isWindowActive: Bool {
         controlActiveState == .key || controlActiveState == .active
     }
 
     private var accentColor: Color {
-        if vm.isPaused { return .yellow }
-        return vm.isWork ? Color(red: 0.3, green: 0.8, blue: 0.5) : Color(red: 0.4, green: 0.7, blue: 1.0)
+        if vm.isPaused { return theme.warning }
+        return vm.isWork ? theme.accent : theme.accentBreak
     }
 
     var body: some View {
@@ -84,9 +92,13 @@ struct DashboardContentView: View {
                 isFocused = true
             }
             installKeyMonitor()
+            theme.systemIsDark = (systemColorScheme == .dark)
         }
         .onChange(of: isWindowActive) { _, newValue in
             if newValue { isFocused = true }
+        }
+        .onChange(of: systemColorScheme) { _, newValue in
+            theme.systemIsDark = (newValue == .dark)
         }
         .contentShape(Rectangle())
         .onTapGesture {
