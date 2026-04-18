@@ -380,3 +380,52 @@ func TestSnoozeBreakRejectsInvalidModes(t *testing.T) {
 		})
 	}
 }
+
+func TestStateHourlyWorkRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state")
+
+	s := New()
+	s.HourlyWork[9] = 600
+	s.HourlyWork[14] = 1200
+
+	if err := Save(path, s); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.HourlyWork[9] != 600 {
+		t.Errorf("HourlyWork[9] = %d, want 600", loaded.HourlyWork[9])
+	}
+	if loaded.HourlyWork[14] != 1200 {
+		t.Errorf("HourlyWork[14] = %d, want 1200", loaded.HourlyWork[14])
+	}
+}
+
+func TestStateHourlyWorkBackwardCompat(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state")
+
+	// Write state without HOURLY_WORK line
+	legacy := `WORK_SECONDS=100
+MODE=work
+LAST_CHECK=1700000000
+LAST_UPDATE_DATE=2026-04-17
+`
+	if err := os.WriteFile(path, []byte(legacy), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for i, v := range loaded.HourlyWork {
+		if v != 0 {
+			t.Errorf("HourlyWork[%d] = %d, want 0 for legacy state", i, v)
+		}
+	}
+}

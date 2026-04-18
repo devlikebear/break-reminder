@@ -52,11 +52,27 @@ struct DashboardContentView: View {
         controlActiveState == .key || controlActiveState == .active
     }
 
+    private var accentColor: Color {
+        if vm.isPaused { return .yellow }
+        return vm.isWork ? Color(red: 0.3, green: 0.8, blue: 0.5) : Color(red: 0.4, green: 0.7, blue: 1.0)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             StatusHeaderView(vm: vm)
             Divider().background(Color(white: 0.2))
-            TimerTabView(vm: vm)
+            TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
+
+            Group {
+                switch vm.selectedTab {
+                case .timer:
+                    TimerTabView(vm: vm)
+                case .stats:
+                    StatsTabView(vm: vm)
+                case .insights:
+                    InsightsTabView()
+                }
+            }
         }
         .opacity(isWindowActive ? 1.0 : 0.55)
         .animation(.easeInOut(duration: 0.2), value: isWindowActive)

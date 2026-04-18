@@ -26,6 +26,7 @@ type DayEndSummary struct {
 	Date         string
 	WorkSeconds  int
 	BreakSeconds int
+	HourlyWork   [24]int
 }
 
 // TickResult is the outcome of a single timer tick.
@@ -50,12 +51,14 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 				Date:         s.LastUpdateDate,
 				WorkSeconds:  s.TodayWorkSeconds,
 				BreakSeconds: s.TodayBreakSeconds,
+				HourlyWork:   s.HourlyWork,
 			}
 			result.Actions = append(result.Actions, ActionSaveDailyHistory)
 		}
 		result.State.TodayWorkSeconds = 0
 		result.State.TodayBreakSeconds = 0
 		result.State.LastUpdateDate = today
+		result.State.HourlyWork = [24]int{}
 		result.LogMsg = "New day detected! Resetting daily stats."
 	} else if s.LastUpdateDate == "" {
 		result.State.LastUpdateDate = today
@@ -108,6 +111,11 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 		// User is active
 		r.State.WorkSeconds += elapsed
 		r.State.TodayWorkSeconds += elapsed
+
+		hour := time.Unix(unix, 0).Hour()
+		if hour >= 0 && hour < 24 {
+			r.State.HourlyWork[hour] += elapsed
+		}
 
 		workMin := r.State.WorkSeconds / 60
 		remainMin := (workDur - r.State.WorkSeconds) / 60

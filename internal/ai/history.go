@@ -8,11 +8,12 @@ import (
 
 // DailySummary represents one day's usage statistics.
 type DailySummary struct {
-	Date       string `json:"date"`
-	WorkMin    int    `json:"work_min"`
-	BreakMin   int    `json:"break_min"`
-	Sessions   int    `json:"sessions"`
-	Activities int    `json:"activities"`
+	Date       string  `json:"date"`
+	WorkMin    int     `json:"work_min"`
+	BreakMin   int     `json:"break_min"`
+	Sessions   int     `json:"sessions"`
+	Activities int     `json:"activities"`
+	HourlyWork [24]int `json:"hourly_work"`
 }
 
 // historyPathOverride allows tests to redirect the history file.

@@ -31,6 +31,7 @@ type State struct {
 	TodayBreakSeconds      int    `json:"today_break_seconds"`
 	LastUpdateDate         string `json:"last_update_date"`
 	LastBreakWarningBucket int    `json:"last_break_warning_bucket"`
+	HourlyWork             [24]int `json:"hourly_work"`
 }
 
 // DefaultStatePath returns ~/.break-reminder-state
@@ -267,6 +268,15 @@ func Load(path string) (State, error) {
 			if v, err := strconv.Atoi(value); err == nil {
 				s.LastBreakWarningBucket = v
 			}
+		case "HOURLY_WORK":
+			parts := strings.Split(value, ",")
+			if len(parts) == 24 {
+				for i, p := range parts {
+					if n, err := strconv.Atoi(strings.TrimSpace(p)); err == nil {
+						s.HourlyWork[i] = n
+					}
+				}
+			}
 		}
 	}
 
@@ -274,19 +284,26 @@ func Load(path string) (State, error) {
 }
 
 func serialize(s State) string {
-	return fmt.Sprintf(`WORK_SECONDS=%d
-MODE=%s
-LAST_CHECK=%d
-BREAK_START=%d
-SNOOZE_UNTIL=%d
-PAUSED=%t
-PAUSED_AT=%d
-TODAY_WORK_SECONDS=%d
-TODAY_BREAK_SECONDS=%d
-LAST_UPDATE_DATE=%s
-LAST_BREAK_WARNING_BUCKET=%d
-`, s.WorkSeconds, s.Mode, s.LastCheck, s.BreakStart,
-		s.SnoozeUntil, s.Paused, s.PausedAt, s.TodayWorkSeconds, s.TodayBreakSeconds, s.LastUpdateDate, s.LastBreakWarningBucket)
+	var b strings.Builder
+	fmt.Fprintf(&b, "WORK_SECONDS=%d\n", s.WorkSeconds)
+	fmt.Fprintf(&b, "MODE=%s\n", s.Mode)
+	fmt.Fprintf(&b, "LAST_CHECK=%d\n", s.LastCheck)
+	fmt.Fprintf(&b, "BREAK_START=%d\n", s.BreakStart)
+	fmt.Fprintf(&b, "SNOOZE_UNTIL=%d\n", s.SnoozeUntil)
+	fmt.Fprintf(&b, "PAUSED=%t\n", s.Paused)
+	fmt.Fprintf(&b, "PAUSED_AT=%d\n", s.PausedAt)
+	fmt.Fprintf(&b, "TODAY_WORK_SECONDS=%d\n", s.TodayWorkSeconds)
+	fmt.Fprintf(&b, "TODAY_BREAK_SECONDS=%d\n", s.TodayBreakSeconds)
+	fmt.Fprintf(&b, "LAST_UPDATE_DATE=%s\n", s.LastUpdateDate)
+	fmt.Fprintf(&b, "LAST_BREAK_WARNING_BUCKET=%d\n", s.LastBreakWarningBucket)
+
+	hourlyParts := make([]string, 24)
+	for i, v := range s.HourlyWork {
+		hourlyParts[i] = strconv.Itoa(v)
+	}
+	fmt.Fprintf(&b, "HOURLY_WORK=%s\n", strings.Join(hourlyParts, ","))
+
+	return b.String()
 }
 
 func saveUnlocked(path string, s State) error {

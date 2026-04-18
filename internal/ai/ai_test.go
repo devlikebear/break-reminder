@@ -130,3 +130,57 @@ func TestHistoryFileFormat(t *testing.T) {
 		t.Fatalf("history file should be valid JSON: %v", err)
 	}
 }
+
+func TestDailySummaryHourlyWorkPersists(t *testing.T) {
+	origPath := historyPathOverride
+	defer func() { historyPathOverride = origPath }()
+	historyPathOverride = filepath.Join(t.TempDir(), "history.json")
+
+	summary := DailySummary{
+		Date:       "2026-04-17",
+		WorkMin:    280,
+		BreakMin:   60,
+		Sessions:   7,
+		Activities: 3,
+		HourlyWork: [24]int{0, 0, 0, 0, 0, 0, 0, 0, 0, 45, 55, 50, 10, 40, 50, 35, 20, 0, 0, 0, 0, 0, 0, 0},
+	}
+	if err := AppendHistory(summary); err != nil {
+		t.Fatalf("AppendHistory: %v", err)
+	}
+
+	history, err := LoadHistory()
+	if err != nil {
+		t.Fatalf("LoadHistory: %v", err)
+	}
+	if len(history) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(history))
+	}
+	if history[0].HourlyWork[10] != 55 {
+		t.Errorf("HourlyWork[10] = %d, want 55", history[0].HourlyWork[10])
+	}
+}
+
+func TestDailySummaryBackwardCompatMissingHourly(t *testing.T) {
+	origPath := historyPathOverride
+	defer func() { historyPathOverride = origPath }()
+	historyPathOverride = filepath.Join(t.TempDir(), "history.json")
+
+	// Write legacy JSON without hourly_work field
+	legacy := `[{"date":"2026-04-16","work_min":200,"break_min":40,"sessions":4,"activities":2}]`
+	if err := os.WriteFile(historyPathOverride, []byte(legacy), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	history, err := LoadHistory()
+	if err != nil {
+		t.Fatalf("LoadHistory: %v", err)
+	}
+	if len(history) != 1 {
+		t.Fatalf("expected 1 entry, got %d", len(history))
+	}
+	for i, v := range history[0].HourlyWork {
+		if v != 0 {
+			t.Errorf("HourlyWork[%d] = %d, want 0 for legacy data", i, v)
+		}
+	}
+}
