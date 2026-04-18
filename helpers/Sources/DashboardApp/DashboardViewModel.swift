@@ -18,6 +18,8 @@ final class DashboardViewModel: ObservableObject {
     @Published var launchdStatusText: String = "Unknown"
     @Published var selectedTab: DashboardTab = .timer
     @Published var history: [HistoryEntry] = []
+    @Published var insights: InsightsReport?
+    @Published var isRefreshingInsights = false
 
     private var timer: Timer?
 
@@ -61,6 +63,7 @@ final class DashboardViewModel: ObservableObject {
     func start() {
         refresh()
         loadHistory()
+        loadInsights()
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
@@ -79,10 +82,48 @@ final class DashboardViewModel: ObservableObject {
         idleSeconds = getIdleSecondsFromSystem()
         launchdStatusText = queryLaunchdStatus()
         loadHistory()
+        loadInsights()
     }
 
     func loadHistory() {
         history = loadHistoryFromDisk()
+    }
+
+    func loadInsights() {
+        insights = loadInsightsFromDisk()
+    }
+
+    func refreshInsights() {
+        guard !isRefreshingInsights else { return }
+        isRefreshingInsights = true
+
+        Task.detached { [weak self] in
+            await self?.runInsightsRefresh()
+        }
+    }
+
+    @MainActor
+    private func runInsightsRefresh() async {
+        defer { isRefreshingInsights = false }
+
+        guard let cli = findHelper("break-reminder") else {
+            return
+        }
+
+        let process = Process()
+        process.launchPath = cli
+        process.arguments = ["insights", "--refresh"]
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return
+        }
+
+        loadInsights()
     }
 
     func resetTimer() {

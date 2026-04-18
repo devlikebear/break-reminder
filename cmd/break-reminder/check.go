@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
+	"time"
+
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/devlikebear/break-reminder/internal/ai"
 	"github.com/devlikebear/break-reminder/internal/breakscreen"
 	"github.com/devlikebear/break-reminder/internal/idle"
+	"github.com/devlikebear/break-reminder/internal/insights"
 	"github.com/devlikebear/break-reminder/internal/logging"
 	"github.com/devlikebear/break-reminder/internal/notify"
 	"github.com/devlikebear/break-reminder/internal/schedule"
@@ -105,7 +109,43 @@ func executeActions(actions []timer.Action, s state.State, daySummary *timer.Day
 					BreakMin:   daySummary.BreakSeconds / 60,
 					HourlyWork: hourlyMin,
 				})
+
+				if cfg.AIEnabled {
+					go generateDailyInsights()
+				}
 			}
 		}
 	}
+}
+
+func generateDailyInsights() {
+	client := ai.NewClient(cfg.AICLI)
+	if !client.Available() {
+		log.Warn().Str("cli", cfg.AICLI).Msg("AI CLI unavailable, skipping insights generation")
+		return
+	}
+
+	history, err := ai.LoadHistory()
+	if err != nil {
+		log.Warn().Err(err).Msg("Load history for insights")
+		return
+	}
+	recent := history
+	if len(recent) > 7 {
+		recent = recent[len(recent)-7:]
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	report, err := insights.Generate(ctx, client, recent, time.Now())
+	if err != nil {
+		log.Warn().Err(err).Msg("Generate insights")
+		return
+	}
+	if err := insights.Save(report); err != nil {
+		log.Warn().Err(err).Msg("Save insights")
+		return
+	}
+	log.Info().Msg("Insights auto-generated")
 }
