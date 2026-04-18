@@ -17,6 +17,12 @@ struct DashboardAppEntry: App {
                     configureWindow()
                 }
                 .onDisappear { vm.stop() }
+                .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+                    vm.isWindowActive = true
+                }
+                .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
+                    vm.isWindowActive = false
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -38,6 +44,9 @@ struct DashboardAppEntry: App {
             window.isMovableByWindowBackground = true
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
+            // Initial focus
+            NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
         }
     }
 }
@@ -54,6 +63,15 @@ struct DashboardContentView: View {
             StatusHeaderView(vm: vm)
             Divider().background(Color(white: 0.2))
             TimerTabView(vm: vm)
+        }
+        .opacity(vm.isWindowActive ? 1.0 : 0.55)
+        .animation(.easeInOut(duration: 0.2), value: vm.isWindowActive)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            NSApp.activate(ignoringOtherApps: true)
+            if let window = NSApp.windows.first(where: { $0.title == "Break Reminder" }) {
+                window.makeKeyAndOrderFront(nil)
+            }
         }
     }
 }
