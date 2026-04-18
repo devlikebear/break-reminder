@@ -67,13 +67,11 @@ struct DashboardContentView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                 isFocused = true
             }
+            installKeyMonitor()
         }
         .onChange(of: isWindowActive) { _, newValue in
             if newValue { isFocused = true }
         }
-        .onKeyPress("q") { NSApp.terminate(nil); return .handled }
-        .onKeyPress("r") { vm.resetTimer(); return .handled }
-        .onKeyPress("b") { vm.forceBreak(); return .handled }
         .contentShape(Rectangle())
         .onTapGesture {
             NSApp.activate(ignoringOtherApps: true)
@@ -81,6 +79,30 @@ struct DashboardContentView: View {
                 window.makeKeyAndOrderFront(nil)
             }
             isFocused = true
+        }
+    }
+
+    private func installKeyMonitor() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            // Only handle plain keys (no modifiers like Cmd/Ctrl/Opt)
+            let relevantFlags: NSEvent.ModifierFlags = [.command, .control, .option]
+            if !event.modifierFlags.intersection(relevantFlags).isEmpty {
+                return event
+            }
+
+            switch event.keyCode {
+            case 12:  // Q (physical key)
+                NSApp.terminate(nil)
+                return nil
+            case 15:  // R
+                vm.resetTimer()
+                return nil
+            case 11:  // B
+                vm.forceBreak()
+                return nil
+            default:
+                return event
+            }
         }
     }
 }
