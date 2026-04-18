@@ -22,6 +22,8 @@ struct CircularProgressRing: View {
                 .trim(from: 0, to: CGFloat(min(progress, 1.0)))
                 .stroke(fillColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
+                .shadow(color: fillColor.opacity(0.6), radius: 4)
+                .animation(.easeInOut(duration: 1.0), value: progress)
         }
     }
 }
