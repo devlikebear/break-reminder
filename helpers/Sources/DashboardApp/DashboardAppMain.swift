@@ -15,11 +15,9 @@ struct DashboardAppEntry: App {
                 .onAppear {
                     vm.start()
                     configureWindow()
+                    installKeyMonitor()
                 }
                 .onDisappear { vm.stop() }
-                .onKeyPress("q") { NSApp.terminate(nil); return .handled }
-                .onKeyPress("r") { vm.resetTimer(); return .handled }
-                .onKeyPress("b") { vm.forceBreak(); return .handled }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -33,6 +31,17 @@ struct DashboardAppEntry: App {
             window.isMovableByWindowBackground = true
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
+        }
+    }
+
+    private func installKeyMonitor() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            switch event.charactersIgnoringModifiers {
+            case "q": NSApp.terminate(nil); return nil
+            case "r": vm.resetTimer(); return nil
+            case "b": vm.forceBreak(); return nil
+            default: return event
+            }
         }
     }
 }
