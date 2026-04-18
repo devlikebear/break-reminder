@@ -43,6 +43,7 @@ struct StatsTabView: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
         }
+        .scrollIndicators(.visible)
     }
 
     private var periodSelector: some View {
@@ -52,6 +53,7 @@ struct StatsTabView: View {
             }
         }
         .pickerStyle(.segmented)
+        .labelsHidden()
     }
 
     private var workBreakChart: some View {
@@ -61,7 +63,7 @@ struct StatsTabView: View {
         return VStack(alignment: .leading, spacing: 8) {
             Text("작업 / 휴식 시간")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(white: 0.9))
+                .foregroundColor(.primary)
 
             Chart {
                 ForEach(filteredHistory, id: \.date) { entry in
@@ -79,6 +81,22 @@ struct StatsTabView: View {
                 }
             }
             .frame(height: 140)
+            .chartXAxis {
+                AxisMarks { _ in
+                    AxisValueLabel()
+                        .foregroundStyle(Color.secondary)
+                    AxisGridLine()
+                        .foregroundStyle(Color.gray.opacity(0.2))
+                }
+            }
+            .chartYAxis {
+                AxisMarks { _ in
+                    AxisValueLabel()
+                        .foregroundStyle(Color.secondary)
+                    AxisGridLine()
+                        .foregroundStyle(Color.gray.opacity(0.2))
+                }
+            }
 
             HStack(spacing: 16) {
                 HStack(spacing: 4) {
@@ -107,7 +125,7 @@ struct StatsTabView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("시간대별 집중도")
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(Color(white: 0.9))
+                .foregroundColor(.primary)
 
             heatmapGrid
             heatmapLegend
