@@ -4,15 +4,16 @@ import HelperCore
 
 struct InsightsTabView: View {
     @ObservedObject var vm: DashboardViewModel
+    @EnvironmentObject var theme: ThemeManager
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let report = vm.insights {
                     dailyReportCard(report)
-                    Divider().background(Color(white: 0.2))
+                    Divider().background(theme.divider)
                     patternsSection(report)
-                    Divider().background(Color(white: 0.2))
+                    Divider().background(theme.divider)
                     actionButtons(report)
                 } else {
                     emptyState
@@ -64,7 +65,7 @@ struct InsightsTabView: View {
 
             HStack(alignment: .top, spacing: 8) {
                 Rectangle()
-                    .fill(Color(red: 0.3, green: 0.8, blue: 0.5))
+                    .fill(theme.accent)
                     .frame(width: 3)
                 Text(report.dailyReport)
                     .font(.system(size: 12))
@@ -73,7 +74,7 @@ struct InsightsTabView: View {
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(white: 0.15))
+            .background(theme.surface)
             .cornerRadius(10)
         }
     }
@@ -113,7 +114,7 @@ struct InsightsTabView: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(white: 0.15))
+        .background(theme.surface)
         .cornerRadius(8)
     }
 

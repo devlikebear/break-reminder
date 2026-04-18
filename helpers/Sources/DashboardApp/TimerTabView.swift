@@ -3,14 +3,12 @@ import HelperCore
 
 struct TimerTabView: View {
     @ObservedObject var vm: DashboardViewModel
-
-    private let workColor = Color(red: 0.3, green: 0.8, blue: 0.5)
-    private let breakColor = Color(red: 0.4, green: 0.7, blue: 1.0)
+    @EnvironmentObject var theme: ThemeManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             dailyStatsSection
-            Divider().background(Color(white: 0.2))
+            Divider().background(theme.divider)
             systemInfoSection
             Spacer()
             actionButtons
@@ -24,7 +22,7 @@ struct TimerTabView: View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Daily Statistics")
                 .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(Color(white: 0.9))
+                .foregroundColor(theme.textPrimary)
 
             let totals = vm.dailyTotals
             let workMin = totals.workSeconds / 60
@@ -34,21 +32,21 @@ struct TimerTabView: View {
             HStack {
                 Text("Work: \(formatMinutes(workMin))")
                     .font(.system(size: 13))
-                    .foregroundColor(Color(white: 0.9))
+                    .foregroundColor(theme.textPrimary)
                 Spacer()
                 Text("Break: \(formatMinutes(breakMin))")
                     .font(.system(size: 13))
-                    .foregroundColor(breakColor)
+                    .foregroundColor(theme.accentBreak)
             }
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(Color(white: 0.2))
+                        .fill(theme.divider)
                         .frame(height: 6)
                     if totalMin > 0 {
                         RoundedRectangle(cornerRadius: 3)
-                            .fill(workColor)
+                            .fill(theme.accent)
                             .frame(width: geo.size.width * CGFloat(workMin) / CGFloat(totalMin), height: 6)
                     }
                 }
@@ -60,7 +58,7 @@ struct TimerTabView: View {
                     Spacer()
                     Text("\(workMin * 100 / totalMin)%")
                         .font(.system(size: 11))
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.textSecondary)
                 }
             }
         }
@@ -70,10 +68,10 @@ struct TimerTabView: View {
         VStack(alignment: .leading, spacing: 4) {
             Text("System: \(vm.launchdStatusText)")
                 .font(.system(size: 12))
-                .foregroundColor(.gray)
+                .foregroundColor(theme.textSecondary)
             Text("Idle: \(vm.idleSeconds)s / Threshold: \(vm.config.idleThresholdSec)s")
                 .font(.system(size: 12))
-                .foregroundColor(.gray)
+                .foregroundColor(theme.textSecondary)
         }
     }
 
@@ -91,22 +89,30 @@ struct TimerTabView: View {
             Spacer()
             Text("q: quit   r: reset   b: break")
                 .font(.system(size: 10))
-                .foregroundColor(.gray)
+                .foregroundColor(theme.textSecondary)
             Spacer()
         }
     }
 }
 
 struct DashboardButtonStyle: ButtonStyle {
+    let surfaceColor: Color
+    let textColor: Color
+
+    init(surfaceColor: Color = Color(white: 0.22), textColor: Color = Color(white: 0.9)) {
+        self.surfaceColor = surfaceColor
+        self.textColor = textColor
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 14, weight: .medium))
-            .foregroundColor(Color(white: 0.9))
+            .foregroundColor(textColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(white: configuration.isPressed ? 0.28 : 0.22))
+                    .fill(surfaceColor.opacity(configuration.isPressed ? 1.3 : 1.0))
             )
     }
 }

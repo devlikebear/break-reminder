@@ -68,7 +68,7 @@ struct DashboardContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             StatusHeaderView(vm: vm)
-            Divider().background(Color(white: 0.2))
+            Divider().background(theme.divider)
             TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
 
             Group {
