@@ -20,6 +20,7 @@ enum StatsPeriod: String, CaseIterable, Identifiable {
 
 struct StatsTabView: View {
     @ObservedObject var vm: DashboardViewModel
+    @EnvironmentObject var theme: ThemeManager
     @State private var period: StatsPeriod = .week
 
     private var filteredHistory: [HistoryEntry] {
@@ -35,9 +36,9 @@ struct StatsTabView: View {
             VStack(alignment: .leading, spacing: 16) {
                 periodSelector
                 workBreakChart
-                Divider().background(Color(white: 0.2))
+                Divider().background(theme.divider)
                 heatmapView
-                Divider().background(Color(white: 0.2))
+                Divider().background(theme.divider)
                 summaryCards
             }
             .padding(.horizontal, 20)
@@ -57,9 +58,6 @@ struct StatsTabView: View {
     }
 
     private var workBreakChart: some View {
-        let workColor = Color(red: 0.3, green: 0.8, blue: 0.5)
-        let breakColor = Color(red: 0.4, green: 0.7, blue: 1.0)
-
         return VStack(alignment: .leading, spacing: 8) {
             Text("작업 / 휴식 시간")
                 .font(.system(size: 13, weight: .semibold))
@@ -71,13 +69,13 @@ struct StatsTabView: View {
                         x: .value("날짜", shortDate(entry.date)),
                         y: .value("분", entry.workMin)
                     )
-                    .foregroundStyle(workColor)
+                    .foregroundStyle(theme.accent)
 
                     BarMark(
                         x: .value("날짜", shortDate(entry.date)),
                         y: .value("분", entry.breakMin)
                     )
-                    .foregroundStyle(breakColor)
+                    .foregroundStyle(theme.accentBreak)
                 }
             }
             .frame(height: 140)
@@ -101,15 +99,15 @@ struct StatsTabView: View {
             HStack(spacing: 16) {
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(workColor)
+                        .fill(theme.accent)
                         .frame(width: 8, height: 8)
-                    Text("작업").font(.system(size: 10)).foregroundColor(.gray)
+                    Text("작업").font(.system(size: 10)).foregroundColor(theme.textSecondary)
                 }
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(breakColor)
+                        .fill(theme.accentBreak)
                         .frame(width: 8, height: 8)
-                    Text("휴식").font(.system(size: 10)).foregroundColor(.gray)
+                    Text("휴식").font(.system(size: 10)).foregroundColor(theme.textSecondary)
                 }
             }
         }
@@ -142,7 +140,7 @@ struct StatsTabView: View {
                 ForEach(hours, id: \.self) { hour in
                     Text("\(hour)")
                         .font(.system(size: 9))
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -151,7 +149,7 @@ struct StatsTabView: View {
                 HStack(spacing: 2) {
                     Text(dayLabel(entry.date))
                         .font(.system(size: 9))
-                        .foregroundColor(.gray)
+                        .foregroundColor(theme.textSecondary)
                         .frame(width: 28, alignment: .leading)
 
                     ForEach(hours, id: \.self) { hour in
@@ -166,13 +164,13 @@ struct StatsTabView: View {
 
     private var heatmapLegend: some View {
         HStack(spacing: 4) {
-            Text("낮음").font(.system(size: 9)).foregroundColor(.gray)
+            Text("낮음").font(.system(size: 9)).foregroundColor(theme.textSecondary)
             ForEach([0, 15, 35, 55], id: \.self) { v in
                 RoundedRectangle(cornerRadius: 2)
                     .fill(heatColor(for: v))
                     .frame(width: 12, height: 8)
             }
-            Text("높음").font(.system(size: 9)).foregroundColor(.gray)
+            Text("높음").font(.system(size: 9)).foregroundColor(theme.textSecondary)
         }
     }
 
@@ -203,9 +201,9 @@ struct StatsTabView: View {
         let ratio = total > 0 ? (totalWork * 100) / total : 0
 
         return HStack(spacing: 8) {
-            summaryCard(label: "\(period.rawValue) 작업", value: formatMinutes(totalWork), color: Color(red: 0.3, green: 0.8, blue: 0.5))
-            summaryCard(label: "\(period.rawValue) 휴식", value: formatMinutes(totalBreak), color: Color(red: 0.4, green: 0.7, blue: 1.0))
-            summaryCard(label: "작업 비율", value: "\(ratio)%", color: Color(red: 1.0, green: 0.8, blue: 0.4))
+            summaryCard(label: "\(period.rawValue) 작업", value: formatMinutes(totalWork), color: theme.accent)
+            summaryCard(label: "\(period.rawValue) 휴식", value: formatMinutes(totalBreak), color: theme.accentBreak)
+            summaryCard(label: "작업 비율", value: "\(ratio)%", color: theme.warning)
         }
     }
 
@@ -216,11 +214,11 @@ struct StatsTabView: View {
                 .foregroundColor(color)
             Text(label)
                 .font(.system(size: 9))
-                .foregroundColor(.gray)
+                .foregroundColor(theme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
-        .background(Color(white: 0.15))
+        .background(theme.surface)
         .cornerRadius(8)
     }
 }

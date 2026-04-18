@@ -5,18 +5,24 @@ import HelperCore
 @main
 struct DashboardAppEntry: App {
     @StateObject private var vm = DashboardViewModel()
+    @StateObject private var theme = ThemeManager()
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
         Window("Break Reminder", id: "dashboard") {
             DashboardContentView(vm: vm)
+                .environmentObject(theme)
                 .frame(width: 360, height: 600)
-                .background(Color(red: 0.1, green: 0.1, blue: 0.12))
+                .background(theme.background)
                 .onAppear {
                     vm.start()
+                    theme.mode = ThemeMode(raw: vm.config.theme)
                     configureWindow()
                 }
                 .onDisappear { vm.stop() }
+                .onChange(of: vm.config.theme) { _, newValue in
+                    theme.mode = ThemeMode(raw: newValue)
+                }
         }
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
@@ -45,34 +51,48 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct DashboardContentView: View {
     @ObservedObject var vm: DashboardViewModel
+    @EnvironmentObject var theme: ThemeManager
     @FocusState private var isFocused: Bool
     @Environment(\.controlActiveState) private var controlActiveState
+    @Environment(\.colorScheme) private var systemColorScheme
+    @State private var confettiParticles: [ConfettiParticle] = []
 
     private var isWindowActive: Bool {
         controlActiveState == .key || controlActiveState == .active
     }
 
     private var accentColor: Color {
-        if vm.isPaused { return .yellow }
-        return vm.isWork ? Color(red: 0.3, green: 0.8, blue: 0.5) : Color(red: 0.4, green: 0.7, blue: 1.0)
+        if vm.isPaused { return theme.warning }
+        return vm.isWork ? theme.accent : theme.accentBreak
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            StatusHeaderView(vm: vm)
-            Divider().background(Color(white: 0.2))
-            TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
+        ZStack {
+            VStack(spacing: 0) {
+                StatusHeaderView(vm: vm)
+                Divider().background(theme.divider)
+                TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
 
-            Group {
-                switch vm.selectedTab {
-                case .timer:
-                    TimerTabView(vm: vm)
-                case .stats:
-                    StatsTabView(vm: vm)
-                case .insights:
-                    InsightsTabView(vm: vm)
+                Group {
+                    switch vm.selectedTab {
+                    case .timer:
+                        TimerTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    case .stats:
+                        StatsTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    case .insights:
+                        InsightsTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    }
                 }
+                .animation(.easeInOut(duration: 0.25), value: vm.selectedTab)
             }
+
+            ConfettiView(
+                particles: confettiParticles,
+                isActive: vm.showConfetti
+            )
         }
         .opacity(isWindowActive ? 1.0 : 0.55)
         .animation(.easeInOut(duration: 0.2), value: isWindowActive)
@@ -84,9 +104,19 @@ struct DashboardContentView: View {
                 isFocused = true
             }
             installKeyMonitor()
+            theme.systemIsDark = (systemColorScheme == .dark)
+            if confettiParticles.isEmpty {
+                confettiParticles = ConfettiView.generate(
+                    count: 50,
+                    colors: [theme.accent, theme.accentBreak, theme.warning, .pink, .purple]
+                )
+            }
         }
         .onChange(of: isWindowActive) { _, newValue in
             if newValue { isFocused = true }
+        }
+        .onChange(of: systemColorScheme) { _, newValue in
+            theme.systemIsDark = (newValue == .dark)
         }
         .contentShape(Rectangle())
         .onTapGesture {

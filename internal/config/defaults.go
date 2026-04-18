@@ -25,5 +25,6 @@ func Default() Config {
 		BreakScreenMode:        "ask",
 		MaxLogLines:            1000,
 		CheckIntervalSec:       60,
+		Theme:                  "auto",
 	}
 }

@@ -541,3 +541,30 @@ func TestApplyYAMLChangesAcceptsTTSAPIKey(t *testing.T) {
 		t.Fatalf("TTSAPIKey = %q, want new-key", updated.TTSAPIKey)
 	}
 }
+
+func TestThemeDefaultAuto(t *testing.T) {
+	cfg := Default()
+	if cfg.Theme != "auto" {
+		t.Errorf("Theme default = %q, want 'auto'", cfg.Theme)
+	}
+}
+
+func TestThemeMergePreservesDefault(t *testing.T) {
+	base := Default()
+	src := Config{} // empty — should not override
+	raw := map[string]any{}
+	merge(&base, &src, raw)
+	if base.Theme != "auto" {
+		t.Errorf("Theme = %q after empty merge, want 'auto'", base.Theme)
+	}
+}
+
+func TestThemeMergeOverride(t *testing.T) {
+	base := Default()
+	src := Config{Theme: "dark"}
+	raw := map[string]any{"theme": "dark"}
+	merge(&base, &src, raw)
+	if base.Theme != "dark" {
+		t.Errorf("Theme = %q, want 'dark'", base.Theme)
+	}
+}

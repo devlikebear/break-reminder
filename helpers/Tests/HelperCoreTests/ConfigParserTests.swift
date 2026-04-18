@@ -44,4 +44,23 @@ final class ConfigParserTests: XCTestCase {
         let c = parseConfig(from: content)
         XCTAssertEqual(c.workDurationMin, 50, "Invalid value should fall back to default")
     }
+
+    func testThemeDefaultAuto() {
+        let cfg = AppConfig()
+        XCTAssertEqual(cfg.theme, "auto")
+    }
+
+    func testThemeParseFromYAML() {
+        let yaml = """
+        work_duration_min: 50
+        theme: dark
+        """
+        let cfg = parseConfig(from: yaml)
+        XCTAssertEqual(cfg.theme, "dark")
+    }
+
+    func testThemeParseLight() {
+        let cfg = parseConfig(from: "theme: light")
+        XCTAssertEqual(cfg.theme, "light")
+    }
 }

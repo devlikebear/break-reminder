@@ -113,6 +113,7 @@ var validConfigKeys = map[string]struct{}{
 	"break_screen_mode":        {},
 	"max_log_lines":            {},
 	"check_interval_sec":       {},
+	"theme":                    {},
 	"notifications_enabled":    {},
 	"tts_enabled":              {},
 	"break_activities_enabled": {},
@@ -222,6 +223,9 @@ func merge(dst, src *Config, raw map[string]any) {
 	}
 	if src.AICLI != "" {
 		dst.AICLI = src.AICLI
+	}
+	if src.Theme != "" {
+		dst.Theme = src.Theme
 	}
 	if src.BreakScreenMode != "" {
 		dst.BreakScreenMode = src.BreakScreenMode

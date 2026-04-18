@@ -6,6 +6,7 @@ public struct AppConfig: Equatable {
     public var breakDurationMin: Int = 10
     public var idleThresholdSec: Int = 120
     public var checkIntervalSec: Int = 60
+    public var theme: String = "auto"
 
     public init() {}
 }
@@ -24,6 +25,7 @@ public func parseConfig(from content: String) -> AppConfig {
         case "break_duration_min": c.breakDurationMin = Int(val) ?? 10
         case "idle_threshold_sec": c.idleThresholdSec = Int(val) ?? 120
         case "check_interval_sec": c.checkIntervalSec = Int(val) ?? 60
+        case "theme": c.theme = val
         default: break
         }
     }
