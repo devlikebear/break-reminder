@@ -24,6 +24,7 @@ type Config struct {
 	BreakScreenMode        string `yaml:"break_screen_mode"` // "ask", "block", "notify"
 	MaxLogLines            int    `yaml:"max_log_lines"`
 	CheckIntervalSec       int    `yaml:"check_interval_sec"`
+	Theme                  string `yaml:"theme"` // "auto", "dark", "light"
 }
 
 // WorkDurationSec returns work duration in seconds.
