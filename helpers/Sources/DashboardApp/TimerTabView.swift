@@ -14,6 +14,7 @@ struct TimerTabView: View {
             systemInfoSection
             Spacer()
             actionButtons
+            shortcutHint
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -82,6 +83,16 @@ struct TimerTabView: View {
                 .buttonStyle(DashboardButtonStyle())
             Button("Force Break") { vm.forceBreak() }
                 .buttonStyle(DashboardButtonStyle())
+        }
+    }
+
+    private var shortcutHint: some View {
+        HStack {
+            Spacer()
+            Text("q: quit   r: reset   b: break")
+                .font(.system(size: 10))
+                .foregroundColor(.gray)
+            Spacer()
         }
     }
 }
