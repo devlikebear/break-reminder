@@ -89,7 +89,7 @@ struct TimerTabView: View {
     private var shortcutHint: some View {
         HStack {
             Spacer()
-            Text("q: quit   r: reset   b: break")
+            Text("⌘Q: quit   ⌘R: reset   ⌘B: break")
                 .font(.system(size: 10))
                 .foregroundColor(.gray)
             Spacer()
