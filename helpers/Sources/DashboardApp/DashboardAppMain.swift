@@ -70,7 +70,7 @@ struct DashboardContentView: View {
                 case .stats:
                     StatsTabView(vm: vm)
                 case .insights:
-                    InsightsTabView()
+                    InsightsTabView(vm: vm)
                 }
             }
         }
