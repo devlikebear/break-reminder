@@ -35,6 +35,8 @@ struct StatsTabView: View {
             VStack(alignment: .leading, spacing: 16) {
                 periodSelector
                 workBreakChart
+                Divider().background(Color(white: 0.2))
+                heatmapView
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -97,5 +99,80 @@ struct StatsTabView: View {
         let parts = iso.split(separator: "-")
         guard parts.count == 3 else { return iso }
         return "\(Int(parts[1]) ?? 0)/\(Int(parts[2]) ?? 0)"
+    }
+
+    private var heatmapView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("시간대별 집중도")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color(white: 0.9))
+
+            heatmapGrid
+            heatmapLegend
+        }
+    }
+
+    private var heatmapGrid: some View {
+        let hours = Array(9...18)
+        let entries = Array(filteredHistory.suffix(7))
+
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 2) {
+                Text("").frame(width: 28)
+                ForEach(hours, id: \.self) { hour in
+                    Text("\(hour)")
+                        .font(.system(size: 9))
+                        .foregroundColor(.gray)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            ForEach(entries, id: \.date) { entry in
+                HStack(spacing: 2) {
+                    Text(dayLabel(entry.date))
+                        .font(.system(size: 9))
+                        .foregroundColor(.gray)
+                        .frame(width: 28, alignment: .leading)
+
+                    ForEach(hours, id: \.self) { hour in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(heatColor(for: entry.hourlyWork[hour]))
+                            .frame(height: 14)
+                    }
+                }
+            }
+        }
+    }
+
+    private var heatmapLegend: some View {
+        HStack(spacing: 4) {
+            Text("낮음").font(.system(size: 9)).foregroundColor(.gray)
+            ForEach([0, 15, 35, 55], id: \.self) { v in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(heatColor(for: v))
+                    .frame(width: 12, height: 8)
+            }
+            Text("높음").font(.system(size: 9)).foregroundColor(.gray)
+        }
+    }
+
+    private func heatColor(for minutes: Int) -> Color {
+        switch minutes {
+        case 0: return Color(red: 0.145, green: 0.145, blue: 0.157)
+        case 1..<20: return Color(red: 0.102, green: 0.290, blue: 0.180)
+        case 20..<45: return Color(red: 0.176, green: 0.478, blue: 0.290)
+        default: return Color(red: 0.302, green: 0.800, blue: 0.502)
+        }
+    }
+
+    private func dayLabel(_ iso: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let date = formatter.date(from: iso) else { return "" }
+
+        let weekdayFormatter = DateFormatter()
+        weekdayFormatter.locale = Locale(identifier: "ko_KR")
+        weekdayFormatter.dateFormat = "E"
+        return weekdayFormatter.string(from: date)
     }
 }
