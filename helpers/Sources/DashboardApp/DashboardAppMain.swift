@@ -55,6 +55,7 @@ struct DashboardContentView: View {
     @FocusState private var isFocused: Bool
     @Environment(\.controlActiveState) private var controlActiveState
     @Environment(\.colorScheme) private var systemColorScheme
+    @State private var confettiParticles: [ConfettiParticle] = []
 
     private var isWindowActive: Bool {
         controlActiveState == .key || controlActiveState == .active
@@ -66,25 +67,32 @@ struct DashboardContentView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            StatusHeaderView(vm: vm)
-            Divider().background(theme.divider)
-            TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
+        ZStack {
+            VStack(spacing: 0) {
+                StatusHeaderView(vm: vm)
+                Divider().background(theme.divider)
+                TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
 
-            Group {
-                switch vm.selectedTab {
-                case .timer:
-                    TimerTabView(vm: vm)
-                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
-                case .stats:
-                    StatsTabView(vm: vm)
-                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
-                case .insights:
-                    InsightsTabView(vm: vm)
-                        .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                Group {
+                    switch vm.selectedTab {
+                    case .timer:
+                        TimerTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    case .stats:
+                        StatsTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    case .insights:
+                        InsightsTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    }
                 }
+                .animation(.easeInOut(duration: 0.25), value: vm.selectedTab)
             }
-            .animation(.easeInOut(duration: 0.25), value: vm.selectedTab)
+
+            ConfettiView(
+                particles: confettiParticles,
+                isActive: vm.showConfetti
+            )
         }
         .opacity(isWindowActive ? 1.0 : 0.55)
         .animation(.easeInOut(duration: 0.2), value: isWindowActive)
@@ -97,6 +105,12 @@ struct DashboardContentView: View {
             }
             installKeyMonitor()
             theme.systemIsDark = (systemColorScheme == .dark)
+            if confettiParticles.isEmpty {
+                confettiParticles = ConfettiView.generate(
+                    count: 50,
+                    colors: [theme.accent, theme.accentBreak, theme.warning, .pink, .purple]
+                )
+            }
         }
         .onChange(of: isWindowActive) { _, newValue in
             if newValue { isFocused = true }

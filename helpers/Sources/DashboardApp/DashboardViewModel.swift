@@ -20,6 +20,9 @@ final class DashboardViewModel: ObservableObject {
     @Published var history: [HistoryEntry] = []
     @Published var insights: InsightsReport?
     @Published var isRefreshingInsights = false
+    @Published var showConfetti = false
+    private var lastGoalCheckMinute = 0
+    private let dailyGoalMinutes = 240 // 4 hours
 
     private var timer: Timer?
 
@@ -87,6 +90,18 @@ final class DashboardViewModel: ObservableObject {
         launchdStatusText = queryLaunchdStatus()
         loadHistory()
         loadInsights()
+        checkGoalAchievement()
+    }
+
+    func checkGoalAchievement() {
+        let workMin = dailyTotals.workSeconds / 60
+        if workMin >= dailyGoalMinutes && lastGoalCheckMinute < dailyGoalMinutes {
+            showConfetti = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) { [weak self] in
+                self?.showConfetti = false
+            }
+        }
+        lastGoalCheckMinute = workMin
     }
 
     func loadHistory() {
