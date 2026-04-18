@@ -15,6 +15,7 @@ struct DashboardAppEntry: App {
                 .onAppear {
                     vm.start()
                     configureWindow()
+                    installKeyMonitor()
                 }
                 .onDisappear { vm.stop() }
                 .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
@@ -27,14 +28,6 @@ struct DashboardAppEntry: App {
         .windowStyle(.hiddenTitleBar)
         .windowResizability(.contentSize)
         .defaultPosition(.topTrailing)
-        .commands {
-            CommandMenu("Timer") {
-                Button("Reset") { vm.resetTimer() }
-                    .keyboardShortcut("r", modifiers: [.command])
-                Button("Force Break") { vm.forceBreak() }
-                    .keyboardShortcut("b", modifiers: [.command])
-            }
-        }
     }
 
     private func configureWindow() {
@@ -44,9 +37,19 @@ struct DashboardAppEntry: App {
             window.isMovableByWindowBackground = true
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            // Initial focus
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
+        }
+    }
+
+    private func installKeyMonitor() {
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            switch event.charactersIgnoringModifiers {
+            case "q": NSApp.terminate(nil); return nil
+            case "r": vm.resetTimer(); return nil
+            case "b": vm.forceBreak(); return nil
+            default: return event
+            }
         }
     }
 }
