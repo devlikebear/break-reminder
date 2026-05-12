@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-12
+
 ### Added
 - **GUI pause modes** — dashboard header now offers Meeting / Focus / AFK pause from a dropdown, each with per-mode work-time accrual policy (meeting: not counted, focus: counted as work, afk: counted but resets the work cycle).
 - **Auto-resume timer** — pause picker includes 15분 / 30분 / 1시간 / 2시간 / 무제한 options; the daemon resumes automatically at the configured time and the dashboard shows a live countdown.
