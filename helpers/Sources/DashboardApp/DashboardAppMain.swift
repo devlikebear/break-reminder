@@ -84,6 +84,9 @@ struct DashboardContentView: View {
                     case .insights:
                         InsightsTabView(vm: vm)
                             .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
+                    case .settings:
+                        SettingsTabView(vm: vm)
+                            .transition(.asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading)))
                     }
                 }
                 .animation(.easeInOut(duration: 0.25), value: vm.selectedTab)

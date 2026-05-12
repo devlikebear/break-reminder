@@ -65,7 +65,14 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 	}
 
 	if s.Paused {
-		return result
+		if s.PauseUntil > 0 && unix >= s.PauseUntil {
+			reason := s.PauseReason
+			result.State = result.State.Resume(unix)
+			result.LogMsg = "Auto-resumed from " + reason + " pause"
+			s = result.State
+		} else {
+			return result
+		}
 	}
 
 	elapsed := int(unix - s.LastCheck)

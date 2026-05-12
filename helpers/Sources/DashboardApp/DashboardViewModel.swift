@@ -6,6 +6,7 @@ enum DashboardTab: String, CaseIterable, Identifiable {
     case timer = "타이머"
     case stats = "통계"
     case insights = "인사이트"
+    case settings = "설정"
 
     var id: String { rawValue }
 }
@@ -48,9 +49,36 @@ final class DashboardViewModel: ObservableObject {
 
     var statusText: String {
         if isPaused {
-            return "PAUSED (\(isWork ? "WORK" : "BREAK"))"
+            let label = pauseModeLabel
+            return label.isEmpty ? "PAUSED" : "PAUSED · \(label)"
         }
         return isWork ? "WORKING" : "ON BREAK"
+    }
+
+    var pauseModeLabel: String {
+        switch state.pauseReason {
+        case "meeting": return "회의"
+        case "focus":   return "집중"
+        case "afk":     return "외출"
+        default:        return ""
+        }
+    }
+
+    var pauseRemainingText: String? {
+        guard isPaused, state.pauseUntil > 0 else { return nil }
+        let remaining = max(0, state.pauseUntil - now)
+        let m = remaining / 60
+        let s = remaining % 60
+        return String(format: "%d:%02d 남음", m, s)
+    }
+
+    var pauseModeAccent: Color {
+        switch state.pauseReason {
+        case "meeting": return .blue
+        case "focus":   return .orange
+        case "afk":     return .gray
+        default:        return .secondary
+        }
     }
 
     var modeDetail: String {
@@ -154,6 +182,64 @@ final class DashboardViewModel: ObservableObject {
         s.lastUpdateDate = totals.date
         writeStateToDisk(s)
         refresh()
+    }
+
+    func pause(mode: String, durationMinutes: Int? = nil) {
+        var args = ["pause", "--mode=\(mode)"]
+        if let m = durationMinutes, m > 0 {
+            args.append("--duration=\(m)m")
+        }
+        runCLI(args: args)
+        refresh()
+    }
+
+    func resume() {
+        runCLI(args: ["resume"])
+        refresh()
+    }
+
+    private func runCLI(args: [String]) {
+        guard let cli = findHelper("break-reminder") else { return }
+        let process = Process()
+        process.launchPath = cli
+        process.arguments = args
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return
+        }
+    }
+
+    func saveSettings(_ changes: [(String, String)]) -> Result<Void, Error> {
+        guard let cli = findHelper("break-reminder") else {
+            return .failure(NSError(domain: "ConfigSave", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "break-reminder CLI not found"]))
+        }
+        let args = ["config", "set"] + changes.map { "\($0.0)=\($0.1)" }
+        let process = Process()
+        process.launchPath = cli
+        process.arguments = args
+        let errPipe = Pipe()
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = errPipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus != 0 {
+                let msg = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+                    ?? "Unknown error"
+                return .failure(NSError(domain: "ConfigSave", code: Int(process.terminationStatus),
+                    userInfo: [NSLocalizedDescriptionKey: msg.trimmingCharacters(in: .whitespacesAndNewlines)]))
+            }
+            refresh()
+            return .success(())
+        } catch {
+            return .failure(error)
+        }
     }
 
     func forceBreak() {

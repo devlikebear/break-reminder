@@ -58,7 +58,9 @@ break-reminder check              # Single timer tick (used by launchd)
 break-reminder daemon             # Foreground loop
 break-reminder status             # Current state overview
 break-reminder reset              # Reset timer
-break-reminder pause              # Pause the timer without losing progress or any active snooze postponement
+break-reminder pause              # Pause the timer (default mode: meeting; paused time is not counted as work)
+break-reminder pause --mode=focus # Pause but count the paused time as work (e.g., off-screen focus block)
+break-reminder pause --mode=afk --duration=30m  # External absence; resets work cycle; auto-resumes in 30 min
 break-reminder resume             # Resume the previous work/break mode
 break-reminder snooze             # End the current break early and postpone the next one by 5 min
 break-reminder snooze --for 10m   # Postpone the next break by a custom duration
@@ -90,6 +92,10 @@ break-reminder ai configure "25분 작업, 5분 휴식" # Natural language confi
 # Configuration
 break-reminder config show        # Show current config
 break-reminder config edit        # Open in $EDITOR
+break-reminder config get work_duration_min            # Print a single value
+break-reminder config set work_duration_min=45 break_duration_min=15  # Validated atomic write
+break-reminder config set notifications_enabled=false  # Booleans
+break-reminder config set work_days=[1,2,3,4,5]        # Flow-style arrays
 
 # Optional TTS backends
 break-reminder tts install kittentts   # Install KittenTTS into a managed venv

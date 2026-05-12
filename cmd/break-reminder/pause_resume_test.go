@@ -88,6 +88,78 @@ func TestPauseAndResumeCommands(t *testing.T) {
 	}
 }
 
+func TestPauseModeFlagPersistsReason(t *testing.T) {
+	origLoadConfig := loadConfig
+	origNowFunc := nowFunc
+	defer func() {
+		loadConfig = origLoadConfig
+		nowFunc = origNowFunc
+	}()
+
+	loadConfig = func() (config.Config, error) { return config.Default(), nil }
+	nowFunc = func() time.Time { return time.Unix(1_700_000_060, 0) }
+
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+	statePath := filepath.Join(tmpHome, ".break-reminder-state")
+
+	initial := state.State{
+		Mode:           "work",
+		LastCheck:      1_700_000_000,
+		LastUpdateDate: "2025-01-15",
+	}
+	if err := state.Save(statePath, initial); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"pause", "--mode=focus"})
+	out := new(bytes.Buffer)
+	cmd.SetOut(out)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("pause --mode=focus error = %v", err)
+	}
+	if !strings.Contains(out.String(), "reason=focus") {
+		t.Fatalf("output = %q, want reason=focus", out.String())
+	}
+
+	loaded, err := state.Load(statePath)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.PauseReason != state.PauseReasonFocus {
+		t.Fatalf("PauseReason = %q, want %q", loaded.PauseReason, state.PauseReasonFocus)
+	}
+}
+
+func TestPauseModeFlagRejectsInvalid(t *testing.T) {
+	origLoadConfig := loadConfig
+	origNowFunc := nowFunc
+	defer func() {
+		loadConfig = origLoadConfig
+		nowFunc = origNowFunc
+	}()
+
+	loadConfig = func() (config.Config, error) { return config.Default(), nil }
+	nowFunc = func() time.Time { return time.Unix(1_700_000_060, 0) }
+
+	tmpHome := t.TempDir()
+	t.Setenv("HOME", tmpHome)
+
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"pause", "--mode=invalid"})
+	cmd.SetOut(new(bytes.Buffer))
+	cmd.SetErr(new(bytes.Buffer))
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("pause --mode=invalid should error, got nil")
+	}
+	if !strings.Contains(err.Error(), "invalid --mode") {
+		t.Fatalf("error = %v, want contains 'invalid --mode'", err)
+	}
+}
+
 func TestPauseAlreadyPausedIsSafe(t *testing.T) {
 	origLoadConfig := loadConfig
 	origNowFunc := nowFunc

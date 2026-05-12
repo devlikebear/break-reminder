@@ -9,6 +9,8 @@ public struct AppState: Equatable {
     public var snoozeUntil: Int64 = 0
     public var paused: Bool = false
     public var pausedAt: Int64 = 0
+    public var pauseReason: String = ""
+    public var pauseUntil: Int64 = 0
     public var todayWorkSeconds: Int = 0
     public var todayBreakSeconds: Int = 0
     public var lastUpdateDate: String = ""
@@ -32,6 +34,13 @@ public func parseState(from content: String) -> AppState {
         case "SNOOZE_UNTIL":        s.snoozeUntil = Int64(val) ?? 0
         case "PAUSED":              s.paused = (val == "true")
         case "PAUSED_AT":           s.pausedAt = Int64(val) ?? 0
+        case "PAUSE_REASON":
+            if val == "meeting" || val == "focus" || val == "afk" {
+                s.pauseReason = val
+            } else {
+                s.pauseReason = ""
+            }
+        case "PAUSE_UNTIL":         s.pauseUntil = Int64(val) ?? 0
         case "TODAY_WORK_SECONDS":  s.todayWorkSeconds = Int(val) ?? 0
         case "TODAY_BREAK_SECONDS": s.todayBreakSeconds = Int(val) ?? 0
         case "LAST_UPDATE_DATE":    s.lastUpdateDate = val
@@ -51,6 +60,8 @@ public func serializeState(_ s: AppState) -> String {
         "SNOOZE_UNTIL=\(s.snoozeUntil)",
         "PAUSED=\(s.paused ? "true" : "false")",
         "PAUSED_AT=\(s.pausedAt)",
+        "PAUSE_REASON=\(s.pauseReason)",
+        "PAUSE_UNTIL=\(s.pauseUntil)",
         "TODAY_WORK_SECONDS=\(s.todayWorkSeconds)",
         "TODAY_BREAK_SECONDS=\(s.todayBreakSeconds)",
         "LAST_UPDATE_DATE=\(s.lastUpdateDate)",

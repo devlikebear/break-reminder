@@ -18,19 +18,37 @@ var (
 	ErrInvalidSnooze  = errors.New("snooze duration must be greater than zero")
 )
 
+// Pause mode identifiers. Empty string means not paused or unknown.
+const (
+	PauseReasonMeeting = "meeting"
+	PauseReasonFocus   = "focus"
+	PauseReasonAFK     = "afk"
+)
+
+// IsValidPauseReason reports whether r is one of the supported pause modes.
+func IsValidPauseReason(r string) bool {
+	switch r {
+	case PauseReasonMeeting, PauseReasonFocus, PauseReasonAFK:
+		return true
+	}
+	return false
+}
+
 // State represents the application's current timer state.
 type State struct {
-	WorkSeconds            int    `json:"work_seconds"`
-	Mode                   string `json:"mode"` // "work" or "break"
-	LastCheck              int64  `json:"last_check"`
-	BreakStart             int64  `json:"break_start"`
-	SnoozeUntil            int64  `json:"snooze_until"`
-	Paused                 bool   `json:"paused"`
-	PausedAt               int64  `json:"paused_at"`
-	TodayWorkSeconds       int    `json:"today_work_seconds"`
-	TodayBreakSeconds      int    `json:"today_break_seconds"`
-	LastUpdateDate         string `json:"last_update_date"`
-	LastBreakWarningBucket int    `json:"last_break_warning_bucket"`
+	WorkSeconds            int     `json:"work_seconds"`
+	Mode                   string  `json:"mode"` // "work" or "break"
+	LastCheck              int64   `json:"last_check"`
+	BreakStart             int64   `json:"break_start"`
+	SnoozeUntil            int64   `json:"snooze_until"`
+	Paused                 bool    `json:"paused"`
+	PausedAt               int64   `json:"paused_at"`
+	PauseReason            string  `json:"pause_reason"`
+	PauseUntil             int64   `json:"pause_until"`
+	TodayWorkSeconds       int     `json:"today_work_seconds"`
+	TodayBreakSeconds      int     `json:"today_break_seconds"`
+	LastUpdateDate         string  `json:"last_update_date"`
+	LastBreakWarningBucket int     `json:"last_break_warning_bucket"`
 	HourlyWork             [24]int `json:"hourly_work"`
 }
 
@@ -62,14 +80,26 @@ func (s State) EnterBreak(at int64) State {
 	return s
 }
 
-// Pause freezes the timer until Resume is called.
-func (s State) Pause(at int64) State {
+// Pause freezes the timer until Resume is called. reason selects the
+// per-mode policy applied on Resume; invalid or empty values fall back
+// to PauseReasonMeeting. If durationSec > 0, the daemon's next tick will
+// auto-resume at or after at+durationSec.
+func (s State) Pause(at int64, reason string, durationSec int) State {
 	if s.Paused {
 		return s
+	}
+	if !IsValidPauseReason(reason) {
+		reason = PauseReasonMeeting
 	}
 	s = s.accrueUntil(at)
 	s.Paused = true
 	s.PausedAt = at
+	s.PauseReason = reason
+	if durationSec > 0 {
+		s.PauseUntil = at + int64(durationSec)
+	} else {
+		s.PauseUntil = 0
+	}
 	return s
 }
 
@@ -126,11 +156,28 @@ func (s State) addElapsed(elapsed int) State {
 	return s
 }
 
-// Resume unfreezes the timer and shifts time anchors so paused time is not counted.
+// Resume unfreezes the timer. The accrual policy depends on PauseReason:
+//   - meeting (default): shift LastCheck/BreakStart/SnoozeUntil anchors by
+//     the paused gap so the paused time does not count as work or break.
+//   - focus: keep anchors fixed and accrue the elapsed paused time as work.
+//   - afk: shift anchors like meeting, but additionally reset the work cycle
+//     (WorkSeconds=0, SnoozeUntil=0).
 func (s State) Resume(at int64) State {
 	if !s.Paused {
 		return s
 	}
+	reason := s.PauseReason
+
+	if reason == PauseReasonFocus {
+		// Treat paused span as work: don't shift anchors, just accrue.
+		s.Paused = false
+		s.PausedAt = 0
+		s.PauseReason = ""
+		s.PauseUntil = 0
+		s = s.accrueUntil(at)
+		return s
+	}
+
 	if s.PausedAt <= 0 {
 		if s.LastCheck > 0 {
 			s.LastCheck = at
@@ -140,6 +187,12 @@ func (s State) Resume(at int64) State {
 		}
 		s.Paused = false
 		s.PausedAt = 0
+		if reason == PauseReasonAFK {
+			s.WorkSeconds = 0
+			s.SnoozeUntil = 0
+		}
+		s.PauseReason = ""
+		s.PauseUntil = 0
 		return s
 	}
 	gap := at - s.PausedAt
@@ -157,6 +210,12 @@ func (s State) Resume(at int64) State {
 	}
 	s.Paused = false
 	s.PausedAt = 0
+	if reason == PauseReasonAFK {
+		s.WorkSeconds = 0
+		s.SnoozeUntil = 0
+	}
+	s.PauseReason = ""
+	s.PauseUntil = 0
 	return s
 }
 
@@ -254,6 +313,16 @@ func Load(path string) (State, error) {
 			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
 				s.PausedAt = v
 			}
+		case "PAUSE_REASON":
+			if IsValidPauseReason(value) {
+				s.PauseReason = value
+			} else {
+				s.PauseReason = ""
+			}
+		case "PAUSE_UNTIL":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.PauseUntil = v
+			}
 		case "TODAY_WORK_SECONDS":
 			if v, err := strconv.Atoi(value); err == nil {
 				s.TodayWorkSeconds = v
@@ -292,6 +361,8 @@ func serialize(s State) string {
 	fmt.Fprintf(&b, "SNOOZE_UNTIL=%d\n", s.SnoozeUntil)
 	fmt.Fprintf(&b, "PAUSED=%t\n", s.Paused)
 	fmt.Fprintf(&b, "PAUSED_AT=%d\n", s.PausedAt)
+	fmt.Fprintf(&b, "PAUSE_REASON=%s\n", s.PauseReason)
+	fmt.Fprintf(&b, "PAUSE_UNTIL=%d\n", s.PauseUntil)
 	fmt.Fprintf(&b, "TODAY_WORK_SECONDS=%d\n", s.TodayWorkSeconds)
 	fmt.Fprintf(&b, "TODAY_BREAK_SECONDS=%d\n", s.TodayBreakSeconds)
 	fmt.Fprintf(&b, "LAST_UPDATE_DATE=%s\n", s.LastUpdateDate)

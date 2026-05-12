@@ -63,4 +63,50 @@ final class ConfigParserTests: XCTestCase {
         let cfg = parseConfig(from: "theme: light")
         XCTAssertEqual(cfg.theme, "light")
     }
+
+    func testParseWorkDaysFlowArray() {
+        let cfg = parseConfig(from: "work_days: [1, 2, 3, 4, 5]")
+        XCTAssertEqual(cfg.workDays, [1, 2, 3, 4, 5])
+    }
+
+    func testParseWorkDaysCompact() {
+        let cfg = parseConfig(from: "work_days: [1,3,5]")
+        XCTAssertEqual(cfg.workDays, [1, 3, 5])
+    }
+
+    func testParseScheduleHours() {
+        let yaml = """
+        work_start_hour: 8
+        work_start_minute: 30
+        work_end_hour: 17
+        work_end_minute: 45
+        """
+        let cfg = parseConfig(from: yaml)
+        XCTAssertEqual(cfg.workStartHour, 8)
+        XCTAssertEqual(cfg.workStartMinute, 30)
+        XCTAssertEqual(cfg.workEndHour, 17)
+        XCTAssertEqual(cfg.workEndMinute, 45)
+    }
+
+    func testParseBoolToggles() {
+        let yaml = """
+        notifications_enabled: false
+        tts_enabled: false
+        break_activities_enabled: false
+        """
+        let cfg = parseConfig(from: yaml)
+        XCTAssertFalse(cfg.notificationsEnabled)
+        XCTAssertFalse(cfg.ttsEnabled)
+        XCTAssertFalse(cfg.breakActivitiesEnabled)
+    }
+
+    func testParseBreakScreenMode() {
+        let cfg = parseConfig(from: "break_screen_mode: block")
+        XCTAssertEqual(cfg.breakScreenMode, "block")
+    }
+
+    func testParseNaturalBreakSec() {
+        let cfg = parseConfig(from: "natural_break_sec: 600")
+        XCTAssertEqual(cfg.naturalBreakSec, 600)
+    }
 }

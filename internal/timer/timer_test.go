@@ -406,7 +406,7 @@ func TestWorkTickDoesNotExpireSnoozeWhilePaused(t *testing.T) {
 		t.Fatalf("SnoozeBreak() error = %v", err)
 	}
 
-	paused := snoozed.Pause(start.Add(30 * time.Second).Unix())
+	paused := snoozed.Pause(start.Add(30*time.Second).Unix(), state.PauseReasonMeeting, 0)
 	resumed := paused.Resume(start.Add(6 * time.Minute).Unix())
 
 	if resumed.SnoozeUntil != start.Add(10*time.Minute + 30*time.Second).Unix() {
@@ -670,5 +670,81 @@ func TestTickPausedOverMidnightOnlyRollsDailyTotals(t *testing.T) {
 	}
 	if !result.State.Paused {
 		t.Fatal("paused state should remain paused")
+	}
+}
+
+func TestTickAutoResumesAfterPauseUntil(t *testing.T) {
+	cfg := config.Default()
+	pausedAt := time.Date(2025, 6, 1, 10, 0, 0, 0, time.Local)
+	pauseUntil := pausedAt.Add(30 * time.Minute)
+	now := pauseUntil.Add(5 * time.Second) // just past auto-resume time
+
+	s := state.State{
+		Mode:           "work",
+		LastCheck:      pausedAt.Unix(),
+		Paused:         true,
+		PausedAt:       pausedAt.Unix(),
+		PauseReason:    state.PauseReasonMeeting,
+		PauseUntil:     pauseUntil.Unix(),
+		LastUpdateDate: pausedAt.Format("2006-01-02"),
+	}
+
+	result := Tick(cfg, s, now, 0)
+
+	if result.State.Paused {
+		t.Fatal("expected auto-resume to clear paused")
+	}
+	if result.State.PauseReason != "" {
+		t.Fatalf("PauseReason = %q, want empty after auto-resume", result.State.PauseReason)
+	}
+	if result.State.PauseUntil != 0 {
+		t.Fatalf("PauseUntil = %d, want 0 after auto-resume", result.State.PauseUntil)
+	}
+}
+
+func TestTickStaysPausedBeforePauseUntil(t *testing.T) {
+	cfg := config.Default()
+	pausedAt := time.Date(2025, 6, 1, 10, 0, 0, 0, time.Local)
+	pauseUntil := pausedAt.Add(30 * time.Minute)
+	now := pauseUntil.Add(-30 * time.Second) // not yet at auto-resume
+
+	s := state.State{
+		Mode:           "work",
+		LastCheck:      pausedAt.Unix(),
+		Paused:         true,
+		PausedAt:       pausedAt.Unix(),
+		PauseReason:    state.PauseReasonMeeting,
+		PauseUntil:     pauseUntil.Unix(),
+		LastUpdateDate: pausedAt.Format("2006-01-02"),
+	}
+
+	result := Tick(cfg, s, now, 0)
+
+	if !result.State.Paused {
+		t.Fatal("expected to remain paused before PauseUntil")
+	}
+	if result.State.PauseReason != state.PauseReasonMeeting {
+		t.Fatalf("PauseReason = %q, want meeting", result.State.PauseReason)
+	}
+}
+
+func TestTickPauseUntilZeroNeverAutoResumes(t *testing.T) {
+	cfg := config.Default()
+	pausedAt := time.Date(2025, 6, 1, 10, 0, 0, 0, time.Local)
+	now := pausedAt.Add(2 * time.Hour) // long after, but no PauseUntil set
+
+	s := state.State{
+		Mode:           "work",
+		LastCheck:      pausedAt.Unix(),
+		Paused:         true,
+		PausedAt:       pausedAt.Unix(),
+		PauseReason:    state.PauseReasonMeeting,
+		PauseUntil:     0,
+		LastUpdateDate: pausedAt.Format("2006-01-02"),
+	}
+
+	result := Tick(cfg, s, now, 0)
+	if !result.State.Paused {
+		t.Fatal("expected to remain paused indefinitely when PauseUntil=0")
 	}
 }

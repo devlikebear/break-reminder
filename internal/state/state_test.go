@@ -182,7 +182,7 @@ func TestPauseAndResumeRoundTrip(t *testing.T) {
 		LastUpdateDate: "2025-01-15",
 	}
 
-	paused := original.Pause(1_700_000_060)
+	paused := original.Pause(1_700_000_060, PauseReasonMeeting, 0)
 	if !paused.Paused {
 		t.Fatal("Pause() should mark the state as paused")
 	}
@@ -240,7 +240,7 @@ func TestPauseSettlesElapsedWorkBeforeFreezing(t *testing.T) {
 		LastUpdateDate:   "2025-01-15",
 	}
 
-	paused := original.Pause(1_700_000_120)
+	paused := original.Pause(1_700_000_120, PauseReasonMeeting, 0)
 
 	if paused.WorkSeconds != 1020 {
 		t.Fatalf("WorkSeconds = %d, want 1020", paused.WorkSeconds)
@@ -267,7 +267,7 @@ func TestPauseSettlesElapsedBreakAcrossMidnight(t *testing.T) {
 	}
 
 	pausedAt := time.Date(2025, 1, 16, 0, 1, 0, 0, time.Local).Unix()
-	paused := original.Pause(pausedAt)
+	paused := original.Pause(pausedAt, PauseReasonMeeting, 0)
 
 	if paused.TodayBreakSeconds != 60 {
 		t.Fatalf("TodayBreakSeconds = %d, want 60", paused.TodayBreakSeconds)
@@ -284,7 +284,7 @@ func TestPauseSettlesElapsedBreakAcrossMidnight(t *testing.T) {
 }
 
 func TestPauseAlreadyPausedIsNoOp(t *testing.T) {
-	paused := State{Mode: "work", Paused: true, PausedAt: 123}.Pause(456)
+	paused := State{Mode: "work", Paused: true, PausedAt: 123}.Pause(456, PauseReasonMeeting, 0)
 	if paused.PausedAt != 123 {
 		t.Fatalf("PausedAt = %d, want 123", paused.PausedAt)
 	}
@@ -402,6 +402,184 @@ func TestStateHourlyWorkRoundTrip(t *testing.T) {
 	}
 	if loaded.HourlyWork[14] != 1200 {
 		t.Errorf("HourlyWork[14] = %d, want 1200", loaded.HourlyWork[14])
+	}
+}
+
+func TestPauseReasonRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state")
+
+	original := State{
+		Mode:           "work",
+		LastCheck:      1_700_000_000,
+		Paused:         true,
+		PausedAt:       1_700_000_060,
+		PauseReason:    PauseReasonFocus,
+		LastUpdateDate: "2025-01-15",
+	}
+	if err := Save(path, original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.PauseReason != PauseReasonFocus {
+		t.Fatalf("PauseReason = %q, want %q", loaded.PauseReason, PauseReasonFocus)
+	}
+}
+
+func TestLoadNormalizesInvalidPauseReason(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state")
+	content := "MODE=work\nLAST_CHECK=1700000000\nPAUSED=true\nPAUSED_AT=1700000060\nPAUSE_REASON=invalid\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if s.PauseReason != "" {
+		t.Fatalf("PauseReason = %q, want empty for invalid value", s.PauseReason)
+	}
+}
+
+func TestPauseResumeModeAccrualScenarios(t *testing.T) {
+	const t0 int64 = 1_700_000_000
+
+	build := func() State {
+		return State{
+			Mode:             "work",
+			WorkSeconds:      600,
+			LastCheck:        t0,
+			TodayWorkSeconds: 600,
+			LastUpdateDate:   time.Unix(t0, 0).In(time.Local).Format("2006-01-02"),
+		}
+	}
+
+	tests := []struct {
+		name                 string
+		reason               string
+		wantWorkSeconds      int
+		wantTodayWorkSeconds int
+		wantSnoozeUntil      int64
+	}{
+		{
+			name:                 "meeting preserves work and today totals",
+			reason:               PauseReasonMeeting,
+			wantWorkSeconds:      600,
+			wantTodayWorkSeconds: 600,
+		},
+		{
+			name:                 "focus accrues paused span as work",
+			reason:               PauseReasonFocus,
+			wantWorkSeconds:      900,
+			wantTodayWorkSeconds: 900,
+		},
+		{
+			name:                 "afk preserves today totals but resets work cycle",
+			reason:               PauseReasonAFK,
+			wantWorkSeconds:      0,
+			wantTodayWorkSeconds: 600,
+			wantSnoozeUntil:      0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := build()
+			paused := s.Pause(t0, tt.reason, 0)
+			if !paused.Paused {
+				t.Fatal("Pause should mark paused=true")
+			}
+			if paused.PauseReason != tt.reason {
+				t.Fatalf("PauseReason after Pause = %q, want %q", paused.PauseReason, tt.reason)
+			}
+
+			resumed := paused.Resume(t0 + 300)
+			if resumed.Paused {
+				t.Fatal("Resume should clear paused")
+			}
+			if resumed.PauseReason != "" {
+				t.Fatalf("PauseReason after Resume = %q, want empty", resumed.PauseReason)
+			}
+			if resumed.LastCheck != t0+300 {
+				t.Fatalf("LastCheck = %d, want %d", resumed.LastCheck, t0+300)
+			}
+			if resumed.WorkSeconds != tt.wantWorkSeconds {
+				t.Fatalf("WorkSeconds = %d, want %d", resumed.WorkSeconds, tt.wantWorkSeconds)
+			}
+			if resumed.TodayWorkSeconds != tt.wantTodayWorkSeconds {
+				t.Fatalf("TodayWorkSeconds = %d, want %d", resumed.TodayWorkSeconds, tt.wantTodayWorkSeconds)
+			}
+			if resumed.SnoozeUntil != tt.wantSnoozeUntil {
+				t.Fatalf("SnoozeUntil = %d, want %d", resumed.SnoozeUntil, tt.wantSnoozeUntil)
+			}
+		})
+	}
+}
+
+func TestPauseUntilSetByDuration(t *testing.T) {
+	const t0 int64 = 1_700_000_000
+	s := State{Mode: "work", LastCheck: t0}
+
+	paused := s.Pause(t0, PauseReasonMeeting, 1800)
+	if paused.PauseUntil != t0+1800 {
+		t.Fatalf("PauseUntil = %d, want %d", paused.PauseUntil, t0+1800)
+	}
+
+	indefinite := s.Pause(t0, PauseReasonMeeting, 0)
+	if indefinite.PauseUntil != 0 {
+		t.Fatalf("PauseUntil = %d for duration=0, want 0", indefinite.PauseUntil)
+	}
+
+	negative := s.Pause(t0, PauseReasonMeeting, -10)
+	if negative.PauseUntil != 0 {
+		t.Fatalf("PauseUntil = %d for negative duration, want 0", negative.PauseUntil)
+	}
+}
+
+func TestResumeClearsPauseUntil(t *testing.T) {
+	const t0 int64 = 1_700_000_000
+	s := State{Mode: "work", LastCheck: t0}
+	paused := s.Pause(t0, PauseReasonMeeting, 1800)
+	resumed := paused.Resume(t0 + 300)
+	if resumed.PauseUntil != 0 {
+		t.Fatalf("PauseUntil after Resume = %d, want 0", resumed.PauseUntil)
+	}
+}
+
+func TestPauseUntilRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "state")
+	original := State{
+		Mode:        "work",
+		LastCheck:   1_700_000_000,
+		Paused:      true,
+		PausedAt:    1_700_000_060,
+		PauseReason: PauseReasonMeeting,
+		PauseUntil:  1_700_001_860,
+	}
+	if err := Save(path, original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.PauseUntil != original.PauseUntil {
+		t.Fatalf("PauseUntil = %d, want %d", loaded.PauseUntil, original.PauseUntil)
+	}
+}
+
+func TestPauseDefaultsToMeetingForInvalidReason(t *testing.T) {
+	s := State{Mode: "work", LastCheck: 100}
+	paused := s.Pause(200, "garbage", 0)
+	if paused.PauseReason != PauseReasonMeeting {
+		t.Fatalf("PauseReason = %q, want %q for invalid input", paused.PauseReason, PauseReasonMeeting)
 	}
 }
 

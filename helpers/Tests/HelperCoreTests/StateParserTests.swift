@@ -79,4 +79,26 @@ final class StateParserTests: XCTestCase {
         XCTAssertTrue(s.paused)
         XCTAssertEqual(s.pausedAt, 1710000300)
     }
+
+    func testParsePauseReasonValidValues() {
+        for reason in ["meeting", "focus", "afk"] {
+            let s = parseState(from: "PAUSE_REASON=\(reason)\n")
+            XCTAssertEqual(s.pauseReason, reason)
+        }
+    }
+
+    func testParsePauseReasonInvalidValueDefaultsToEmpty() {
+        let s = parseState(from: "PAUSE_REASON=garbage\n")
+        XCTAssertEqual(s.pauseReason, "")
+    }
+
+    func testSerializePauseReasonRoundtrip() {
+        var original = AppState()
+        original.paused = true
+        original.pausedAt = 1710000300
+        original.pauseReason = "focus"
+
+        let parsed = parseState(from: serializeState(original))
+        XCTAssertEqual(parsed.pauseReason, "focus")
+    }
 }

@@ -46,6 +46,8 @@ struct StatusHeaderView: View {
                 }
             }
 
+            pauseControlRow
+
             mascotRow
         }
         .padding(.horizontal, 20)
@@ -53,6 +55,66 @@ struct StatusHeaderView: View {
         .padding(.bottom, 12)
         .animation(.easeInOut(duration: 0.5), value: vm.isWork)
         .animation(.easeInOut(duration: 0.3), value: vm.isPaused)
+    }
+
+    private var pauseControlRow: some View {
+        HStack(spacing: 8) {
+            if vm.isPaused {
+                Circle()
+                    .fill(vm.pauseModeAccent)
+                    .frame(width: 8, height: 8)
+                Text(vm.pauseModeLabel.isEmpty ? "Paused" : "Paused · \(vm.pauseModeLabel)")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(vm.pauseModeAccent)
+                if let remaining = vm.pauseRemainingText {
+                    Text("· \(remaining)")
+                        .font(.system(size: 12).monospacedDigit())
+                        .foregroundColor(theme.textSecondary)
+                }
+                Spacer()
+                Button {
+                    vm.resume()
+                } label: {
+                    Label("Resume", systemImage: "play.fill")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+            } else {
+                Spacer()
+                Menu {
+                    pauseModeMenu(mode: "meeting", titleKR: "회의", titleEN: "Meeting", icon: "person.2.fill")
+                    pauseModeMenu(mode: "focus", titleKR: "집중", titleEN: "Focus", icon: "bolt.fill")
+                    pauseModeMenu(mode: "afk", titleKR: "외출", titleEN: "AFK", icon: "figure.walk")
+                } label: {
+                    Label("Pause", systemImage: "pause.fill")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .menuStyle(.borderlessButton)
+                .controlSize(.small)
+                .fixedSize()
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(theme.surface)
+        )
+    }
+
+    @ViewBuilder
+    private func pauseModeMenu(mode: String, titleKR: String, titleEN: String, icon: String) -> some View {
+        Menu {
+            Button("15분") { vm.pause(mode: mode, durationMinutes: 15) }
+            Button("30분") { vm.pause(mode: mode, durationMinutes: 30) }
+            Button("1시간") { vm.pause(mode: mode, durationMinutes: 60) }
+            Button("2시간") { vm.pause(mode: mode, durationMinutes: 120) }
+            Divider()
+            Button("무제한") { vm.pause(mode: mode, durationMinutes: nil) }
+        } label: {
+            Label("\(titleKR) (\(titleEN))", systemImage: icon)
+        }
     }
 
     private var mascotRow: some View {

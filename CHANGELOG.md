@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **GUI pause modes** — dashboard header now offers Meeting / Focus / AFK pause from a dropdown, each with per-mode work-time accrual policy (meeting: not counted, focus: counted as work, afk: counted but resets the work cycle).
+- **Auto-resume timer** — pause picker includes 15분 / 30분 / 1시간 / 2시간 / 무제한 options; the daemon resumes automatically at the configured time and the dashboard shows a live countdown.
+- **Settings tab** in the dashboard — edit core timer, schedule, behavior, and theme settings inline; saves go through the validated `break-reminder config set` CLI for atomicity.
+- **CLI**: `break-reminder pause --mode={meeting|focus|afk} [--duration=30m]` and `break-reminder config set key=value [...]` (plus a `config get` companion).
+
+### Changed
+- `State.Pause(at, reason, durationSec)` replaces the legacy single-arg form; state file gains `PAUSE_REASON` and `PAUSE_UNTIL` keys (backward compatible with older files — missing keys default to empty / 0).
+
 ## [0.8.0] - 2026-04-18
 
 ### Added
