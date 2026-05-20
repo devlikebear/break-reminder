@@ -153,24 +153,57 @@ final class DashboardViewModel: ObservableObject {
     private func runInsightsRefresh() async {
         defer { isRefreshingInsights = false }
 
-        guard let cli = findHelper("break-reminder") else {
+        dashLog("insights refresh: requested")
+
+        var checked: [String] = []
+        guard let cli = findHelper("break-reminder", checked: &checked) else {
+            dashLog("insights refresh: break-reminder helper not found. checked=\(checked)")
             return
         }
+        dashLog("insights refresh: helper=\(cli) PATH=\(ProcessInfo.processInfo.environment["PATH"] ?? "<unset>")")
 
         let process = Process()
         process.launchPath = cli
         process.arguments = ["insights", "--refresh"]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
+        let outPipe = Pipe()
+        let errPipe = Pipe()
+        process.standardOutput = outPipe
+        process.standardError = errPipe
 
         do {
             try process.run()
-            process.waitUntilExit()
         } catch {
+            dashLog("insights refresh: spawn failed: \(error.localizedDescription)")
             return
+        }
+        process.waitUntilExit()
+
+        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
+        let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+        let outStr = String(data: outData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let errStr = String(data: errData, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        dashLog("insights refresh: exit=\(process.terminationStatus) reason=\(process.terminationReason.rawValue) stdoutBytes=\(outData.count) stderrBytes=\(errData.count)")
+        if !outStr.isEmpty {
+            dashLog("insights refresh: stdout: \(truncated(outStr, max: 800))")
+        }
+        if !errStr.isEmpty {
+            dashLog("insights refresh: stderr: \(truncated(errStr, max: 800))")
         }
 
         loadInsights()
+        if insights == nil {
+            dashLog("insights refresh: insights file still empty after run")
+        } else {
+            dashLog("insights refresh: insights loaded ok")
+        }
+    }
+
+    private func truncated(_ s: String, max: Int) -> String {
+        if s.count <= max { return s }
+        return String(s.prefix(max)) + "…(+\(s.count - max) chars)"
     }
 
     func resetTimer() {

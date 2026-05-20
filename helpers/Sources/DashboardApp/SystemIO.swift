@@ -65,6 +65,10 @@ func getIdleSecondsFromSystem() -> Int {
 }
 
 func findHelper(_ name: String) -> String? {
+    return findHelper(name, checked: nil)
+}
+
+func findHelper(_ name: String, checked: UnsafeMutablePointer<[String]>?) -> String? {
     var candidates: [String] = []
     if let exe = Bundle.main.executablePath {
         candidates.append(
@@ -76,10 +80,32 @@ func findHelper(_ name: String) -> String? {
     }
     let home = FileManager.default.homeDirectoryForCurrentUser.path
     candidates.append("\(home)/.local/bin/\(name)")
+    if let checked = checked {
+        checked.pointee = candidates
+    }
     for candidate in candidates {
         if FileManager.default.isExecutableFile(atPath: candidate) {
             return candidate
         }
     }
     return nil
+}
+
+/// Append a timestamped line to ~/.break-reminder.log so GUI-side events show
+/// alongside CLI logs. Best-effort — failures are silently dropped because we
+/// don't want logging itself to crash the app.
+func dashLog(_ message: String) {
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    let path = "\(home)/.break-reminder.log"
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+    let line = "[\(formatter.string(from: Date()))] [dashboard] \(message)\n"
+    guard let data = line.data(using: .utf8) else { return }
+    if let handle = FileHandle(forWritingAtPath: path) {
+        defer { try? handle.close() }
+        _ = try? handle.seekToEnd()
+        try? handle.write(contentsOf: data)
+    } else {
+        try? data.write(to: URL(fileURLWithPath: path))
+    }
 }
