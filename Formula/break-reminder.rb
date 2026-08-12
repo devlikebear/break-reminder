@@ -7,6 +7,7 @@ class BreakReminder < Formula
   license "MIT"
 
   depends_on :macos
+  depends_on "terminal-notifier"
 
   def install
     bin.install "break-reminder"

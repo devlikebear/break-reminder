@@ -41,12 +41,20 @@ brew install devlikebear/tap/break-reminder
 
 ### From Source
 
+Install the macOS notification helper first. Homebrew installs this dependency
+automatically when you install `break-reminder` from the tap, but source and
+standalone binary installations must provide it explicitly.
+
 ```bash
+brew install terminal-notifier
 git clone https://github.com/devlikebear/break-reminder.git
 cd break-reminder
 make build      # Build Go binary + Swift helpers (break-screen, break-dashboard, break-menubar)
 make install    # Install to ~/.local/bin/ + register timer/menu bar LaunchAgents
 ```
+
+Without `terminal-notifier`, timer operation continues but desktop notification
+sending fails with an actionable error in `break-reminder doctor`.
 
 ## 🚀 Usage
 
