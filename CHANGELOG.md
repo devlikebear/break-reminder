@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-08-12
+
+### Fixed
+- macOS notifications now use `terminal-notifier` instead of AppleScript, so clicking a break notification no longer opens Script Editor.
+- LaunchAgent notification delivery can locate Homebrew's `terminal-notifier` even with launchd's minimal `PATH`.
+
+### Changed
+- Homebrew installs `terminal-notifier` as a runtime dependency; source and standalone binary installations must install it separately.
+
 ## [0.9.0] - 2026-05-12
 
 ### Added
