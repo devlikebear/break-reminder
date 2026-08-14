@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-08-14
+
+### Added
+- The macOS menu bar now features a hand-refined, full-color SVG hamster mascot animated across six running frames, two resting frames, and one sleeping frame.
+- Embedded vector artwork is decoded and cached once, with tests covering frame contracts, pure-vector packaging, and native `NSImage` SVG decoding.
+
+### Changed
+- Replaced the legacy `🐹` and `☕` title emoji with state-aware mascot artwork while preserving progress and remaining-time text.
+- Menu bar refresh and animation timers continue updating while the menu is open and cleanly invalidate with the controller lifecycle.
+
 ## [0.9.2] - 2026-08-12
 
 ### Fixed
