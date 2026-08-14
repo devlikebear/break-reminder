@@ -53,6 +53,9 @@ func findHelper(_ name: String) -> String? {
 class MenuBarController: NSObject {
     private var statusItem: NSStatusItem!
     private var refreshTimer: Timer?
+    private var animationTimer: Timer?
+    private var animationTick = 0
+    private var currentState = AppState()
 
     // Keep strong refs to menu items that need live updates.
     private var statusMenuItem: NSMenuItem!
@@ -61,10 +64,20 @@ class MenuBarController: NSObject {
     override init() {
         super.init()
         setupStatusItem()
+        statusItem.button?.imagePosition = .imageLeading
+        statusItem.button?.imageScaling = .scaleProportionallyDown
         refresh()
-        refreshTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        refreshTimer = scheduleMenuBarTimer(interval: 1.0) { [weak self] in
             self?.refresh()
         }
+        animationTimer = scheduleMenuBarTimer(interval: 0.25) { [weak self] in
+            self?.advanceAnimation()
+        }
+    }
+
+    deinit {
+        refreshTimer?.invalidate()
+        animationTimer?.invalidate()
     }
 
     // MARK: Setup
@@ -118,13 +131,25 @@ class MenuBarController: NSObject {
 
     @objc private func refresh() {
         let state = loadStateFromFile()
+        currentState = state
         let config = loadConfigFromFile()
         let now = Int64(Date().timeIntervalSince1970)
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
         statusItem.button?.title = presentation.title
+        updateMascotImage()
         statusMenuItem.title = presentation.statusLine
         statsMenuItem.title = presentation.statsLine
+    }
+
+    private func advanceAnimation() {
+        animationTick = (animationTick + 1) % 12_000
+        updateMascotImage()
+    }
+
+    private func updateMascotImage() {
+        let frame = menuBarAnimation(state: currentState, tick: animationTick)
+        statusItem.button?.image = HamsterMenuBarIcon.image(for: frame)
     }
 
     // MARK: Actions

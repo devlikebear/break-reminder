@@ -16,7 +16,7 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support
 - **📊 TUI Dashboard** — Real-time progress bars and daily statistics (Bubbletea)
 - **🖼️ Native GUI Dashboard** — macOS native window with circular progress bar
-- **🍎 Menu Bar App** — Native macOS status item with quick controls and live session status
+- **🍎 Menu Bar App** — Native macOS status item with an animated hamster mascot, quick controls, and live session status
 - **🧘 Guided Break Activities** — Eye exercise, stretching, box breathing, walk timer
 - **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
