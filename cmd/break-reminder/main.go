@@ -79,6 +79,7 @@ func newRootCmd() *cobra.Command {
 		newConfigCmd(),
 		newTTSCmd(),
 		newAICmd(),
+		newUpdateCmd(),
 		newVersionCmd(),
 	)
 

@@ -37,7 +37,16 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 
 ```bash
 brew install devlikebear/tap/break-reminder
+break-reminder service install
 ```
+
+When installed through Homebrew, `service install` also registers a dedicated
+LaunchAgent that checks the tap every day at 04:00. If a newer release is
+available, it runs `brew upgrade devlikebear/tap/break-reminder` and reloads the
+timer and menu bar agents from Homebrew's stable `bin` symlinks. Source and
+standalone installs never enable this updater.
+
+Run `break-reminder update` to perform the same check immediately.
 
 ### From Source
 
@@ -79,11 +88,12 @@ break-reminder dashboard --gui    # Native macOS GUI
 break-reminder menubar            # Native macOS menu bar app
 
 # Service Management
-break-reminder service install    # Register timer LaunchAgent + menu bar auto-start when helper is installed
-break-reminder service uninstall  # Remove LaunchAgents
+break-reminder service install    # Register timer/menu bar agents; Homebrew installs also enable daily auto-update
+break-reminder service uninstall  # Remove all LaunchAgents, including the updater
 break-reminder service start      # Start service
 break-reminder service stop       # Stop service
-break-reminder service status     # Check service status
+break-reminder service status     # Check timer, menu bar, and auto-update status
+break-reminder update             # Check and install a Homebrew update now
 
 # Guided Break Activities
 break-reminder break eye          # 20-20-20 eye exercise (2 min)

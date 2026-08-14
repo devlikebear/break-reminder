@@ -6,8 +6,21 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/devlikebear/break-reminder/internal/autoupdate"
 	"github.com/devlikebear/break-reminder/internal/breakscreen"
 	"github.com/devlikebear/break-reminder/internal/launchd"
+)
+
+var (
+	serviceExecutablePath = os.Executable
+	serviceFindMenuBar    = breakscreen.FindHelper
+	serviceDetectHomebrew = autoupdate.DetectHomebrewInstall
+	serviceInstallAgents  = launchd.Install
+	serviceInstallUpdater = launchd.InstallUpdater
+	serviceDisableUpdater = launchd.DisableUpdater
+	serviceTimerStatus    = launchd.Status
+	serviceMenuBarStatus  = launchd.MenuBarStatus
+	serviceUpdaterStatus  = launchd.UpdaterStatus
 )
 
 func newServiceCmd() *cobra.Command {
@@ -21,21 +34,39 @@ func newServiceCmd() *cobra.Command {
 			Use:   "install",
 			Short: "Install as macOS LaunchAgent",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				exe, err := os.Executable()
+				exe, err := serviceExecutablePath()
 				if err != nil {
 					return fmt.Errorf("resolve executable path: %w", err)
 				}
-				menuBarPath := breakscreen.FindHelper("break-menubar")
-				menuBarInstalled, err := launchd.Install(exe, menuBarPath)
+				menuBarPath := serviceFindMenuBar("break-menubar")
+				homebrewInstall, installedByHomebrew := serviceDetectHomebrew(exe)
+				if installedByHomebrew {
+					exe = homebrewInstall.BinaryPath
+					menuBarPath = homebrewInstall.MenuBarPath
+				}
+
+				menuBarInstalled, err := serviceInstallAgents(exe, menuBarPath)
 				if err != nil {
 					return err
 				}
-				fmt.Println("Successfully installed and loaded break-reminder agent!")
-				fmt.Println("It will now run every minute in the background.")
+				if installedByHomebrew {
+					if err := serviceInstallUpdater(exe); err != nil {
+						return err
+					}
+				} else if err := serviceDisableUpdater(); err != nil {
+					return fmt.Errorf("disable Homebrew auto-update: %w", err)
+				}
+
+				out := cmd.OutOrStdout()
+				fmt.Fprintln(out, "Successfully installed and loaded break-reminder agent!")
+				fmt.Fprintln(out, "It will now run every minute in the background.")
 				if menuBarInstalled {
-					fmt.Println("Menu bar app auto-start is enabled and will stay running in the background.")
+					fmt.Fprintln(out, "Menu bar app auto-start is enabled and will stay running in the background.")
 				} else {
-					fmt.Println("Menu bar auto-start skipped because break-menubar helper was not found.")
+					fmt.Fprintln(out, "Menu bar auto-start skipped because break-menubar helper was not found.")
+				}
+				if installedByHomebrew {
+					fmt.Fprintln(out, "Homebrew auto-update is enabled and will check daily at 04:00.")
 				}
 				return nil
 			},
@@ -69,8 +100,10 @@ func newServiceCmd() *cobra.Command {
 			Use:   "status",
 			Short: "Show agent status",
 			Run: func(cmd *cobra.Command, args []string) {
-				fmt.Println("Timer:", launchd.Status())
-				fmt.Println("Menu Bar:", launchd.MenuBarStatus())
+				out := cmd.OutOrStdout()
+				fmt.Fprintln(out, "Timer:", serviceTimerStatus())
+				fmt.Fprintln(out, "Menu Bar:", serviceMenuBarStatus())
+				fmt.Fprintln(out, "Auto Update:", serviceUpdaterStatus())
 			},
 		},
 	)

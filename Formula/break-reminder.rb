@@ -2,8 +2,8 @@ class BreakReminder < Formula
   desc "Smart work/break cycle enforcer for macOS with guided breaks and AI integration"
   homepage "https://github.com/devlikebear/break-reminder"
   url "https://github.com/devlikebear/break-reminder/releases/download/v0.10.0/break-reminder-v0.10.0-darwin-arm64.tar.gz"
-  sha256 "33b4ebe6b322cc067a185221b4267b8fc820569ae5f4062a9e10b5b3104aedcd"
   version "0.10.0"
+  sha256 "33b4ebe6b322cc067a185221b4267b8fc820569ae5f4062a9e10b5b3104aedcd"
   license "MIT"
 
   depends_on :macos
@@ -17,16 +17,21 @@ class BreakReminder < Formula
   end
 
   def post_install
-    ohai "Run 'break-reminder service install' to set up the launchd agent"
+    ohai "Run 'break-reminder service install' to set up timer/menu bar agents and daily automatic updates"
     ohai "Run 'break-reminder doctor' to verify your setup"
     ohai "Run 'break-reminder dashboard' for the TUI dashboard"
-    ohai "Optional: run 'break-reminder tts install kittentts' or 'break-reminder tts install supertonic' to enable alternate TTS engines"
+    ohai "Optional: run 'break-reminder tts install kittentts' or " \
+         "'break-reminder tts install supertonic' to enable alternate TTS engines"
   end
 
   def caveats
     <<~EOS
-      To start break-reminder as a background service:
+      To start break-reminder as a background service and enable daily updates:
         break-reminder service install
+
+      Homebrew installations check for updates every day at 04:00.
+      To check immediately:
+        break-reminder update
 
       To check system status:
         break-reminder doctor

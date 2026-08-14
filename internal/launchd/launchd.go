@@ -3,6 +3,7 @@ package launchd
 import (
 	"errors"
 	"fmt"
+	"html"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -12,9 +13,13 @@ import (
 const (
 	Label        = "com.devlikebear.break-reminder"
 	MenuBarLabel = Label + ".menubar"
+	UpdaterLabel = Label + ".updater"
 )
 
-var userHomeDir = os.UserHomeDir
+var (
+	userHomeDir       = os.UserHomeDir
+	loadJobForInstall = loadJob
+)
 
 // PlistPath returns the LaunchAgent plist file path.
 func PlistPath() string {
@@ -24,6 +29,11 @@ func PlistPath() string {
 // MenuBarPlistPath returns the LaunchAgent plist file path for the menu bar app.
 func MenuBarPlistPath() string {
 	return plistPath(MenuBarLabel)
+}
+
+// UpdaterPlistPath returns the LaunchAgent plist file path for automatic updates.
+func UpdaterPlistPath() string {
+	return plistPath(UpdaterLabel)
 }
 
 func plistPath(label string) string {
@@ -70,6 +80,25 @@ func removeJob(path string) error {
 	return nil
 }
 
+// InstallUpdater creates and loads the daily Homebrew updater agent.
+func InstallUpdater(binaryPath string) error {
+	if err := os.MkdirAll(updaterLogDir(), 0o755); err != nil {
+		return fmt.Errorf("create updater log dir: %w", err)
+	}
+	if err := writePlist(UpdaterPlistPath(), generateUpdaterPlist(binaryPath)); err != nil {
+		return err
+	}
+	if err := loadJobForInstall(UpdaterPlistPath()); err != nil {
+		return fmt.Errorf("load updater agent: %w", err)
+	}
+	return nil
+}
+
+// DisableUpdater unloads and removes the automatic updater when present.
+func DisableUpdater() error {
+	return removeJob(UpdaterPlistPath())
+}
+
 // Install creates the plists and loads the agents.
 func Install(binaryPath, menuBarPath string) (bool, error) {
 	if err := writePlist(PlistPath(), generateTimerPlist(binaryPath)); err != nil {
@@ -100,7 +129,8 @@ func Install(binaryPath, menuBarPath string) (bool, error) {
 func Uninstall() error {
 	timerInstalled := Status() != "Not Installed"
 	menuInstalled := MenuBarStatus() != "Not Installed"
-	if !timerInstalled && !menuInstalled {
+	updaterInstalled := UpdaterStatus() != "Not Installed"
+	if !timerInstalled && !menuInstalled && !updaterInstalled {
 		return fmt.Errorf("agent not installed (plist not found)")
 	}
 
@@ -115,11 +145,16 @@ func Uninstall() error {
 			errs = append(errs, fmt.Errorf("remove menu bar agent: %w", err))
 		}
 	}
+	if updaterInstalled {
+		if err := removeJob(UpdaterPlistPath()); err != nil {
+			errs = append(errs, fmt.Errorf("remove updater agent: %w", err))
+		}
+	}
 	return errors.Join(errs...)
 }
 
-// Start loads the agents.
-func Start() error {
+// RestartRuntime reloads only the timer and menu bar jobs after a binary upgrade.
+func RestartRuntime() error {
 	var errs []error
 	if err := loadJob(PlistPath()); err != nil {
 		errs = append(errs, fmt.Errorf("start timer agent: %w", err))
@@ -127,6 +162,20 @@ func Start() error {
 	if MenuBarStatus() != "Not Installed" {
 		if err := loadJob(MenuBarPlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("start menu bar agent: %w", err))
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// Start loads all installed agents.
+func Start() error {
+	var errs []error
+	if err := RestartRuntime(); err != nil {
+		errs = append(errs, err)
+	}
+	if UpdaterStatus() != "Not Installed" {
+		if err := loadJob(UpdaterPlistPath()); err != nil {
+			errs = append(errs, fmt.Errorf("start updater agent: %w", err))
 		}
 	}
 	return errors.Join(errs...)
@@ -141,6 +190,11 @@ func Stop() error {
 	if MenuBarStatus() != "Not Installed" {
 		if err := unloadJob(MenuBarPlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("stop menu bar agent: %w", err))
+		}
+	}
+	if UpdaterStatus() != "Not Installed" {
+		if err := unloadJob(UpdaterPlistPath()); err != nil {
+			errs = append(errs, fmt.Errorf("stop updater agent: %w", err))
 		}
 	}
 	return errors.Join(errs...)
@@ -172,6 +226,11 @@ func MenuBarStatus() string {
 	return jobStatus(MenuBarPlistPath(), MenuBarLabel)
 }
 
+// UpdaterStatus returns the current automatic updater agent status.
+func UpdaterStatus() string {
+	return jobStatus(UpdaterPlistPath(), UpdaterLabel)
+}
+
 func generateTimerPlist(binaryPath string) string {
 	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -194,7 +253,54 @@ func generateTimerPlist(binaryPath string) string {
     <string>/tmp/break-reminder.err</string>
 </dict>
 </plist>
-`, Label, binaryPath)
+`, Label, html.EscapeString(binaryPath))
+}
+
+func updaterLogDir() string {
+	home, _ := userHomeDir()
+	return filepath.Join(home, "Library", "Logs")
+}
+
+func updaterLogPath(extension string) string {
+	return filepath.Join(updaterLogDir(), "break-reminder-updater."+extension)
+}
+
+func generateUpdaterPlist(binaryPath string) string {
+	return fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>%s</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>%s</string>
+        <string>update</string>
+        <string>--automatic</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>4</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>LowPriorityIO</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>%s</string>
+    <key>StandardErrorPath</key>
+    <string>%s</string>
+</dict>
+</plist>
+`,
+		UpdaterLabel,
+		html.EscapeString(binaryPath),
+		html.EscapeString(updaterLogPath("out")),
+		html.EscapeString(updaterLogPath("err")),
+	)
 }
 
 func generateMenuBarPlist(menuBarPath string) string {
@@ -220,5 +326,5 @@ func generateMenuBarPlist(menuBarPath string) string {
     <string>/tmp/break-reminder-menubar.err</string>
 </dict>
 </plist>
-`, MenuBarLabel, menuBarPath)
+`, MenuBarLabel, html.EscapeString(menuBarPath))
 }
