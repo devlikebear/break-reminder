@@ -13,7 +13,7 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 
 - **🖱️ Activity Detection** — Monitors keyboard/mouse idle time via `ioreg`
 - **⏰ Smart Timer** — 50 min work / 10 min break cycle (configurable)
-- **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support
+- **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support and an optional two-minute guided neck-and-shoulder stretch
 - **📊 TUI Dashboard** — Real-time progress bars and daily statistics (Bubbletea)
 - **🖼️ Native GUI Dashboard** — macOS native window with circular progress bar
 - **🍎 Menu Bar App** — Native macOS status item with an animated hamster mascot, quick controls, and live session status
@@ -132,6 +132,22 @@ break-reminder config path        # Show config file path
 break-reminder doctor             # Check all components
 break-reminder version            # Show version
 ```
+
+### Fullscreen guided break (macOS)
+
+The current `block`-mode implementation is designed to open the primary display
+with a fixed, optional two-minute standing neck-and-shoulder guide. The guide's
+local countdown uses the existing AppKit timer and can start only while at least
+123 seconds remain so its 120-second activity and three-second completion state
+fit inside the break. The ready, running, completion, cancellation, Skip, and keyboard activation
+flows have been exercised with the native helper. VoiceOver audio,
+multi-display behavior, and accessibility-display variants still depend on the
+user's local environment.
+
+- The code assigns Return/Space to `시작`; `가이드 취소` is intended to return to the ready card without closing the break.
+- Existing Esc and timed `Skip Break` handlers remain connected to whole-overlay dismissal in every guide phase.
+- The model and adapter implement a guide countdown, one instruction at a time, a three-tick completion state, and one AppKit announcement request before dismissal.
+- The existing secondary-display branch remains non-interactive and renders the `☕ Break Time` surface.
 
 ### Dashboard
 
