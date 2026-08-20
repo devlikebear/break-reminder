@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-20
+
 ### Added
 - Implemented a fixed, optional two-minute standing neck-and-shoulder guide for block-mode fullscreen breaks, with ready, running, and three-tick completion states.
 - Added Return/Space activation, cancel without ending the overall break, phase-specific AppKit accessibility text, and one completion announcement request while retaining the existing Esc, timed Skip, and secondary-display branches. Native helper QA covers the ready/running/completed flow, 122/123-second guard, cancellation/restart, timed Skip, phase-specific Esc, exact `01:00`, and automatic dismissal after completion; VoiceOver audio and multi-display variants remain environment-dependent.
