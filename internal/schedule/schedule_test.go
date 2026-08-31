@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/devlikebear/break-reminder/internal/config"
+	"github.com/devlikebear/break-reminder/internal/state"
 )
 
 func TestIsWorkingTime(t *testing.T) {
@@ -142,5 +143,68 @@ func TestIsWorkingTimeHourOnlyConfigRemainsBackwardCompatible(t *testing.T) {
 				t.Errorf("IsWorkingTime(%v) = %v, want %v", tt.time, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestInDetectWindow(t *testing.T) {
+	cfg := config.Default() // 07:00-22:00, Mon-Fri
+
+	tests := []struct {
+		name string
+		time time.Time
+		want bool
+	}{
+		{"before window", time.Date(2025, 1, 15, 6, 59, 0, 0, time.Local), false},
+		{"window opens", time.Date(2025, 1, 15, 7, 0, 0, 0, time.Local), true},
+		{"before working hours", time.Date(2025, 1, 15, 8, 30, 0, 0, time.Local), true},
+		{"after working hours", time.Date(2025, 1, 15, 21, 59, 0, 0, time.Local), true},
+		{"window closes", time.Date(2025, 1, 15, 22, 0, 0, 0, time.Local), false},
+		{"weekend", time.Date(2025, 1, 18, 10, 0, 0, 0, time.Local), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := InDetectWindow(cfg, tt.time); got != tt.want {
+				t.Errorf("InDetectWindow(%v) = %v, want %v", tt.time, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsActiveWithAutoDetection(t *testing.T) {
+	cfg := config.Default()
+	insideHours := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+
+	if IsActive(cfg, state.State{}, insideHours) {
+		t.Error("no session means the timer is not running")
+	}
+
+	active := state.State{SessionState: state.SessionStateActive}
+	outsideHours := time.Date(2025, 1, 15, 21, 0, 0, 0, time.Local)
+	if !IsActive(cfg, active, outsideHours) {
+		t.Error("an open session keeps running past the configured working hours")
+	}
+}
+
+func TestIsActiveWithLegacyScheduling(t *testing.T) {
+	cfg := config.Default()
+	cfg.AutoSessionDetect = false
+	insideHours := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
+	outsideHours := time.Date(2025, 1, 15, 21, 0, 0, 0, time.Local)
+
+	if !IsActive(cfg, state.State{}, insideHours) {
+		t.Error("legacy scheduling should be active during working hours")
+	}
+	if IsActive(cfg, state.State{}, outsideHours) {
+		t.Error("legacy scheduling should be inactive outside working hours")
+	}
+
+	stopped := state.State{SessionState: state.SessionStateEnded, SessionManual: true}
+	if IsActive(cfg, stopped, insideHours) {
+		t.Error("a manual stop must win over the fixed schedule")
+	}
+
+	started := state.State{SessionState: state.SessionStateActive, SessionManual: true}
+	if !IsActive(cfg, started, outsideHours) {
+		t.Error("a manual start must win over the fixed schedule")
 	}
 }

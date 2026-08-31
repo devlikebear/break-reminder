@@ -16,16 +16,20 @@ public func mascotFor(state: AppState, config: AppConfig, now: Int64) -> Mascot 
         return Mascot(emoji: "😶", message: "일시 정지 중이에요")
     }
 
+    if !timerIsRunning(state: state, config: config) {
+        return Mascot(emoji: "🌙", message: "업무 세션이 꺼져 있어요")
+    }
+
     if state.mode == "break" {
         let breakElapsed = state.breakStart > 0 ? Int(now - state.breakStart) : 0
-        let breakTotal = config.breakDurationMin * 60
+        let breakTotal = config.effectiveBreakMin(completedPomodoros: state.pomodoroCount) * 60
         if breakElapsed > breakTotal - 60 {
             return Mascot(emoji: "☕", message: "곧 다시 시작해요~")
         }
         return Mascot(emoji: "😴", message: "푹 쉬고 와요~ ☕")
     }
 
-    let workTotal = config.workDurationMin * 60
+    let workTotal = config.effectiveWorkMin * 60
     let elapsed = state.workSeconds
 
     // Long continuous work warning (2x or more of the configured work duration)

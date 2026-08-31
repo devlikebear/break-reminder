@@ -28,6 +28,7 @@ final class MenuBarPresentationTests: XCTestCase {
         let now: Int64 = 1_030
 
         var state = AppState()
+        state.sessionState = "active"
         state.mode = "work"
         state.workSeconds = 900
         state.lastCheck = 1_000
@@ -74,6 +75,7 @@ final class MenuBarPresentationTests: XCTestCase {
         let now: Int64 = 2_150
 
         var state = AppState()
+        state.sessionState = "active"
         state.mode = "break"
         state.breakStart = 2_000
         state.lastCheck = 2_100
@@ -144,6 +146,53 @@ final class MenuBarPresentationTests: XCTestCase {
         XCTAssertEqual(presentation.title, "PAUSED (BREAK) · 8m left")
         XCTAssertEqual(presentation.statusLine, "PAUSED (BREAK) · 2m elapsed · 8m until work")
         XCTAssertEqual(presentation.statsLine, "Today · Work 2h · Break 10m")
+    }
+
+    func testMenuBarPresentationForStoppedSession() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let now: Int64 = 1_030
+
+        var state = AppState()
+        state.mode = "work"
+        state.sessionState = "ended"
+        state.sessionManual = true
+        state.todayWorkSeconds = 3_600
+        state.todayBreakSeconds = 1_200
+        state.lastUpdateDate = formatter.string(from: Date(timeIntervalSince1970: TimeInterval(now)))
+
+        let presentation = menuBarPresentation(state: state, config: AppConfig(), now: now)
+
+        XCTAssertEqual(presentation.title, "Off")
+        XCTAssertEqual(presentation.statusLine, "Stopped by hand · start a session to resume")
+        XCTAssertEqual(presentation.statsLine, "Today · Work 1h · Break 20m")
+    }
+
+    func testMenuBarPresentationBeforeFirstSessionOfTheDay() {
+        let presentation = menuBarPresentation(state: AppState(), config: AppConfig(), now: 1_030)
+
+        XCTAssertEqual(presentation.title, "Idle")
+        XCTAssertEqual(presentation.statusLine, "Waiting · starts on your first activity")
+    }
+
+    func testMenuBarPresentationPomodoroUsesPomodoroDurations() {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let now: Int64 = 1_000
+
+        var state = AppState()
+        state.sessionState = "active"
+        state.mode = "work"
+        state.workSeconds = 300
+        state.lastCheck = 1_000
+        state.lastUpdateDate = formatter.string(from: Date(timeIntervalSince1970: TimeInterval(now)))
+
+        var config = AppConfig()
+        config.timerMode = "pomodoro"
+
+        let presentation = menuBarPresentation(state: state, config: config, now: now)
+
+        XCTAssertEqual(presentation.title, "20% · 20m left")
     }
 
     func testTodayTotalsResetsStalePreviousDayTotals() {

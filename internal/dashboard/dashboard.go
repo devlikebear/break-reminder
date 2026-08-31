@@ -117,6 +117,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return s, nil
 			})
 			m.state = s
+		case key.Matches(msg, keys.Session):
+			// Toggle the work session (manual clock-in / clock-out)
+			now := time.Now().Unix()
+			if m.state.IsSessionActive() {
+				m.state = m.state.EndSession(now, true)
+			} else {
+				m.state = m.state.StartSession(now, true)
+			}
+			toggled := m.state
+			_ = state.Update(state.DefaultStatePath(), func(state.State) (state.State, error) {
+				return toggled, nil
+			})
+			m.showBreakMenu = false
 		case key.Matches(msg, keys.Break):
 			// Force break mode
 			m.state = m.state.EnterBreak(time.Now().Unix())
@@ -183,7 +196,7 @@ func (m Model) View() string {
 	blueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
 	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 
-	b.WriteString(titleStyle.Render("🐹 Break Reminder Dashboard") + " (q:quit r:reset b:break)\n")
+	b.WriteString(titleStyle.Render("🐹 Break Reminder Dashboard") + " (q:quit r:reset b:break s:start/stop)\n")
 	b.WriteString("══════════════════════════════════════════════════\n")
 
 	// System status
@@ -201,8 +214,8 @@ func (m Model) View() string {
 			pausedMode = "WORK"
 		}
 		b.WriteString("Status: " + yellowStyle.Render("PAUSED ("+pausedMode+")") + "\n")
-	} else if !schedule.IsWorkingTime(m.cfg, now) {
-		b.WriteString("Status: " + yellowStyle.Render("SLEEPING (Outside Working Hours)") + "\n")
+	} else if !schedule.IsActive(m.cfg, m.state, now) {
+		b.WriteString("Status: " + yellowStyle.Render("SLEEPING ("+sleepReason(m.cfg, m.state, now)+")") + "\n")
 	} else if m.state.Mode == "work" {
 		b.WriteString("Status: " + greenStyle.Render("WORKING") + "\n")
 	} else {
@@ -213,7 +226,7 @@ func (m Model) View() string {
 
 	// Progress bar
 	if m.state.Mode == "work" {
-		workDur := m.cfg.WorkDurationSec()
+		workDur := m.cfg.EffectiveWorkSec()
 		pct := 0
 		if workDur > 0 {
 			pct = (m.state.WorkSeconds * 100) / workDur
@@ -223,9 +236,9 @@ func (m Model) View() string {
 		}
 		bar := renderBar(pct, 30, greenStyle)
 		b.WriteString(fmt.Sprintf("Session Work: %s (%d / %d min)\n",
-			bar, m.state.WorkSeconds/60, m.cfg.WorkDurationMin))
+			bar, m.state.WorkSeconds/60, m.cfg.EffectiveWorkMin()))
 	} else {
-		breakDur := m.cfg.BreakDurationSec()
+		breakDur := m.cfg.EffectiveBreakSec(m.state.PomodoroCount)
 		breakElapsed := int(referenceNow.Unix() - m.state.BreakStart)
 		pct := 0
 		if breakDur > 0 {
@@ -236,7 +249,7 @@ func (m Model) View() string {
 		}
 		bar := renderBar(pct, 30, blueStyle)
 		b.WriteString(fmt.Sprintf("Break Timer:  %s (%d / %d min)\n",
-			bar, breakElapsed/60, m.cfg.BreakDurationMin))
+			bar, breakElapsed/60, m.cfg.EffectiveBreakMin(m.state.PomodoroCount)))
 	}
 
 	b.WriteString("\n")
@@ -249,6 +262,10 @@ func (m Model) View() string {
 	b.WriteString("Daily Statistics:\n")
 	b.WriteString(fmt.Sprintf("  Work: %s\n", fmtMin(dailyWorkMin)))
 	b.WriteString(fmt.Sprintf("  Rest: %s\n", fmtMin(dailyBreakMin)))
+	if m.cfg.PomodoroEnabled() {
+		b.WriteString(fmt.Sprintf("  Pomodoros: %d (cycle %d/%d)\n",
+			m.state.TodayPomodoros, m.state.PomodoroCount, m.cfg.PomodoroLongBreakEvery))
+	}
 	if totalMin > 0 {
 		ratio := (dailyWorkMin * 100) / totalMin
 		bar := renderBar(ratio, 20, yellowStyle)
@@ -316,13 +333,31 @@ func renderBar(pct, length int, style lipgloss.Style) string {
 
 // Key bindings
 type keyMap struct {
-	Quit  key.Binding
-	Reset key.Binding
-	Break key.Binding
+	Quit    key.Binding
+	Reset   key.Binding
+	Break   key.Binding
+	Session key.Binding
 }
 
 var keys = keyMap{
-	Quit:  key.NewBinding(key.WithKeys("q", "ctrl+c")),
-	Reset: key.NewBinding(key.WithKeys("r")),
-	Break: key.NewBinding(key.WithKeys("b")),
+	Quit:    key.NewBinding(key.WithKeys("q", "ctrl+c")),
+	Reset:   key.NewBinding(key.WithKeys("r")),
+	Break:   key.NewBinding(key.WithKeys("b")),
+	Session: key.NewBinding(key.WithKeys("s")),
+}
+
+// sleepReason explains why the dashboard shows the timer as sleeping.
+func sleepReason(cfg config.Config, s state.State, now time.Time) string {
+	switch {
+	case s.SessionState == state.SessionStateEnded && s.SessionManual:
+		return "Stopped - press s to start"
+	case s.SessionState == state.SessionStateEnded:
+		return "Work Session Ended"
+	case cfg.AutoSessionDetect && schedule.InDetectWindow(cfg, now):
+		return "Waiting For Activity"
+	case cfg.AutoSessionDetect:
+		return "Outside Detection Window"
+	default:
+		return "Outside Working Hours"
+	}
 }

@@ -18,8 +18,34 @@ public struct AppConfig: Equatable {
     public var breakActivitiesEnabled: Bool = true
     public var breakScreenMode: String = "ask"
     public var theme: String = "auto"
+    public var autoSessionDetect: Bool = true
+    public var sessionDetectStartHour: Int = 7
+    public var sessionDetectEndHour: Int = 22
+    public var sessionIdleEndMin: Int = 30
+    public var timerMode: String = "classic"
+    public var pomodoroWorkMin: Int = 25
+    public var pomodoroBreakMin: Int = 5
+    public var pomodoroLongBreakMin: Int = 15
+    public var pomodoroLongBreakEvery: Int = 4
 
     public init() {}
+
+    /// True when the pomodoro timer replaces the classic long work block.
+    public var pomodoroEnabled: Bool { timerMode == "pomodoro" }
+
+    /// Work block length of the active timer mode, in minutes.
+    public var effectiveWorkMin: Int { pomodoroEnabled ? pomodoroWorkMin : workDurationMin }
+
+    /// Break length that follows the given number of completed pomodoros.
+    public func effectiveBreakMin(completedPomodoros: Int) -> Int {
+        guard pomodoroEnabled else { return breakDurationMin }
+        if pomodoroLongBreakEvery > 0,
+           completedPomodoros > 0,
+           completedPomodoros % pomodoroLongBreakEvery == 0 {
+            return pomodoroLongBreakMin
+        }
+        return pomodoroBreakMin
+    }
 }
 
 /// Parses configuration from simple YAML content (flat key: value pairs and
@@ -49,6 +75,15 @@ public func parseConfig(from content: String) -> AppConfig {
         case "break_activities_enabled": c.breakActivitiesEnabled = (val == "true")
         case "break_screen_mode":        c.breakScreenMode = val
         case "theme":                    c.theme = val
+        case "auto_session_detect":      c.autoSessionDetect = (val == "true")
+        case "session_detect_start_hour": c.sessionDetectStartHour = Int(val) ?? c.sessionDetectStartHour
+        case "session_detect_end_hour":  c.sessionDetectEndHour = Int(val) ?? c.sessionDetectEndHour
+        case "session_idle_end_min":     c.sessionIdleEndMin = Int(val) ?? c.sessionIdleEndMin
+        case "timer_mode":               c.timerMode = val
+        case "pomodoro_work_min":        c.pomodoroWorkMin = Int(val) ?? c.pomodoroWorkMin
+        case "pomodoro_break_min":       c.pomodoroBreakMin = Int(val) ?? c.pomodoroBreakMin
+        case "pomodoro_long_break_min":  c.pomodoroLongBreakMin = Int(val) ?? c.pomodoroLongBreakMin
+        case "pomodoro_long_break_every": c.pomodoroLongBreakEvery = Int(val) ?? c.pomodoroLongBreakEvery
         case "work_days":
             let stripped = val.trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
             let parsed = stripped.split(separator: ",").compactMap {

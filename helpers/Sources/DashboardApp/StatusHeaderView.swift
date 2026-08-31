@@ -7,6 +7,7 @@ struct StatusHeaderView: View {
 
     private var statusColor: Color {
         if vm.isPaused { return theme.warning }
+        if !vm.isSessionRunning { return theme.textSecondary }
         return vm.isWork ? theme.accent : theme.accentBreak
     }
 
@@ -81,7 +82,24 @@ struct StatusHeaderView: View {
                 .buttonStyle(.borderedProminent)
                 .controlSize(.small)
             } else {
+                if !vm.isSessionRunning {
+                    Circle()
+                        .fill(theme.textSecondary)
+                        .frame(width: 8, height: 8)
+                    Text("업무 세션 꺼짐")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.textSecondary)
+                }
                 Spacer()
+                Button {
+                    vm.toggleSession()
+                } label: {
+                    Label(vm.isSessionRunning ? "Stop" : "Start",
+                          systemImage: vm.isSessionRunning ? "stop.fill" : "play.fill")
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 Menu {
                     pauseModeMenu(mode: "meeting", titleKR: "회의", titleEN: "Meeting", icon: "person.2.fill")
                     pauseModeMenu(mode: "focus", titleKR: "집중", titleEN: "Focus", icon: "bolt.fill")

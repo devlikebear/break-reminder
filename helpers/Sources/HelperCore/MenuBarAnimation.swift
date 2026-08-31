@@ -23,12 +23,12 @@ public struct MenuBarAnimationFrame: Equatable {
 
 /// Selects the menu-bar mascot frame for the current timer state.
 /// The caller advances `tick` at a steady cadence (250 ms in MenuBarApp).
-public func menuBarAnimation(state: AppState, tick: Int) -> MenuBarAnimationFrame {
+public func menuBarAnimation(state: AppState, config: AppConfig, tick: Int) -> MenuBarAnimationFrame {
     func wrapped(_ value: Int, modulo: Int) -> Int {
         ((value % modulo) + modulo) % modulo
     }
 
-    if state.paused {
+    if state.paused || !timerIsRunning(state: state, config: config) {
         return MenuBarAnimationFrame(kind: .sleeping, frameIndex: 0)
     }
     if state.mode == "break" {

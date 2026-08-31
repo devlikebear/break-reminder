@@ -105,6 +105,52 @@ final class ConfigParserTests: XCTestCase {
         XCTAssertEqual(cfg.breakScreenMode, "block")
     }
 
+    func testParseSessionDetectionKeys() {
+        let yaml = """
+        auto_session_detect: false
+        session_detect_start_hour: 6
+        session_detect_end_hour: 23
+        session_idle_end_min: 45
+        """
+        let cfg = parseConfig(from: yaml)
+        XCTAssertFalse(cfg.autoSessionDetect)
+        XCTAssertEqual(cfg.sessionDetectStartHour, 6)
+        XCTAssertEqual(cfg.sessionDetectEndHour, 23)
+        XCTAssertEqual(cfg.sessionIdleEndMin, 45)
+    }
+
+    func testSessionDetectionDefaults() {
+        let cfg = parseConfig(from: "")
+        XCTAssertTrue(cfg.autoSessionDetect)
+        XCTAssertEqual(cfg.sessionDetectStartHour, 7)
+        XCTAssertEqual(cfg.sessionDetectEndHour, 22)
+        XCTAssertEqual(cfg.sessionIdleEndMin, 30)
+    }
+
+    func testClassicModeUsesClassicDurations() {
+        let cfg = parseConfig(from: "")
+        XCTAssertFalse(cfg.pomodoroEnabled)
+        XCTAssertEqual(cfg.effectiveWorkMin, 50)
+        XCTAssertEqual(cfg.effectiveBreakMin(completedPomodoros: 4), 10)
+    }
+
+    func testPomodoroModeUsesPomodoroDurations() {
+        let yaml = """
+        timer_mode: pomodoro
+        pomodoro_work_min: 25
+        pomodoro_break_min: 5
+        pomodoro_long_break_min: 20
+        pomodoro_long_break_every: 3
+        """
+        let cfg = parseConfig(from: yaml)
+        XCTAssertTrue(cfg.pomodoroEnabled)
+        XCTAssertEqual(cfg.effectiveWorkMin, 25)
+        XCTAssertEqual(cfg.effectiveBreakMin(completedPomodoros: 1), 5)
+        XCTAssertEqual(cfg.effectiveBreakMin(completedPomodoros: 2), 5)
+        XCTAssertEqual(cfg.effectiveBreakMin(completedPomodoros: 3), 20)
+        XCTAssertEqual(cfg.effectiveBreakMin(completedPomodoros: 6), 20)
+    }
+
     func testParseNaturalBreakSec() {
         let cfg = parseConfig(from: "natural_break_sec: 600")
         XCTAssertEqual(cfg.naturalBreakSec, 600)

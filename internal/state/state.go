@@ -25,6 +25,13 @@ const (
 	PauseReasonAFK     = "afk"
 )
 
+// Work session lifecycle values stored in State.SessionState.
+const (
+	SessionStateIdle   = ""       // no work session has started yet today
+	SessionStateActive = "active" // a work session is running
+	SessionStateEnded  = "ended"  // today's work session has finished
+)
+
 // IsValidPauseReason reports whether r is one of the supported pause modes.
 func IsValidPauseReason(r string) bool {
 	switch r {
@@ -50,6 +57,62 @@ type State struct {
 	LastUpdateDate         string  `json:"last_update_date"`
 	LastBreakWarningBucket int     `json:"last_break_warning_bucket"`
 	HourlyWork             [24]int `json:"hourly_work"`
+	SessionState           string  `json:"session_state"` // "", "active", "ended"
+	SessionStart           int64   `json:"session_start"`
+	SessionEnd             int64   `json:"session_end"`
+	SessionManual          bool    `json:"session_manual"` // last transition was an explicit start/stop
+	LastActivity           int64   `json:"last_activity"`
+	PomodoroCount          int     `json:"pomodoro_count"`  // completed pomodoros in the current cycle
+	TodayPomodoros         int     `json:"today_pomodoros"` // completed pomodoros today
+}
+
+// IsSessionActive reports whether a work session is currently running.
+func (s State) IsSessionActive() bool {
+	return s.SessionState == SessionStateActive
+}
+
+// StartSession begins a work session at the given time and resets the work
+// cycle. manual marks sessions opened by an explicit `start` command, which
+// also clears any pause so the timer runs immediately.
+func (s State) StartSession(at int64, manual bool) State {
+	s.SessionState = SessionStateActive
+	s.SessionStart = at
+	s.SessionEnd = 0
+	s.SessionManual = manual
+	s.LastActivity = at
+	s.LastCheck = at
+	s.Mode = "work"
+	s.WorkSeconds = 0
+	s.BreakStart = 0
+	s.SnoozeUntil = 0
+	s.LastBreakWarningBucket = 0
+	s.PomodoroCount = 0
+	s.Paused = false
+	s.PausedAt = 0
+	s.PauseReason = ""
+	s.PauseUntil = 0
+	return s
+}
+
+// EndSession closes the current work session at the given time. manual marks
+// sessions closed by an explicit `stop` command; those are not reopened by
+// automatic detection until the next day or an explicit `start`.
+func (s State) EndSession(at int64, manual bool) State {
+	s.SessionState = SessionStateEnded
+	s.SessionEnd = at
+	s.SessionManual = manual
+	s.Mode = "work"
+	s.WorkSeconds = 0
+	s.BreakStart = 0
+	s.SnoozeUntil = 0
+	s.LastBreakWarningBucket = 0
+	s.PomodoroCount = 0
+	s.LastCheck = at
+	s.Paused = false
+	s.PausedAt = 0
+	s.PauseReason = ""
+	s.PauseUntil = 0
+	return s
 }
 
 // DefaultStatePath returns ~/.break-reminder-state
@@ -337,6 +400,34 @@ func Load(path string) (State, error) {
 			if v, err := strconv.Atoi(value); err == nil {
 				s.LastBreakWarningBucket = v
 			}
+		case "SESSION_STATE":
+			if value == SessionStateActive || value == SessionStateEnded {
+				s.SessionState = value
+			} else {
+				s.SessionState = SessionStateIdle
+			}
+		case "SESSION_START":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.SessionStart = v
+			}
+		case "SESSION_END":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.SessionEnd = v
+			}
+		case "SESSION_MANUAL":
+			s.SessionManual = value == "true"
+		case "LAST_ACTIVITY":
+			if v, err := strconv.ParseInt(value, 10, 64); err == nil {
+				s.LastActivity = v
+			}
+		case "POMODORO_COUNT":
+			if v, err := strconv.Atoi(value); err == nil {
+				s.PomodoroCount = v
+			}
+		case "TODAY_POMODOROS":
+			if v, err := strconv.Atoi(value); err == nil {
+				s.TodayPomodoros = v
+			}
 		case "HOURLY_WORK":
 			parts := strings.Split(value, ",")
 			if len(parts) == 24 {
@@ -367,6 +458,13 @@ func serialize(s State) string {
 	fmt.Fprintf(&b, "TODAY_BREAK_SECONDS=%d\n", s.TodayBreakSeconds)
 	fmt.Fprintf(&b, "LAST_UPDATE_DATE=%s\n", s.LastUpdateDate)
 	fmt.Fprintf(&b, "LAST_BREAK_WARNING_BUCKET=%d\n", s.LastBreakWarningBucket)
+	fmt.Fprintf(&b, "SESSION_STATE=%s\n", s.SessionState)
+	fmt.Fprintf(&b, "SESSION_START=%d\n", s.SessionStart)
+	fmt.Fprintf(&b, "SESSION_END=%d\n", s.SessionEnd)
+	fmt.Fprintf(&b, "SESSION_MANUAL=%t\n", s.SessionManual)
+	fmt.Fprintf(&b, "LAST_ACTIVITY=%d\n", s.LastActivity)
+	fmt.Fprintf(&b, "POMODORO_COUNT=%d\n", s.PomodoroCount)
+	fmt.Fprintf(&b, "TODAY_POMODOROS=%d\n", s.TodayPomodoros)
 
 	hourlyParts := make([]string, 24)
 	for i, v := range s.HourlyWork {

@@ -22,6 +22,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "work mode, active, accumulates time",
 			state: state.State{
+				SessionState:   state.SessionStateActive,
 				Mode:           "work",
 				WorkSeconds:    600, // 10 min
 				LastCheck:      now.Add(-60 * time.Second).Unix(),
@@ -33,6 +34,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "work mode, reaches 50min, switches to break",
 			state: state.State{
+				SessionState:   state.SessionStateActive,
 				Mode:           "work",
 				WorkSeconds:    49*60 + 30, // 49.5 min
 				LastCheck:      now.Add(-60 * time.Second).Unix(),
@@ -45,6 +47,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "work mode, 5-min warning",
 			state: state.State{
+				SessionState:   state.SessionStateActive,
 				Mode:           "work",
 				WorkSeconds:    44 * 60, // 44 min, next tick at 45 min
 				LastCheck:      now.Add(-60 * time.Second).Unix(),
@@ -57,6 +60,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "work mode, idle natural break resets",
 			state: state.State{
+				SessionState:   state.SessionStateActive,
 				Mode:           "work",
 				WorkSeconds:    1800,
 				LastCheck:      now.Add(-60 * time.Second).Unix(),
@@ -68,6 +72,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "break mode, break finished",
 			state: state.State{
+				SessionState:   state.SessionStateActive,
 				Mode:           "break",
 				BreakStart:     now.Add(-11 * time.Minute).Unix(),
 				LastCheck:      now.Add(-60 * time.Second).Unix(),
@@ -80,6 +85,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "long gap resets to work",
 			state: state.State{
+				SessionState:   state.SessionStateActive,
 				Mode:           "break",
 				WorkSeconds:    1000,
 				LastCheck:      now.Add(-2 * time.Hour).Unix(),
@@ -91,6 +97,7 @@ func TestTick(t *testing.T) {
 		{
 			name: "daily reset on new day",
 			state: state.State{
+				SessionState:      state.SessionStateActive,
 				Mode:              "work",
 				WorkSeconds:       600,
 				TodayWorkSeconds:  5000,
@@ -163,6 +170,7 @@ func TestMediumGapSkippedAsIdle(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:      state.SessionStateActive,
 		Mode:              "work",
 		WorkSeconds:       600,
 		TodayWorkSeconds:  600,
@@ -187,6 +195,7 @@ func TestDailyResetNoHistoryWhenEmpty(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:      state.SessionStateActive,
 		Mode:              "work",
 		WorkSeconds:       600,
 		TodayWorkSeconds:  0,
@@ -217,6 +226,7 @@ func TestBreakWarningRequiresActiveUser(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 10, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:           state.SessionStateActive,
 		Mode:                   "break",
 		BreakStart:             now.Add(-3 * time.Minute).Unix(),
 		LastCheck:              now.Add(-60 * time.Second).Unix(),
@@ -242,6 +252,7 @@ func TestBreakWarningOnlyOncePerBucket(t *testing.T) {
 	now := start.Add(100 * time.Second)
 
 	s := state.State{
+		SessionState:           state.SessionStateActive,
 		Mode:                   "break",
 		BreakStart:             start.Unix(),
 		LastCheck:              now.Add(-30 * time.Second).Unix(),
@@ -266,6 +277,7 @@ func TestBreakWarningAdvancesOnNewBucket(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
 
 	s := state.State{
+		SessionState:           state.SessionStateActive,
 		Mode:                   "break",
 		BreakStart:             now.Add(-(4*time.Minute + 5*time.Second)).Unix(),
 		LastCheck:              now.Add(-60 * time.Second).Unix(),
@@ -294,6 +306,7 @@ func TestTickPausedSkipsCounting(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 20, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:     state.SessionStateActive,
 		Mode:             "work",
 		WorkSeconds:      25 * 60,
 		TodayWorkSeconds: 2 * 3600,
@@ -324,6 +337,7 @@ func TestWorkTickAtIdleThresholdDoesNotAccumulate(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:      state.SessionStateActive,
 		Mode:              "work",
 		WorkSeconds:       600,
 		TodayWorkSeconds:  1200,
@@ -352,6 +366,7 @@ func TestWorkTickContinuesAccumulatingDuringSnoozeWithoutTriggeringBreak(t *test
 	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
 
 	snoozed, err := (state.State{
+		SessionState:   state.SessionStateActive,
 		Mode:           "break",
 		BreakStart:     start.Add(-2 * time.Minute).Unix(),
 		LastCheck:      start.Unix(),
@@ -397,6 +412,7 @@ func TestWorkTickDoesNotExpireSnoozeWhilePaused(t *testing.T) {
 	start := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local)
 
 	snoozed, err := (state.State{
+		SessionState:   state.SessionStateActive,
 		Mode:           "break",
 		BreakStart:     start.Add(-2 * time.Minute).Unix(),
 		LastCheck:      start.Unix(),
@@ -409,7 +425,7 @@ func TestWorkTickDoesNotExpireSnoozeWhilePaused(t *testing.T) {
 	paused := snoozed.Pause(start.Add(30*time.Second).Unix(), state.PauseReasonMeeting, 0)
 	resumed := paused.Resume(start.Add(6 * time.Minute).Unix())
 
-	if resumed.SnoozeUntil != start.Add(10*time.Minute + 30*time.Second).Unix() {
+	if resumed.SnoozeUntil != start.Add(10*time.Minute+30*time.Second).Unix() {
 		t.Fatalf("SnoozeUntil after resume = %d, want %d", resumed.SnoozeUntil, start.Add(10*time.Minute+30*time.Second).Unix())
 	}
 
@@ -429,6 +445,7 @@ func TestNaturalBreakClearsPendingSnooze(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
 
 	s := state.State{
+		SessionState:      state.SessionStateActive,
 		Mode:              "work",
 		WorkSeconds:       45 * 60,
 		LastCheck:         now.Add(-60 * time.Second).Unix(),
@@ -457,6 +474,7 @@ func TestBreakWarningSuppressedAtIdleThresholdBoundary(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 4, 5, 0, time.Local)
 
 	s := state.State{
+		SessionState:           state.SessionStateActive,
 		Mode:                   "break",
 		BreakStart:             now.Add(-(4*time.Minute + 5*time.Second)).Unix(),
 		LastCheck:              now.Add(-60 * time.Second).Unix(),
@@ -484,6 +502,7 @@ func TestShortBreakWarningRespectsGracePeriod(t *testing.T) {
 	t.Run("before grace period", func(t *testing.T) {
 		now := start.Add(20 * time.Second)
 		s := state.State{
+			SessionState:           state.SessionStateActive,
 			Mode:                   "break",
 			BreakStart:             start.Unix(),
 			LastCheck:              now.Add(-10 * time.Second).Unix(),
@@ -502,6 +521,7 @@ func TestShortBreakWarningRespectsGracePeriod(t *testing.T) {
 	t.Run("warns after grace period", func(t *testing.T) {
 		now := start.Add(45 * time.Second)
 		s := state.State{
+			SessionState:           state.SessionStateActive,
 			Mode:                   "break",
 			BreakStart:             start.Unix(),
 			LastCheck:              now.Add(-15 * time.Second).Unix(),
@@ -527,6 +547,7 @@ func TestDailyResetWhileStillOnBreak(t *testing.T) {
 	now := time.Date(2025, 1, 16, 0, 1, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:           state.SessionStateActive,
 		Mode:                   "break",
 		BreakStart:             time.Date(2025, 1, 15, 23, 58, 0, 0, time.Local).Unix(),
 		LastCheck:              now.Add(-60 * time.Second).Unix(),
@@ -565,6 +586,7 @@ func TestTickWorkAccumulatesHourlyWork(t *testing.T) {
 	cfg := config.Default()
 	s := state.New()
 	s.Mode = "work"
+	s.SessionState = state.SessionStateActive
 	// Simulate 10:30 AM local time
 	now := time.Date(2026, 4, 17, 10, 30, 0, 0, time.Local)
 	s.LastCheck = now.Add(-60 * time.Second).Unix()
@@ -644,6 +666,7 @@ func TestTickPausedOverMidnightOnlyRollsDailyTotals(t *testing.T) {
 	now := time.Date(2025, 1, 16, 0, 5, 0, 0, time.Local)
 
 	s := state.State{
+		SessionState:      state.SessionStateActive,
 		Mode:              "work",
 		WorkSeconds:       1800,
 		TodayWorkSeconds:  7200,
@@ -680,6 +703,7 @@ func TestTickAutoResumesAfterPauseUntil(t *testing.T) {
 	now := pauseUntil.Add(5 * time.Second) // just past auto-resume time
 
 	s := state.State{
+		SessionState:   state.SessionStateActive,
 		Mode:           "work",
 		LastCheck:      pausedAt.Unix(),
 		Paused:         true,
@@ -709,6 +733,7 @@ func TestTickStaysPausedBeforePauseUntil(t *testing.T) {
 	now := pauseUntil.Add(-30 * time.Second) // not yet at auto-resume
 
 	s := state.State{
+		SessionState:   state.SessionStateActive,
 		Mode:           "work",
 		LastCheck:      pausedAt.Unix(),
 		Paused:         true,
@@ -734,6 +759,7 @@ func TestTickPauseUntilZeroNeverAutoResumes(t *testing.T) {
 	now := pausedAt.Add(2 * time.Hour) // long after, but no PauseUntil set
 
 	s := state.State{
+		SessionState:   state.SessionStateActive,
 		Mode:           "work",
 		LastCheck:      pausedAt.Unix(),
 		Paused:         true,

@@ -270,4 +270,37 @@ final class ProgressCalcTests: XCTestCase {
         XCTAssertEqual(totals.breakSeconds, 20)
         XCTAssertEqual(totals.date, today)
     }
+
+    func testPomodoroWorkProgressUsesPomodoroDuration() {
+        var state = AppState()
+        state.mode = "work"
+        state.workSeconds = 300
+        state.lastCheck = 1_000
+
+        var config = AppConfig()
+        config.timerMode = "pomodoro"
+        config.pomodoroWorkMin = 25
+
+        let p = workProgress(state: state, config: config, now: 1_000)
+        XCTAssertEqual(p.totalSec, 1_500)
+        XCTAssertEqual(p.remainingSec, 1_200)
+    }
+
+    func testPomodoroLongBreakProgressUsesLongDuration() {
+        var state = AppState()
+        state.mode = "break"
+        state.breakStart = 1_000
+        state.lastCheck = 1_000
+        state.pomodoroCount = 4
+
+        var config = AppConfig()
+        config.timerMode = "pomodoro"
+        config.pomodoroBreakMin = 5
+        config.pomodoroLongBreakMin = 15
+        config.pomodoroLongBreakEvery = 4
+
+        let p = breakProgress(state: state, config: config, now: 1_060)
+        XCTAssertEqual(p.totalSec, 900)
+        XCTAssertEqual(p.remainingSec, 840)
+    }
 }

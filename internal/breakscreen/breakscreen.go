@@ -1,6 +1,8 @@
 package breakscreen
 
 import (
+	"fmt"
+
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/notify"
 	"github.com/devlikebear/break-reminder/internal/state"
@@ -15,11 +17,14 @@ func Show(cfg config.Config, breakDurSec int, breakStartUnix int64) {
 	todayWorkMin := s.TodayWorkSeconds / 60
 	todayBreakMin := s.TodayBreakSeconds / 60
 
+	workMin := cfg.EffectiveWorkMin()
+	breakMin := breakDurSec / 60
+
 	switch cfg.BreakScreenMode {
 	case "block":
-		showOverlay(breakDurSec, breakStartUnix, todayWorkMin, todayBreakMin)
+		showOverlay(workMin, breakDurSec, breakStartUnix, todayWorkMin, todayBreakMin)
 	case "notify":
-		sendNotification()
+		sendNotification(workMin, breakMin)
 	case "ask":
 		choice := askBreakMode()
 		switch choice {
@@ -28,20 +33,20 @@ func Show(cfg config.Config, breakDurSec int, breakStartUnix int64) {
 			if err := config.Save(cfg); err != nil {
 				log.Warn().Err(err).Msg("Failed to save break_screen_mode preference")
 			}
-			showOverlay(breakDurSec, breakStartUnix, todayWorkMin, todayBreakMin)
+			showOverlay(workMin, breakDurSec, breakStartUnix, todayWorkMin, todayBreakMin)
 		default:
 			cfg.BreakScreenMode = "notify"
 			if err := config.Save(cfg); err != nil {
 				log.Warn().Err(err).Msg("Failed to save break_screen_mode preference")
 			}
-			sendNotification()
+			sendNotification(workMin, breakMin)
 		}
 	default:
-		sendNotification()
+		sendNotification(workMin, breakMin)
 	}
 }
 
-func sendNotification() {
+func sendNotification(workMin, breakMin int) {
 	notifier := notify.NewNotifier()
-	_ = notifier.Send("Break Time!", "50 minutes complete! Take a 10-minute break~", "Blow")
+	_ = notifier.Send("Break Time!", fmt.Sprintf("%d minutes complete! Take a %d-minute break~", workMin, breakMin), "Blow")
 }

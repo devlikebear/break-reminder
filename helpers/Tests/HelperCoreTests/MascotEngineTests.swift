@@ -4,6 +4,7 @@ import XCTest
 final class MascotEngineTests: XCTestCase {
     func testWorkingStateReturnsHamster() {
         var state = AppState()
+        state.sessionState = "active"
         state.mode = "work"
         state.workSeconds = 300 // 5 min
         let config = AppConfig()
@@ -15,6 +16,7 @@ final class MascotEngineTests: XCTestCase {
 
     func testBreakStateReturnsSleeping() {
         var state = AppState()
+        state.sessionState = "active"
         state.mode = "break"
         state.breakStart = Int64(Date().timeIntervalSince1970) - 60
         let config = AppConfig()
@@ -25,6 +27,7 @@ final class MascotEngineTests: XCTestCase {
 
     func testLongWorkReturnsConcerned() {
         var state = AppState()
+        state.sessionState = "active"
         state.mode = "work"
         state.workSeconds = 7200 // 2 hours
         var config = AppConfig()
@@ -46,6 +49,7 @@ final class MascotEngineTests: XCTestCase {
 
     func testNearBreakReturnsHamsterWithBreakMessage() {
         var state = AppState()
+        state.sessionState = "active"
         state.mode = "work"
         state.workSeconds = 50 * 60 - 120 // 2 min remaining to break
         var config = AppConfig()
@@ -54,6 +58,16 @@ final class MascotEngineTests: XCTestCase {
 
         XCTAssertEqual(mascot.emoji, "🐹")
         XCTAssertTrue(mascot.message.contains("휴식"), "message should hint at break: \(mascot.message)")
+    }
+
+    func testStoppedSessionReturnsMoon() {
+        var state = AppState()
+        state.mode = "work"
+        state.sessionState = "ended"
+        state.sessionManual = true
+        let mascot = mascotFor(state: state, config: AppConfig(), now: Int64(Date().timeIntervalSince1970))
+
+        XCTAssertEqual(mascot.emoji, "🌙")
     }
 
     func testAchievementMascotBelowGoal() {

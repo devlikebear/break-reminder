@@ -119,11 +119,29 @@ func Run(cfg config.Config) Report {
 		r.add("ok", "Menu bar auto-start", menuBarStatus)
 	}
 
-	// Working hours
-	if schedule.IsWorkingTime(cfg, time.Now()) {
-		r.add("ok", "Working hours", "within working hours")
-	} else {
+	// Work session
+	now := time.Now()
+	current, _ := state.Load(statePath)
+	switch {
+	case schedule.IsActive(cfg, current, now):
+		r.add("ok", "Work session", "running - timer active")
+	case current.SessionState == state.SessionStateEnded && current.SessionManual:
+		r.add("info", "Work session", "stopped by hand - run `break-reminder start` to resume")
+	case cfg.AutoSessionDetect && schedule.InDetectWindow(cfg, now):
+		r.add("info", "Work session", "not started - begins on your next activity")
+	case cfg.AutoSessionDetect:
+		r.add("info", "Work session", fmt.Sprintf("outside the detection window (%02d:00-%02d:00 on working days)",
+			cfg.SessionDetectStartHour, cfg.SessionDetectEndHour))
+	default:
 		r.add("info", "Working hours", "outside working hours - inactive")
+	}
+
+	// Timer mode
+	if cfg.PomodoroEnabled() {
+		r.add("ok", "Timer mode", fmt.Sprintf("pomodoro (%d/%d min, %d min long break every %d)",
+			cfg.PomodoroWorkMin, cfg.PomodoroBreakMin, cfg.PomodoroLongBreakMin, cfg.PomodoroLongBreakEvery))
+	} else {
+		r.add("ok", "Timer mode", fmt.Sprintf("classic (%d/%d min)", cfg.WorkDurationMin, cfg.BreakDurationMin))
 	}
 
 	// Config file
