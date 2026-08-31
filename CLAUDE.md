@@ -23,16 +23,19 @@ Read it first when you need to understand the project structure, dependencies, o
 
 ### Release
 
-1. `VERSION` 파일 업데이트 (예: `0.4.0`)
-2. 커밋: `chore: bump version to <version>`
-3. `git push origin main`
-4. `git tag v<version>` → `git push origin v<version>`
-5. GitHub Actions release workflow가 자동 실행:
-   - Go + Swift 빌드, 테스트
-   - GitHub Release 생성 (바이너리 첨부)
-   - Homebrew formula 업데이트 (로컬 + tap repo)
+Release 워크플로 수동 실행(`workflow_dispatch`)이 기본 경로. 로컬에서 태그를 만들 필요 없음.
 
-**주의**: VERSION 파일과 태그 버전이 일치해야 CI가 통과함.
+1. 릴리스할 변경사항이 main에 머지돼 있고 CHANGELOG `## [Unreleased]` 섹션이 채워졌는지 확인
+2. Actions → Release → Run workflow에서 `bump` 선택 (또는 `gh workflow run release.yml -f bump=minor`)
+   - `patch`/`minor`/`major`: 워크플로가 `VERSION`을 올리고 CHANGELOG의 Unreleased를 버전 섹션으로 바꿔 커밋한 뒤 태그 생성
+   - `none`: `VERSION` 파일 값을 그대로 릴리스 (준비 커밋을 이미 만들어 둔 경우)
+3. 이후 자동 진행: Go + Swift 빌드/테스트 → 버전 커밋 → 태그 push → GitHub Release 생성(바이너리 첨부) → Homebrew formula 갱신 (로컬 + tap repo)
+
+버전 커밋과 태그는 **빌드·테스트 통과 후에만** 생성되므로 실패해도 main은 그대로 남는다.
+봇이 push한 커밋은 CI를 다시 트리거하지 않지만, 릴리스 잡이 같은 테스트를 이미 돌린다.
+
+수동 태그 push(`git tag v<version> && git push origin v<version>`)도 그대로 동작한다.
+**주의**: 이 경로에서는 VERSION 파일과 태그 버전이 일치해야 워크플로가 통과함.
 
 ### Versioning
 
