@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-31
+
 ### Added
 - Work session detection: the timer now opens a session on your first activity inside a configurable detection window (`session_detect_start_hour`/`session_detect_end_hour`) and closes it after `session_idle_end_min` of absence or when the window closes, with start/end notifications and a daily work/break/pomodoro summary.
 - `break-reminder start` and `break-reminder stop` clock a work session in and out by hand; `stop` holds every reminder until the next `start` or the next day, and `start` runs the timer even outside working hours or on a day off.
