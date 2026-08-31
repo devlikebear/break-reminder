@@ -14,8 +14,18 @@ public struct AppState: Equatable {
     public var todayWorkSeconds: Int = 0
     public var todayBreakSeconds: Int = 0
     public var lastUpdateDate: String = ""
+    public var sessionState: String = ""
+    public var sessionStart: Int64 = 0
+    public var sessionEnd: Int64 = 0
+    public var sessionManual: Bool = false
+    public var lastActivity: Int64 = 0
+    public var pomodoroCount: Int = 0
+    public var todayPomodoros: Int = 0
 
     public init() {}
+
+    /// True while a work session is running and the Go timer is ticking.
+    public var isSessionActive: Bool { sessionState == "active" }
 }
 
 /// Parses state from key=value formatted string content.
@@ -44,6 +54,18 @@ public func parseState(from content: String) -> AppState {
         case "TODAY_WORK_SECONDS":  s.todayWorkSeconds = Int(val) ?? 0
         case "TODAY_BREAK_SECONDS": s.todayBreakSeconds = Int(val) ?? 0
         case "LAST_UPDATE_DATE":    s.lastUpdateDate = val
+        case "SESSION_STATE":
+            if val == "active" || val == "ended" {
+                s.sessionState = val
+            } else {
+                s.sessionState = ""
+            }
+        case "SESSION_START":       s.sessionStart = Int64(val) ?? 0
+        case "SESSION_END":         s.sessionEnd = Int64(val) ?? 0
+        case "SESSION_MANUAL":      s.sessionManual = (val == "true")
+        case "LAST_ACTIVITY":       s.lastActivity = Int64(val) ?? 0
+        case "POMODORO_COUNT":      s.pomodoroCount = Int(val) ?? 0
+        case "TODAY_POMODOROS":     s.todayPomodoros = Int(val) ?? 0
         default: break
         }
     }
@@ -65,5 +87,12 @@ public func serializeState(_ s: AppState) -> String {
         "TODAY_WORK_SECONDS=\(s.todayWorkSeconds)",
         "TODAY_BREAK_SECONDS=\(s.todayBreakSeconds)",
         "LAST_UPDATE_DATE=\(s.lastUpdateDate)",
+        "SESSION_STATE=\(s.sessionState)",
+        "SESSION_START=\(s.sessionStart)",
+        "SESSION_END=\(s.sessionEnd)",
+        "SESSION_MANUAL=\(s.sessionManual ? "true" : "false")",
+        "LAST_ACTIVITY=\(s.lastActivity)",
+        "POMODORO_COUNT=\(s.pomodoroCount)",
+        "TODAY_POMODOROS=\(s.todayPomodoros)",
     ].joined(separator: "\n")
 }

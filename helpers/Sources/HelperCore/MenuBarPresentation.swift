@@ -28,6 +28,14 @@ public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) 
     let totals = todayTotals(state: state, config: config, now: now)
     let statsLine = "Today · Work \(formatMinutes(totals.workMinutes)) · Break \(formatMinutes(totals.breakMinutes))"
 
+    if !state.paused && !timerIsRunning(state: state, config: config) {
+        return MenuBarPresentation(
+            title: sessionOffTitle(state: state),
+            statusLine: sessionOffStatusLine(state: state),
+            statsLine: statsLine
+        )
+    }
+
     if state.mode == "break" {
         let progress = breakProgress(state: state, config: config, now: now)
         let percent = Int(progress.progress * 100)

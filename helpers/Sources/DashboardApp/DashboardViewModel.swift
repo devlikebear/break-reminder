@@ -47,10 +47,15 @@ final class DashboardViewModel: ObservableObject {
         mascotFor(state: state, config: config, now: now)
     }
 
+    var isSessionRunning: Bool { timerIsRunning(state: state, config: config) }
+
     var statusText: String {
         if isPaused {
             let label = pauseModeLabel
             return label.isEmpty ? "PAUSED" : "PAUSED · \(label)"
+        }
+        if !isSessionRunning {
+            return state.sessionManual ? "STOPPED" : "IDLE"
         }
         return isWork ? "WORKING" : "ON BREAK"
     }
@@ -213,7 +218,24 @@ final class DashboardViewModel: ObservableObject {
         s.todayWorkSeconds = totals.workSeconds
         s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = totals.date
+        s.todayPomodoros = state.todayPomodoros
+        carryOverSession(into: &s)
         writeStateToDisk(s)
+        refresh()
+    }
+
+    /// Dashboard writes rebuild the state file from scratch, so the work-session
+    /// fields owned by the Go timer have to be carried over explicitly.
+    private func carryOverSession(into next: inout AppState) {
+        next.sessionState = state.sessionState
+        next.sessionStart = state.sessionStart
+        next.sessionEnd = state.sessionEnd
+        next.sessionManual = state.sessionManual
+        next.lastActivity = state.lastActivity
+    }
+
+    func toggleSession() {
+        runCLI(args: [isSessionRunning ? "stop" : "start"])
         refresh()
     }
 
@@ -284,6 +306,9 @@ final class DashboardViewModel: ObservableObject {
         s.todayWorkSeconds = totals.workSeconds
         s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = totals.date
+        s.pomodoroCount = state.pomodoroCount
+        s.todayPomodoros = state.todayPomodoros
+        carryOverSession(into: &s)
         writeStateToDisk(s)
         refresh()
     }

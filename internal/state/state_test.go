@@ -607,3 +607,129 @@ LAST_UPDATE_DATE=2026-04-17
 		}
 	}
 }
+
+func TestSessionFieldsRoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test-state")
+
+	original := State{
+		Mode:           "work",
+		LastCheck:      1700000000,
+		LastUpdateDate: "2025-01-15",
+		SessionState:   SessionStateActive,
+		SessionStart:   1699990000,
+		SessionEnd:     0,
+		SessionManual:  true,
+		LastActivity:   1699999900,
+		PomodoroCount:  2,
+		TodayPomodoros: 5,
+	}
+
+	if err := Save(path, original); err != nil {
+		t.Fatalf("Save: %v", err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+
+	if loaded.SessionState != SessionStateActive || !loaded.IsSessionActive() {
+		t.Errorf("SessionState = %q, want %q", loaded.SessionState, SessionStateActive)
+	}
+	if loaded.SessionStart != original.SessionStart || loaded.SessionEnd != original.SessionEnd {
+		t.Errorf("session bounds = %d/%d, want %d/%d",
+			loaded.SessionStart, loaded.SessionEnd, original.SessionStart, original.SessionEnd)
+	}
+	if !loaded.SessionManual {
+		t.Error("SessionManual should survive the roundtrip")
+	}
+	if loaded.LastActivity != original.LastActivity {
+		t.Errorf("LastActivity = %d, want %d", loaded.LastActivity, original.LastActivity)
+	}
+	if loaded.PomodoroCount != 2 || loaded.TodayPomodoros != 5 {
+		t.Errorf("pomodoro counters = %d/%d, want 2/5", loaded.PomodoroCount, loaded.TodayPomodoros)
+	}
+}
+
+func TestLoadNormalizesUnknownSessionState(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "test-state")
+	content := "MODE=work\nSESSION_STATE=garbage\n"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if loaded.SessionState != SessionStateIdle {
+		t.Errorf("SessionState = %q, want the idle default", loaded.SessionState)
+	}
+}
+
+func TestStartSessionResetsCycleAndClearsPause(t *testing.T) {
+	s := State{
+		Mode:                   "break",
+		WorkSeconds:            1200,
+		BreakStart:             1699999000,
+		SnoozeUntil:            1700000500,
+		LastBreakWarningBucket: 3,
+		Paused:                 true,
+		PausedAt:               1699999500,
+		PauseReason:            PauseReasonMeeting,
+		PauseUntil:             1700003000,
+		PomodoroCount:          2,
+		TodayWorkSeconds:       3600,
+	}
+
+	started := s.StartSession(1700000000, true)
+
+	if !started.IsSessionActive() || !started.SessionManual {
+		t.Fatalf("session = %q (manual=%t), want an active manual session", started.SessionState, started.SessionManual)
+	}
+	if started.SessionStart != 1700000000 || started.LastCheck != 1700000000 {
+		t.Errorf("SessionStart/LastCheck = %d/%d, want 1700000000", started.SessionStart, started.LastCheck)
+	}
+	if started.Mode != "work" || started.WorkSeconds != 0 || started.BreakStart != 0 || started.SnoozeUntil != 0 {
+		t.Errorf("work cycle not reset: %+v", started)
+	}
+	if started.Paused || started.PausedAt != 0 || started.PauseReason != "" || started.PauseUntil != 0 {
+		t.Error("StartSession should clear an active pause")
+	}
+	if started.PomodoroCount != 0 {
+		t.Errorf("PomodoroCount = %d, want 0", started.PomodoroCount)
+	}
+	if started.TodayWorkSeconds != 3600 {
+		t.Errorf("TodayWorkSeconds = %d, want the daily total preserved", started.TodayWorkSeconds)
+	}
+}
+
+func TestEndSessionStopsTheCycleAndKeepsDailyTotals(t *testing.T) {
+	s := State{
+		Mode:              "break",
+		WorkSeconds:       600,
+		BreakStart:        1699999000,
+		SnoozeUntil:       1700000500,
+		SessionState:      SessionStateActive,
+		SessionStart:      1699990000,
+		TodayWorkSeconds:  5400,
+		TodayBreakSeconds: 900,
+		TodayPomodoros:    4,
+	}
+
+	ended := s.EndSession(1700000000, true)
+
+	if ended.SessionState != SessionStateEnded || !ended.SessionManual {
+		t.Fatalf("session = %q (manual=%t), want a manual end", ended.SessionState, ended.SessionManual)
+	}
+	if ended.SessionEnd != 1700000000 {
+		t.Errorf("SessionEnd = %d, want 1700000000", ended.SessionEnd)
+	}
+	if ended.Mode != "work" || ended.WorkSeconds != 0 || ended.BreakStart != 0 || ended.SnoozeUntil != 0 {
+		t.Errorf("timer cycle should be cleared: %+v", ended)
+	}
+	if ended.TodayWorkSeconds != 5400 || ended.TodayBreakSeconds != 900 || ended.TodayPomodoros != 4 {
+		t.Error("daily totals must survive the session end")
+	}
+}

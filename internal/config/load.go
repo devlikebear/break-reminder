@@ -50,7 +50,7 @@ func Load() (Config, error) {
 	}
 
 	merge(&cfg, &fileCfg, raw)
-	if err := validateSchedule(cfg); err != nil {
+	if err := validate(cfg); err != nil {
 		return cfg, err
 	}
 	return cfg, nil
@@ -82,7 +82,7 @@ func Save(cfg Config) error {
 		return err
 	}
 
-	if err := validateSchedule(cfg); err != nil {
+	if err := validate(cfg); err != nil {
 		return err
 	}
 
@@ -95,29 +95,38 @@ func Save(cfg Config) error {
 }
 
 var validConfigKeys = map[string]struct{}{
-	"work_duration_min":        {},
-	"break_duration_min":       {},
-	"idle_threshold_sec":       {},
-	"natural_break_sec":        {},
-	"work_days":                {},
-	"work_start_hour":          {},
-	"work_start_minute":        {},
-	"work_end_hour":            {},
-	"work_end_minute":          {},
-	"voice":                    {},
-	"tts_engine":               {},
-	"tts_model":                {},
-	"tts_python_cmd":           {},
-	"tts_api_key":              {},
-	"ai_cli":                   {},
-	"break_screen_mode":        {},
-	"max_log_lines":            {},
-	"check_interval_sec":       {},
-	"theme":                    {},
-	"notifications_enabled":    {},
-	"tts_enabled":              {},
-	"break_activities_enabled": {},
-	"ai_enabled":               {},
+	"work_duration_min":         {},
+	"break_duration_min":        {},
+	"idle_threshold_sec":        {},
+	"natural_break_sec":         {},
+	"work_days":                 {},
+	"work_start_hour":           {},
+	"work_start_minute":         {},
+	"work_end_hour":             {},
+	"work_end_minute":           {},
+	"auto_session_detect":       {},
+	"session_detect_start_hour": {},
+	"session_detect_end_hour":   {},
+	"session_idle_end_min":      {},
+	"timer_mode":                {},
+	"pomodoro_work_min":         {},
+	"pomodoro_break_min":        {},
+	"pomodoro_long_break_min":   {},
+	"pomodoro_long_break_every": {},
+	"voice":                     {},
+	"tts_engine":                {},
+	"tts_model":                 {},
+	"tts_python_cmd":            {},
+	"tts_api_key":               {},
+	"ai_cli":                    {},
+	"break_screen_mode":         {},
+	"max_log_lines":             {},
+	"check_interval_sec":        {},
+	"theme":                     {},
+	"notifications_enabled":     {},
+	"tts_enabled":               {},
+	"break_activities_enabled":  {},
+	"ai_enabled":                {},
 }
 
 // ApplyYAMLChanges merges YAML changes into an existing config and validates the result.
@@ -142,7 +151,7 @@ func ApplyYAMLChanges(base Config, changes []byte) (Config, error) {
 
 	updated := base
 	merge(&updated, &patchCfg, raw)
-	if err := validateSchedule(updated); err != nil {
+	if err := validate(updated); err != nil {
 		return base, err
 	}
 	return updated, nil
@@ -168,6 +177,54 @@ func validateSchedule(cfg Config) error {
 		return fmt.Errorf("work schedule must end after it starts")
 	}
 
+	return nil
+}
+
+// validate runs every configuration invariant check.
+func validate(cfg Config) error {
+	if err := validateSchedule(cfg); err != nil {
+		return err
+	}
+	if err := validateSession(cfg); err != nil {
+		return err
+	}
+	return validateTimerMode(cfg)
+}
+
+func validateSession(cfg Config) error {
+	if cfg.SessionDetectStartHour < 0 || cfg.SessionDetectStartHour > 23 {
+		return fmt.Errorf("session_detect_start_hour must be between 0 and 23")
+	}
+	if cfg.SessionDetectEndHour < 1 || cfg.SessionDetectEndHour > 24 {
+		return fmt.Errorf("session_detect_end_hour must be between 1 and 24")
+	}
+	if cfg.SessionDetectEndHour <= cfg.SessionDetectStartHour {
+		return fmt.Errorf("session_detect_end_hour must be later than session_detect_start_hour")
+	}
+	if cfg.SessionIdleEndMin < 1 {
+		return fmt.Errorf("session_idle_end_min must be at least 1")
+	}
+	return nil
+}
+
+func validateTimerMode(cfg Config) error {
+	switch cfg.TimerMode {
+	case TimerModeClassic, TimerModePomodoro:
+	default:
+		return fmt.Errorf("timer_mode must be %q or %q", TimerModeClassic, TimerModePomodoro)
+	}
+	if cfg.PomodoroWorkMin < 1 {
+		return fmt.Errorf("pomodoro_work_min must be at least 1")
+	}
+	if cfg.PomodoroBreakMin < 1 {
+		return fmt.Errorf("pomodoro_break_min must be at least 1")
+	}
+	if cfg.PomodoroLongBreakMin < 1 {
+		return fmt.Errorf("pomodoro_long_break_min must be at least 1")
+	}
+	if cfg.PomodoroLongBreakEvery < 1 {
+		return fmt.Errorf("pomodoro_long_break_every must be at least 1")
+	}
 	return nil
 }
 
@@ -206,6 +263,32 @@ func merge(dst, src *Config, raw map[string]any) {
 	if hasNonNilKey(raw, "work_end_minute") {
 		dst.WorkEndMinute = src.WorkEndMinute
 	}
+	if hasNonNilKey(raw, "session_detect_start_hour") {
+		dst.SessionDetectStartHour = src.SessionDetectStartHour
+	}
+	if hasNonNilKey(raw, "session_detect_end_hour") {
+		dst.SessionDetectEndHour = src.SessionDetectEndHour
+	}
+	if hasNonNilKey(raw, "session_idle_end_min") {
+		dst.SessionIdleEndMin = src.SessionIdleEndMin
+	}
+	if src.TimerMode != "" {
+		dst.TimerMode = src.TimerMode
+	}
+	// Pomodoro values use explicit-key detection so an out-of-range value is
+	// reported instead of silently falling back to the default.
+	if hasNonNilKey(raw, "pomodoro_work_min") {
+		dst.PomodoroWorkMin = src.PomodoroWorkMin
+	}
+	if hasNonNilKey(raw, "pomodoro_break_min") {
+		dst.PomodoroBreakMin = src.PomodoroBreakMin
+	}
+	if hasNonNilKey(raw, "pomodoro_long_break_min") {
+		dst.PomodoroLongBreakMin = src.PomodoroLongBreakMin
+	}
+	if hasNonNilKey(raw, "pomodoro_long_break_every") {
+		dst.PomodoroLongBreakEvery = src.PomodoroLongBreakEvery
+	}
 	if src.Voice != "" {
 		dst.Voice = src.Voice
 	}
@@ -238,6 +321,9 @@ func merge(dst, src *Config, raw map[string]any) {
 	}
 
 	// Booleans: only override if explicitly present in the YAML file
+	if _, ok := raw["auto_session_detect"]; ok {
+		dst.AutoSessionDetect = src.AutoSessionDetect
+	}
 	if _, ok := raw["notifications_enabled"]; ok {
 		dst.NotificationsEnabled = src.NotificationsEnabled
 	}

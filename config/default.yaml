@@ -7,6 +7,22 @@ work_start_hour: 9
 work_start_minute: 0
 work_end_hour: 18
 work_end_minute: 0
+
+# Work session detection
+# The session starts on your first activity inside the detection window and ends
+# when you have been away for session_idle_end_min (or when the window closes).
+# Set auto_session_detect to false to fall back to the fixed working hours above.
+auto_session_detect: true
+session_detect_start_hour: 7   # Earliest hour a session may start automatically
+session_detect_end_hour: 22    # Hour at which an auto-detected session ends
+session_idle_end_min: 30       # Away this long = end of the work session
+
+# Timer mode: "classic" (work_duration_min / break_duration_min) or "pomodoro"
+timer_mode: "classic"
+pomodoro_work_min: 25
+pomodoro_break_min: 5
+pomodoro_long_break_min: 15
+pomodoro_long_break_every: 4   # Long break after this many pomodoros
 voice: "Yuna"
 tts_engine: "say"
 tts_model: "KittenML/kitten-tts-nano-0.8"

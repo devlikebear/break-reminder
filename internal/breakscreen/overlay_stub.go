@@ -4,9 +4,9 @@ package breakscreen
 
 import "fmt"
 
-func showOverlay(breakDurSec int, breakStartUnix int64, todayWorkMin, todayBreakMin int) {
+func showOverlay(workMin, breakDurSec int, breakStartUnix int64, todayWorkMin, todayBreakMin int) {
 	fmt.Println("[break-screen] Fullscreen overlay is only supported on macOS")
-	sendNotification()
+	sendNotification(workMin, breakDurSec/60)
 }
 
 func askBreakMode() string {

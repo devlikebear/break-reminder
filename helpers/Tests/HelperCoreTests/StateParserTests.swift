@@ -54,6 +54,47 @@ final class StateParserTests: XCTestCase {
         XCTAssertEqual(s.lastCheck, 0)
     }
 
+    func testParseSessionAndPomodoroFields() {
+        let content = """
+        SESSION_STATE=active
+        SESSION_START=1710000000
+        SESSION_END=0
+        SESSION_MANUAL=true
+        LAST_ACTIVITY=1710000500
+        POMODORO_COUNT=2
+        TODAY_POMODOROS=6
+        """
+        let s = parseState(from: content)
+        XCTAssertEqual(s.sessionState, "active")
+        XCTAssertTrue(s.isSessionActive)
+        XCTAssertEqual(s.sessionStart, 1710000000)
+        XCTAssertEqual(s.sessionEnd, 0)
+        XCTAssertTrue(s.sessionManual)
+        XCTAssertEqual(s.lastActivity, 1710000500)
+        XCTAssertEqual(s.pomodoroCount, 2)
+        XCTAssertEqual(s.todayPomodoros, 6)
+    }
+
+    func testParseUnknownSessionStateFallsBackToEmpty() {
+        let s = parseState(from: "SESSION_STATE=garbage\n")
+        XCTAssertEqual(s.sessionState, "")
+        XCTAssertFalse(s.isSessionActive)
+    }
+
+    func testSerializeSessionRoundtrip() {
+        var original = AppState()
+        original.sessionState = "ended"
+        original.sessionStart = 1710000000
+        original.sessionEnd = 1710030000
+        original.sessionManual = true
+        original.lastActivity = 1710029000
+        original.pomodoroCount = 3
+        original.todayPomodoros = 7
+
+        let parsed = parseState(from: serializeState(original))
+        XCTAssertEqual(parsed, original)
+    }
+
     func testSerializeRoundtrip() {
         var original = AppState()
         original.workSeconds = 1500

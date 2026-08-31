@@ -56,10 +56,12 @@ class MenuBarController: NSObject {
     private var animationTimer: Timer?
     private var animationTick = 0
     private var currentState = AppState()
+    private var currentConfig = AppConfig()
 
     // Keep strong refs to menu items that need live updates.
     private var statusMenuItem: NSMenuItem!
     private var statsMenuItem: NSMenuItem!
+    private var sessionMenuItem: NSMenuItem!
 
     override init() {
         super.init()
@@ -103,24 +105,29 @@ class MenuBarController: NSObject {
         dashItem.target = self
         menu.addItem(dashItem)
 
-        // 3. Reset Timer
+        // 3. Start / Stop Work Session
+        sessionMenuItem = NSMenuItem(title: "Start Work Session", action: #selector(toggleSession), keyEquivalent: "s")
+        sessionMenuItem.target = self
+        menu.addItem(sessionMenuItem)
+
+        // 4. Reset Timer
         let resetItem = NSMenuItem(title: "Reset Timer", action: #selector(resetTimer), keyEquivalent: "r")
         resetItem.target = self
         menu.addItem(resetItem)
 
-        // 4. Force Break
+        // 5. Force Break
         let breakItem = NSMenuItem(title: "Force Break", action: #selector(forceBreak), keyEquivalent: "b")
         breakItem.target = self
         menu.addItem(breakItem)
 
-        // 5. Open Config
+        // 6. Open Config
         let configItem = NSMenuItem(title: "Open Config", action: #selector(openConfig), keyEquivalent: ",")
         configItem.target = self
         menu.addItem(configItem)
 
         menu.addItem(.separator())
 
-        // 6. Quit
+        // 7. Quit
         let quitItem = NSMenuItem(title: "Quit Break Reminder", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
 
@@ -133,6 +140,7 @@ class MenuBarController: NSObject {
         let state = loadStateFromFile()
         currentState = state
         let config = loadConfigFromFile()
+        currentConfig = config
         let now = Int64(Date().timeIntervalSince1970)
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
@@ -140,6 +148,7 @@ class MenuBarController: NSObject {
         updateMascotImage()
         statusMenuItem.title = presentation.statusLine
         statsMenuItem.title = presentation.statsLine
+        sessionMenuItem.title = state.isSessionActive ? "Stop Work Session" : "Start Work Session"
     }
 
     private func advanceAnimation() {
@@ -148,7 +157,7 @@ class MenuBarController: NSObject {
     }
 
     private func updateMascotImage() {
-        let frame = menuBarAnimation(state: currentState, tick: animationTick)
+        let frame = menuBarAnimation(state: currentState, config: currentConfig, tick: animationTick)
         statusItem.button?.image = HamsterMenuBarIcon.image(for: frame)
     }
 
@@ -177,6 +186,8 @@ class MenuBarController: NSObject {
         s.todayWorkSeconds = totals.workSeconds
         s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = totals.date
+        s.todayPomodoros = priorState.todayPomodoros
+        carryOverSession(from: priorState, into: &s)
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
         refresh()
     }
@@ -195,7 +206,34 @@ class MenuBarController: NSObject {
         s.todayWorkSeconds = totals.workSeconds
         s.todayBreakSeconds = totals.breakSeconds
         s.lastUpdateDate = totals.date
+        s.pomodoroCount = state.pomodoroCount
+        s.todayPomodoros = state.todayPomodoros
+        carryOverSession(from: state, into: &s)
         try? serializeState(s).data(using: .utf8)?.write(to: path, options: .atomic)
+        refresh()
+    }
+
+    /// Menu-bar writes rebuild the state file from scratch, so the work-session
+    /// fields owned by the Go timer have to be carried over explicitly.
+    private func carryOverSession(from previous: AppState, into next: inout AppState) {
+        next.sessionState = previous.sessionState
+        next.sessionStart = previous.sessionStart
+        next.sessionEnd = previous.sessionEnd
+        next.sessionManual = previous.sessionManual
+        next.lastActivity = previous.lastActivity
+    }
+
+    @objc private func toggleSession() {
+        guard let helperPath = findHelper("break-reminder") else {
+            showAlert(message: "break-reminder binary not found.",
+                      info: "Run 'make install' so the CLI is placed next to the menu bar helper.")
+            return
+        }
+        let task = Process()
+        task.executableURL = URL(fileURLWithPath: helperPath)
+        task.arguments = [currentState.isSessionActive ? "stop" : "start"]
+        try? task.run()
+        task.waitUntilExit()
         refresh()
     }
 

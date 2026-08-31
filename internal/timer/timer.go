@@ -19,6 +19,8 @@ const (
 	ActionSpeakBreakTime
 	ActionSpeakBreakOver
 	ActionSaveDailyHistory
+	ActionNotifySessionStart
+	ActionNotifySessionEnd
 )
 
 // DayEndSummary holds the previous day's stats when a daily reset occurs.
@@ -34,7 +36,8 @@ type TickResult struct {
 	State         state.State
 	Actions       []Action
 	LogMsg        string
-	DayEndSummary *DayEndSummary // non-nil when daily reset triggers history save
+	DayEndSummary *DayEndSummary  // non-nil when daily reset triggers history save
+	SessionEnded  *SessionSummary // non-nil when a work session ended on this tick
 }
 
 // Tick computes the next state given config, current state, current time, and idle seconds.
@@ -59,6 +62,14 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 		result.State.TodayBreakSeconds = 0
 		result.State.LastUpdateDate = today
 		result.State.HourlyWork = [24]int{}
+		result.State.TodayPomodoros = 0
+		// A finished session (including a manual stop) must not block the new day.
+		if result.State.SessionState == state.SessionStateEnded {
+			result.State.SessionState = state.SessionStateIdle
+			result.State.SessionManual = false
+			result.State.SessionStart = 0
+			result.State.SessionEnd = 0
+		}
 		result.LogMsg = "New day detected! Resetting daily stats."
 	} else if s.LastUpdateDate == "" {
 		result.State.LastUpdateDate = today
@@ -74,6 +85,16 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 			return result
 		}
 	}
+
+	var active bool
+	result, active = evaluateSession(cfg, result, now, idleSec)
+	s = result.State
+	if !active {
+		result.State.LastCheck = unix
+		return result
+	}
+	// A session transition is the more interesting log line for this tick.
+	sessionLog := result.LogMsg
 
 	elapsed := int(unix - s.LastCheck)
 
@@ -108,11 +129,15 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 		result = tickBreak(cfg, result, elapsed, idleSec, unix)
 	}
 
+	if sessionLog != "" {
+		result.LogMsg = sessionLog
+	}
+
 	return result
 }
 
 func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64) TickResult {
-	workDur := cfg.WorkDurationSec()
+	workDur := cfg.EffectiveWorkSec()
 
 	if idleSec < cfg.IdleThresholdSec {
 		// User is active
@@ -135,30 +160,20 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 		if snoozeDue {
 			r.LogMsg = "Snoozed break is due"
 			if idleSec < cfg.IdleThresholdSec {
-				r.Actions = append(r.Actions, ActionNotifyBreakTime)
-				if cfg.TTSEnabled {
-					r.Actions = append(r.Actions, ActionSpeakBreakTime)
-				}
-				r.State = r.State.EnterBreak(unix)
-				return r
+				return startBreak(cfg, r, unix)
 			}
 		}
 
 		// Break time!
 		if !snoozePending && r.State.WorkSeconds >= workDur {
 			r.LogMsg = "Break time triggered!"
-			r.Actions = append(r.Actions, ActionNotifyBreakTime)
-			if cfg.TTSEnabled {
-				r.Actions = append(r.Actions, ActionSpeakBreakTime)
-			}
-			r.State = r.State.EnterBreak(unix)
-			return r
+			return startBreak(cfg, r, unix)
 		}
 
 		// 5-minute warning
 		warningStart := workDur - 5*60
 		warningEnd := warningStart + 60
-		if !snoozeActive && !snoozeDue && r.State.WorkSeconds >= warningStart && r.State.WorkSeconds < warningEnd {
+		if warningStart > 0 && !snoozeActive && !snoozeDue && r.State.WorkSeconds >= warningStart && r.State.WorkSeconds < warningEnd {
 			r.Actions = append(r.Actions, ActionNotifyFiveMinWarning)
 		}
 	} else {
@@ -173,8 +188,23 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 	return r
 }
 
+// startBreak moves the state into break mode, counting the finished pomodoro
+// when the pomodoro timer mode is active.
+func startBreak(cfg config.Config, r TickResult, unix int64) TickResult {
+	if cfg.PomodoroEnabled() {
+		r.State.PomodoroCount++
+		r.State.TodayPomodoros++
+	}
+	r.Actions = append(r.Actions, ActionNotifyBreakTime)
+	if cfg.TTSEnabled {
+		r.Actions = append(r.Actions, ActionSpeakBreakTime)
+	}
+	r.State = r.State.EnterBreak(unix)
+	return r
+}
+
 func tickBreak(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64) TickResult {
-	breakDur := cfg.BreakDurationSec()
+	breakDur := cfg.EffectiveBreakSec(r.State.PomodoroCount)
 
 	r.State.TodayBreakSeconds += elapsed
 	breakElapsed := int(unix - r.State.BreakStart)
@@ -203,6 +233,10 @@ func tickBreak(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64
 		r.State.Mode = "work"
 		r.State.WorkSeconds = 0
 		r.State.LastBreakWarningBucket = 0
+		if cfg.LongBreakDue(r.State.PomodoroCount) {
+			// A long break closes the pomodoro cycle.
+			r.State.PomodoroCount = 0
+		}
 	}
 
 	return r

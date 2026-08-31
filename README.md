@@ -20,16 +20,19 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🧘 Guided Break Activities** — Eye exercise, stretching, box breathing, walk timer
 - **🤖 AI Integration** — Productivity analysis via Claude/Codex CLI
 - **🗓️ Smart Scheduling** — Only active during configured working hours/days
+- **🟢 Work Session Detection** — Starts on your first activity of the day and ends after a long absence, with start/end notifications and a daily summary
+- **▶️⏹️ Manual Start/Stop** — `start` and `stop` clock you in and out; a stop holds reminders until the next start or the next day
+- **🍅 Pomodoro Mode** — 25/5 focus cycles with a long break every 4 pomodoros, switchable with one command
 - **📈 Daily Stats** — Track work/break time with gap detection for accurate tracking
 - **🔔 Notifications** — Visual + voice alerts (`say`, KittenTTS, Supertonic, or Gemini 3.1 Flash TTS)
 - **🚀 Auto-start** — LaunchAgent timer with 60-second check interval plus optional menu bar auto-start
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
-## 🆕 New In v0.7.0
+## 🆕 New In v0.13.0
 
-- **☁️ Gemini 3.1 Flash TTS** — New cloud TTS engine with 30 expressive voices (Zephyr, Puck, Kore, ...) and native 70+ language support, no local install required
-- **🔑 API Key Config** — `tts_api_key` YAML field or `GEMINI_API_KEY` env var powers the new engine
-- **🎙️ Engine Parity** — `tts test`, `doctor`, and runtime break alerts all speak through Gemini when configured
+- **🟢 Work session detection** — The timer no longer waits for a fixed clock hour: it starts when you actually start working (first activity inside the detection window) and ends when you have been away for `session_idle_end_min`, announcing both with a notification and a daily summary
+- **▶️⏹️ Manual clock-in / clock-out** — `break-reminder start` and `break-reminder stop` (also in the menu bar and the TUI dashboard with `s`) run or hold the timer regardless of the schedule
+- **🍅 Pomodoro mode** — `break-reminder pomodoro on` switches to 25/5 cycles with a 15-minute long break every 4 pomodoros; the count is tracked per day and shown in `status`
 
 ## 📦 Installation
 
@@ -75,12 +78,20 @@ break-reminder check              # Single timer tick (used by launchd)
 break-reminder daemon             # Foreground loop
 break-reminder status             # Current state overview
 break-reminder reset              # Reset timer
+break-reminder start              # Start a work session now (manual clock-in)
+break-reminder stop               # End the session and hold reminders until the next start
 break-reminder pause              # Pause the timer (default mode: meeting; paused time is not counted as work)
 break-reminder pause --mode=focus # Pause but count the paused time as work (e.g., off-screen focus block)
 break-reminder pause --mode=afk --duration=30m  # External absence; resets work cycle; auto-resumes in 30 min
 break-reminder resume             # Resume the previous work/break mode
 break-reminder snooze             # End the current break early and postpone the next one by 5 min
 break-reminder snooze --for 10m   # Postpone the next break by a custom duration
+
+# Pomodoro
+break-reminder pomodoro on        # Switch to 25/5 pomodoro cycles
+break-reminder pomodoro on --work 30 --break 6 --long-break 20 --every 3  # Custom cycle
+break-reminder pomodoro off       # Back to the classic 50/10 timer
+break-reminder pomodoro status    # Timer mode, current cycle, pomodoros completed today
 
 # Dashboard
 break-reminder dashboard          # TUI dashboard
@@ -183,7 +194,8 @@ The native menu bar app shows live mode/progress in the title (`🐹 31% · 34m 
 ========================
 System: Installed & Running
 Menu Bar: Installed & Running
-State:  Active (Within working hours)
+Timer: classic (50/10 min)
+State:  Active (work session since 09:12)
 ------------------------
 Mode: paused (work)
 Session Work: 32min / 50min
@@ -191,6 +203,44 @@ Daily Stats: Work 2h 5m / Break 30m
 Current idle: 3sec
 Paused for: 4m12s
 ```
+
+In pomodoro mode the timer line reads `pomodoro (25/5 min, 15 min long break every 4)`
+and an extra `Pomodoros: 6 today (cycle 2/4)` line is printed.
+
+### Work session detection
+
+The timer follows your actual work session instead of a fixed clock window:
+
+- **Start** — the first keyboard/mouse activity on a working day inside the detection window (`07:00`–`22:00` by default) opens a session and sends a "Work session started" notification.
+- **End** — being away for `session_idle_end_min` (30 min by default) closes the session at the moment of your last activity, or the session ends when the detection window closes. The closing notification carries today's work/break totals.
+- **Break reminders only run while a session is open**, so an early start or a late finish is covered without editing `work_start_hour` / `work_end_hour`.
+- Set `auto_session_detect: false` to go back to the previous fixed working-hours behaviour.
+
+### Manual start and stop
+
+```bash
+break-reminder start   # clock in now — works outside working hours and on days off
+break-reminder stop    # clock out and hold reminders
+```
+
+- `start` opens a session immediately, clears any pause, and restarts the work cycle.
+- `stop` closes the session, prints today's summary, and keeps reminders off until you run `start` again or the day rolls over — this is the "turn it off for now" switch.
+- A manually started session is never closed by the detection window; only a long absence or `stop` ends it.
+- The same toggle is available in the menu bar (**Start/Stop Work Session**) and in the TUI dashboard (`s`).
+- `stop` only holds the timer; use `break-reminder service stop` to unload the background agent entirely.
+
+### Pomodoro mode
+
+```bash
+break-reminder pomodoro on       # 25 min focus / 5 min break, 15 min long break every 4
+break-reminder pomodoro status   # cycle position and today's completed pomodoros
+break-reminder pomodoro off      # back to the classic timer
+```
+
+Pomodoro mode replaces the work/break durations of the classic timer; everything
+else (idle detection, break screen, snooze, pause) works the same way. Completed
+pomodoros are counted per day and reported in `status`, in the dashboards, and in
+the work session summary.
 
 ### Snoozing an active break
 
@@ -224,6 +274,19 @@ work_start_minute: 0          # Optional minute precision for the work start bou
 work_end_hour: 18
 work_end_minute: 0            # Optional minute precision for the work end boundary (0-59)
 # Note: work windows stay within the same day; overnight schedules are not supported.
+
+# Work Session Detection
+auto_session_detect: true      # Detect the start/end of your work session automatically
+session_detect_start_hour: 7   # Earliest hour a session may start automatically
+session_detect_end_hour: 22    # Hour at which an auto-detected session ends
+session_idle_end_min: 30       # Away this long = end of the work session
+
+# Timer Mode
+timer_mode: "classic"          # "classic" or "pomodoro"
+pomodoro_work_min: 25
+pomodoro_break_min: 5
+pomodoro_long_break_min: 15
+pomodoro_long_break_every: 4   # Long break after this many pomodoros
 
 # Break Screen
 break_screen_mode: "ask"       # "ask" (choose once), "block" (fullscreen), "notify" (notification only)

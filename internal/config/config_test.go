@@ -568,3 +568,134 @@ func TestThemeMergeOverride(t *testing.T) {
 		t.Errorf("Theme = %q, want 'dark'", base.Theme)
 	}
 }
+
+func mergeYAML(t *testing.T, yamlData string) Config {
+	t.Helper()
+
+	var fileCfg Config
+	if err := yaml.Unmarshal([]byte(yamlData), &fileCfg); err != nil {
+		t.Fatalf("Unmarshal typed: %v", err)
+	}
+	var raw map[string]any
+	if err := yaml.Unmarshal([]byte(yamlData), &raw); err != nil {
+		t.Fatalf("Unmarshal raw: %v", err)
+	}
+
+	cfg := Default()
+	merge(&cfg, &fileCfg, raw)
+	return cfg
+}
+
+func TestSessionDetectionDefaults(t *testing.T) {
+	cfg := Default()
+	if !cfg.AutoSessionDetect {
+		t.Error("AutoSessionDetect should default to true")
+	}
+	if cfg.SessionDetectStartHour != 7 || cfg.SessionDetectEndHour != 22 {
+		t.Errorf("detect window = %d-%d, want 7-22", cfg.SessionDetectStartHour, cfg.SessionDetectEndHour)
+	}
+	if cfg.SessionIdleEndMin != 30 {
+		t.Errorf("SessionIdleEndMin = %d, want 30", cfg.SessionIdleEndMin)
+	}
+	if cfg.SessionIdleEndSec() != 1800 {
+		t.Errorf("SessionIdleEndSec = %d, want 1800", cfg.SessionIdleEndSec())
+	}
+}
+
+func TestMergeSessionDetection(t *testing.T) {
+	cfg := mergeYAML(t, "auto_session_detect: false\nsession_detect_start_hour: 0\nsession_detect_end_hour: 23\nsession_idle_end_min: 45\n")
+
+	if cfg.AutoSessionDetect {
+		t.Error("auto_session_detect: false should be honoured")
+	}
+	if cfg.SessionDetectStartHour != 0 {
+		t.Errorf("SessionDetectStartHour = %d, want 0", cfg.SessionDetectStartHour)
+	}
+	if cfg.SessionDetectEndHour != 23 {
+		t.Errorf("SessionDetectEndHour = %d, want 23", cfg.SessionDetectEndHour)
+	}
+	if cfg.SessionIdleEndMin != 45 {
+		t.Errorf("SessionIdleEndMin = %d, want 45", cfg.SessionIdleEndMin)
+	}
+}
+
+func TestMergeSessionDetectionKeepsDefaultsWhenUnset(t *testing.T) {
+	cfg := mergeYAML(t, "work_duration_min: 45\n")
+
+	if !cfg.AutoSessionDetect {
+		t.Error("AutoSessionDetect should stay true when the key is absent")
+	}
+	if cfg.SessionDetectStartHour != 7 || cfg.SessionDetectEndHour != 22 {
+		t.Errorf("detect window = %d-%d, want the defaults 7-22", cfg.SessionDetectStartHour, cfg.SessionDetectEndHour)
+	}
+}
+
+func TestTimerModeDefaultsToClassic(t *testing.T) {
+	cfg := Default()
+	if cfg.PomodoroEnabled() {
+		t.Error("classic mode expected by default")
+	}
+	if cfg.EffectiveWorkMin() != 50 || cfg.EffectiveBreakMin(4) != 10 {
+		t.Errorf("effective durations = %d/%d, want 50/10", cfg.EffectiveWorkMin(), cfg.EffectiveBreakMin(4))
+	}
+}
+
+func TestPomodoroEffectiveDurations(t *testing.T) {
+	cfg := mergeYAML(t, "timer_mode: pomodoro\npomodoro_work_min: 30\npomodoro_break_min: 6\npomodoro_long_break_min: 20\npomodoro_long_break_every: 3\n")
+
+	if !cfg.PomodoroEnabled() {
+		t.Fatal("pomodoro mode should be enabled")
+	}
+	if cfg.EffectiveWorkSec() != 30*60 {
+		t.Errorf("EffectiveWorkSec = %d, want %d", cfg.EffectiveWorkSec(), 30*60)
+	}
+	for _, tc := range []struct {
+		completed int
+		wantMin   int
+	}{
+		{completed: 1, wantMin: 6},
+		{completed: 2, wantMin: 6},
+		{completed: 3, wantMin: 20},
+		{completed: 6, wantMin: 20},
+	} {
+		if got := cfg.EffectiveBreakMin(tc.completed); got != tc.wantMin {
+			t.Errorf("EffectiveBreakMin(%d) = %d, want %d", tc.completed, got, tc.wantMin)
+		}
+	}
+	if cfg.LongBreakDue(0) {
+		t.Error("LongBreakDue(0) should be false before any pomodoro completes")
+	}
+}
+
+func TestApplyYAMLChangesRejectsInvalidTimerAndSessionValues(t *testing.T) {
+	base := Default()
+	cases := map[string]string{
+		"unknown timer mode":     "timer_mode: sprint\n",
+		"zero pomodoro work":     "pomodoro_work_min: 0\n",
+		"negative long break":    "pomodoro_long_break_min: -5\n",
+		"zero long break cycle":  "pomodoro_long_break_every: 0\n",
+		"inverted detect window": "session_detect_start_hour: 20\nsession_detect_end_hour: 8\n",
+		"zero idle end":          "session_idle_end_min: 0\n",
+	}
+	for name, change := range cases {
+		t.Run(name, func(t *testing.T) {
+			updated, err := ApplyYAMLChanges(base, []byte(change))
+			if err == nil {
+				t.Fatalf("ApplyYAMLChanges(%q) = %+v, want an error", change, updated)
+			}
+			if !reflect.DeepEqual(updated, base) {
+				t.Error("rejected changes must leave the base config untouched")
+			}
+		})
+	}
+}
+
+func TestApplyYAMLChangesAcceptsPomodoroMode(t *testing.T) {
+	updated, err := ApplyYAMLChanges(Default(), []byte("timer_mode: pomodoro\n"))
+	if err != nil {
+		t.Fatalf("ApplyYAMLChanges: %v", err)
+	}
+	if !updated.PomodoroEnabled() {
+		t.Errorf("TimerMode = %q, want pomodoro", updated.TimerMode)
+	}
+}

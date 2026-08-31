@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Work session detection: the timer now opens a session on your first activity inside a configurable detection window (`session_detect_start_hour`/`session_detect_end_hour`) and closes it after `session_idle_end_min` of absence or when the window closes, with start/end notifications and a daily work/break/pomodoro summary.
+- `break-reminder start` and `break-reminder stop` clock a work session in and out by hand; `stop` holds every reminder until the next `start` or the next day, and `start` runs the timer even outside working hours or on a day off.
+- Pomodoro timer mode (`timer_mode: pomodoro`, `break-reminder pomodoro on|off|status`) with configurable focus/break lengths and a long break after every N pomodoros; completed pomodoros are tracked per day.
+- Menu bar gained a **Start/Stop Work Session** item, and the TUI dashboard toggles the session with `s`.
+
+### Changed
+- `status`, `doctor`, both dashboards, and the menu bar report the work session state and the active timer mode; the menu bar and mascot show an idle/off state while no session is running.
+- Break, break-over, and TTS messages now use the durations of the active timer mode instead of the hard-coded 50/10 minute text.
+- `check` skips idle detection entirely while no session can start, and `timer.Tick` owns every scheduling decision.
+- State files carry the session and pomodoro fields (`SESSION_STATE`, `SESSION_START`, `SESSION_END`, `SESSION_MANUAL`, `LAST_ACTIVITY`, `POMODORO_COUNT`, `TODAY_POMODOROS`); older state files load unchanged.
+
 ## [0.12.0] - 2026-08-20
 
 ### Added
