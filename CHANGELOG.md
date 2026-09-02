@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- About(정보) 항목으로 설치된 버전을 UI에서 확인할 수 있다. 메뉴바 메뉴의 **About Break Reminder**는 버전과 GitHub 링크를 띄우고, GUI 대시보드는 설정 탭 맨 아래에 **정보** 섹션을 둔다.
+- TUI 대시보드 타이틀 줄과 `status` 출력에도 버전이 표시된다.
+
 ## [0.13.0] - 2026-08-31
 
 ### Added

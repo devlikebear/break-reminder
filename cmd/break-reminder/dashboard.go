@@ -23,7 +23,7 @@ func newDashboardCmd() *cobra.Command {
 			if gui {
 				return runGUIDashboard()
 			}
-			m := dashboard.New(cfg)
+			m := dashboard.New(cfg, version)
 			p := tea.NewProgram(m, tea.WithAltScreen())
 			if _, err := p.Run(); err != nil {
 				return fmt.Errorf("dashboard: %w", err)

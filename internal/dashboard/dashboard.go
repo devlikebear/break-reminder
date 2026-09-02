@@ -25,6 +25,7 @@ var loadConfig = config.Load
 type Model struct {
 	cfg             config.Config
 	state           state.State
+	version         string
 	idleSec         int
 	logs            []string
 	width           int
@@ -38,12 +39,13 @@ type Model struct {
 	showingActivity bool
 }
 
-func New(cfg config.Config) Model {
+func New(cfg config.Config, version string) Model {
 	s, _ := state.Load(state.DefaultStatePath())
 	return Model{
-		cfg:   cfg,
-		state: s,
-		logs:  logging.Tail(logging.DefaultLogPath(), 5),
+		cfg:     cfg,
+		state:   s,
+		version: version,
+		logs:    logging.Tail(logging.DefaultLogPath(), 5),
 	}
 }
 
@@ -196,7 +198,7 @@ func (m Model) View() string {
 	blueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
 	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 
-	b.WriteString(titleStyle.Render("🐹 Break Reminder Dashboard") + " (q:quit r:reset b:break s:start/stop)\n")
+	b.WriteString(titleStyle.Render("🐹 Break Reminder Dashboard v"+m.version) + " (q:quit r:reset b:break s:start/stop)\n")
 	b.WriteString("══════════════════════════════════════════════════\n")
 
 	// System status
