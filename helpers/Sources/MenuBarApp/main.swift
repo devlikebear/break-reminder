@@ -48,6 +48,34 @@ func findHelper(_ name: String) -> String? {
     return nil
 }
 
+/// Asks the installed CLI for its version. The helper carries no version of its
+/// own, so this is the only source of truth. Returns `unknown` when the CLI is
+/// missing or fails to answer.
+func queryInstalledVersion() -> String {
+    guard let cli = findHelper("break-reminder") else { return AboutInfo.unknownVersion }
+
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: cli)
+    process.arguments = ["version"]
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = FileHandle.nullDevice
+
+    do {
+        try process.run()
+    } catch {
+        return AboutInfo.unknownVersion
+    }
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+
+    guard process.terminationStatus == 0,
+          let output = String(data: data, encoding: .utf8) else {
+        return AboutInfo.unknownVersion
+    }
+    return parseVersionOutput(output)
+}
+
 // MARK: - MenuBarController
 
 class MenuBarController: NSObject {
@@ -57,6 +85,10 @@ class MenuBarController: NSObject {
     private var animationTick = 0
     private var currentState = AppState()
     private var currentConfig = AppConfig()
+
+    /// Resolved on first use and kept for the lifetime of the app — the
+    /// installed version cannot change while this process is running.
+    private lazy var installedVersion: String = queryInstalledVersion()
 
     // Keep strong refs to menu items that need live updates.
     private var statusMenuItem: NSMenuItem!
@@ -125,9 +157,14 @@ class MenuBarController: NSObject {
         configItem.target = self
         menu.addItem(configItem)
 
+        // 7. About
+        let aboutItem = NSMenuItem(title: "About \(AboutInfo.appName)", action: #selector(showAbout), keyEquivalent: "")
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
         menu.addItem(.separator())
 
-        // 7. Quit
+        // 8. Quit
         let quitItem = NSMenuItem(title: "Quit Break Reminder", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
 
@@ -235,6 +272,24 @@ class MenuBarController: NSObject {
         try? task.run()
         task.waitUntilExit()
         refresh()
+    }
+
+    @objc private func showAbout() {
+        // Accessory apps are not frontmost, so the panel would open behind
+        // whatever the user is working in unless we activate first.
+        NSApp.activate(ignoringOtherApps: true)
+
+        let alert = NSAlert()
+        alert.messageText = AboutInfo.appName
+        alert.informativeText = "Version \(installedVersion)"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "GitHub")
+        alert.addButton(withTitle: "Close")
+
+        if alert.runModal() == .alertFirstButtonReturn,
+           let url = URL(string: AboutInfo.repositoryURL) {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     @objc private func openConfig() {

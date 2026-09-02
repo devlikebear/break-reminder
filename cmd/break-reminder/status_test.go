@@ -57,3 +57,29 @@ func TestStatusShowsPausedBreakState(t *testing.T) {
 		}
 	}
 }
+
+func TestStatusShowsVersion(t *testing.T) {
+	origVersion := version
+	origCfg := cfg
+	defer func() {
+		version = origVersion
+		cfg = origCfg
+	}()
+
+	version = "9.9.9"
+	cfg = config.Default()
+	t.Setenv("HOME", t.TempDir())
+
+	cmd := newStatusCmd()
+	cmd.SetArgs(nil)
+	out := new(bytes.Buffer)
+	cmd.SetOut(out)
+	cmd.SetErr(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("status Execute() error = %v", err)
+	}
+
+	if got := out.String(); !strings.Contains(got, "Version: 9.9.9") {
+		t.Fatalf("status output missing version line\nfull output:\n%s", got)
+	}
+}

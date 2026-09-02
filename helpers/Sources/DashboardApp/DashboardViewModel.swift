@@ -22,6 +22,8 @@ final class DashboardViewModel: ObservableObject {
     @Published var insights: InsightsReport?
     @Published var isRefreshingInsights = false
     @Published var showConfetti = false
+    /// Version of the installed CLI, resolved once in `start()`.
+    @Published private(set) var appVersion: String = AboutInfo.unknownVersion
     private var lastGoalCheckMinute = 0
     private let dailyGoalMinutes = 240 // 4 hours
 
@@ -101,6 +103,7 @@ final class DashboardViewModel: ObservableObject {
     }
 
     func start() {
+        appVersion = queryInstalledVersion()
         refresh()
         loadHistory()
         loadInsights()

@@ -69,7 +69,7 @@ func TestUpdateLogsInvalidConfigReloadOnlyOncePerError(t *testing.T) {
 	var logs bytes.Buffer
 	log.Logger = zerolog.New(&logs)
 
-	model := New(config.Default())
+	model := New(config.Default(), "0.0.0-test")
 	updated, _ := model.Update(tickMsg(time.Now()))
 	model = updated.(Model)
 	updated, _ = model.Update(tickMsg(time.Now().Add(time.Second)))
@@ -109,7 +109,7 @@ func TestUpdateLogsInvalidConfigReloadAgainAfterRecovery(t *testing.T) {
 	var logs bytes.Buffer
 	log.Logger = zerolog.New(&logs)
 
-	model := New(config.Default())
+	model := New(config.Default(), "0.0.0-test")
 	updated, _ := model.Update(tickMsg(time.Now()))
 	model = updated.(Model)
 	updated, _ = model.Update(tickMsg(time.Now().Add(time.Second)))
@@ -152,5 +152,14 @@ func TestViewShowsPausedStateAndFrozenBreakProgress(t *testing.T) {
 	}
 	if !strings.Contains(view, "3 / 10 min") {
 		t.Fatalf("view = %q, want frozen break progress based on pause time", view)
+	}
+}
+
+func TestViewShowsVersionInTitle(t *testing.T) {
+	m := Model{cfg: config.Default(), version: "0.13.0"}
+
+	view := m.View()
+	if !strings.Contains(view, "v0.13.0") {
+		t.Fatalf("view = %q, want version in title line", view)
 	}
 }

@@ -91,6 +91,34 @@ func findHelper(_ name: String, checked: UnsafeMutablePointer<[String]>?) -> Str
     return nil
 }
 
+/// Asks the installed CLI for its version. The dashboard carries no version of
+/// its own, so this is the only source of truth. Returns `unknown` when the CLI
+/// is missing or fails to answer.
+func queryInstalledVersion() -> String {
+    guard let cli = findHelper("break-reminder") else { return AboutInfo.unknownVersion }
+
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: cli)
+    process.arguments = ["version"]
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = FileHandle.nullDevice
+
+    do {
+        try process.run()
+    } catch {
+        return AboutInfo.unknownVersion
+    }
+    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+
+    guard process.terminationStatus == 0,
+          let output = String(data: data, encoding: .utf8) else {
+        return AboutInfo.unknownVersion
+    }
+    return parseVersionOutput(output)
+}
+
 /// Append a timestamped line to ~/.break-reminder.log so GUI-side events show
 /// alongside CLI logs. Best-effort — failures are silently dropped because we
 /// don't want logging itself to crash the app.

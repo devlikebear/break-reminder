@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import HelperCore
 
 final class SettingsFormState: ObservableObject {
@@ -131,6 +132,8 @@ struct SettingsTabView: View {
                         .font(.system(size: 11))
                         .foregroundColor(theme.accentBreak)
                 }
+                Divider().background(theme.divider)
+                aboutSection
             }
             .padding(16)
         }
@@ -216,6 +219,23 @@ struct SettingsTabView: View {
                 Text("light").tag("light")
             }
             .pickerStyle(.segmented)
+        }
+    }
+
+    private var aboutSection: some View {
+        sectionCard(title: "정보") {
+            HStack {
+                Text("버전")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(vm.appVersion)
+                    .monospacedDigit()
+                    .foregroundColor(theme.textPrimary)
+            }
+            Button("GitHub 저장소 열기") {
+                if let url = URL(string: AboutInfo.repositoryURL) {
+                    NSWorkspace.shared.open(url)
+                }
+            }
         }
     }
 

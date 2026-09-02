@@ -69,6 +69,7 @@ func newStatusCmd() *cobra.Command {
 
 			fmt.Fprintln(out, "🐹 Break Reminder Status")
 			fmt.Fprintln(out, "========================")
+			fmt.Fprintln(out, "Version:", version)
 			fmt.Fprintln(out, "System:", launchd.Status())
 			fmt.Fprintln(out, "Menu Bar:", launchd.MenuBarStatus())
 
