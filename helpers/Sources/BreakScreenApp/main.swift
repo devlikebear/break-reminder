@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import HelperCore
+import QuartzCore
 
 // MARK: - Key-accepting borderless window
 
@@ -14,6 +15,7 @@ class KeyWindow: NSWindow {
 class BreakScreenApp: NSObject, NSApplicationDelegate {
     var windows: [NSWindow] = []
     var primaryWindow: NSWindow?
+    var mascotImageView: NSImageView!
     var countdownLabel: NSTextField!
     var progressView: NSView!
     var progressFill: NSView!
@@ -90,20 +92,13 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
         if isPrimary {
             let contentView = NSView(frame: localFrame)
+            installBackdrop(in: contentView)
             setupPrimaryUI(in: contentView, frame: localFrame)
             window.contentView = contentView
         } else {
             let contentView = NSView(frame: localFrame)
-            let label = NSTextField(labelWithString: "☕ Break Time")
-            label.font = NSFont.systemFont(ofSize: 36, weight: .light)
-            label.textColor = NSColor(white: 0.5, alpha: 1.0)
-            label.alignment = .center
-            label.sizeToFit()
-            label.frame.origin = NSPoint(
-                x: (localFrame.width - label.frame.width) / 2,
-                y: localFrame.height / 2 - label.frame.height / 2
-            )
-            contentView.addSubview(label)
+            installBackdrop(in: contentView)
+            setupSecondaryUI(in: contentView, frame: localFrame)
             window.contentView = contentView
         }
 
@@ -111,6 +106,65 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             primaryWindow = window
         }
         windows.append(window)
+    }
+
+    private func installBackdrop(in view: NSView) {
+        view.wantsLayer = true
+
+        let gradient = CAGradientLayer()
+        gradient.frame = view.bounds
+        gradient.colors = [
+            NSColor(srgbRed: 0.025, green: 0.055, blue: 0.12, alpha: 1.0).cgColor,
+            NSColor(srgbRed: 0.045, green: 0.105, blue: 0.17, alpha: 1.0).cgColor,
+            NSColor(srgbRed: 0.105, green: 0.065, blue: 0.17, alpha: 1.0).cgColor,
+        ]
+        gradient.startPoint = CGPoint(x: 0.08, y: 0.95)
+        gradient.endPoint = CGPoint(x: 0.92, y: 0.05)
+        view.layer?.insertSublayer(gradient, at: 0)
+    }
+
+    private func setupSecondaryUI(in view: NSView, frame: NSRect) {
+        let centerX = frame.width / 2
+        let compactHeight = frame.height < 700
+        let contentWidth = min(600, max(0, frame.width - 48))
+        let imageSide = min(compactHeight ? 140 : 200, contentWidth)
+
+        if let image = loadMascotImage() {
+            let imageView = makeMascotImageView(
+                image: image,
+                frame: NSRect(
+                    x: centerX - imageSide / 2,
+                    y: frame.height / 2 - imageSide / 2 + (compactHeight ? 24 : 36),
+                    width: imageSide,
+                    height: imageSide
+                )
+            )
+            view.addSubview(imageView)
+        }
+
+        let title = NSTextField(labelWithString: "잠깐 쉬어가요")
+        title.font = NSFont.systemFont(ofSize: compactHeight ? 28 : 36, weight: .semibold)
+        title.textColor = NSColor(white: 0.94, alpha: 1.0)
+        title.alignment = .center
+        title.frame = NSRect(
+            x: centerX - contentWidth / 2,
+            y: frame.height / 2 - imageSide / 2 - (compactHeight ? 48 : 62),
+            width: contentWidth,
+            height: compactHeight ? 38 : 46
+        )
+        view.addSubview(title)
+
+        let subtitle = NSTextField(labelWithString: "☕ Break Time")
+        subtitle.font = NSFont.systemFont(ofSize: compactHeight ? 16 : 18, weight: .regular)
+        subtitle.textColor = NSColor(white: 0.62, alpha: 1.0)
+        subtitle.alignment = .center
+        subtitle.frame = NSRect(
+            x: centerX - contentWidth / 2,
+            y: title.frame.minY - (compactHeight ? 24 : 28),
+            width: contentWidth,
+            height: 24
+        )
+        view.addSubview(subtitle)
     }
 
     func setupPrimaryUI(in view: NSView, frame: NSRect) {
@@ -125,9 +179,27 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         let statsVisible = args.todayWorkMin > 0 || args.todayBreakMin > 0
         let statsBlockHeight: CGFloat = statsVisible ? (compactHeight ? 32 : 40) : 0
         let lowerGap: CGFloat = compactHeight ? 8 : 16
-        let totalHeight = titleHeight + titleGap + countdownHeight + 8 + 8 + cardGap
+        let mascotImage = loadMascotImage()
+        let mascotSide: CGFloat = mascotImage == nil ? 0 : min(compactHeight ? 112 : 168, contentWidth)
+        let mascotGap: CGFloat = mascotImage == nil ? 0 : (compactHeight ? 4 : 10)
+        let totalHeight = mascotSide + mascotGap + titleHeight + titleGap + countdownHeight + 8 + 8 + cardGap
             + 196 + statsBlockHeight + lowerGap + 44 + 8 + 18
         var top = max(24, (frame.height - totalHeight) / 2) + totalHeight
+
+        if let mascotImage {
+            mascotImageView = makeMascotImageView(
+                image: mascotImage,
+                frame: NSRect(
+                    x: centerX - mascotSide / 2,
+                    y: top - mascotSide,
+                    width: mascotSide,
+                    height: mascotSide
+                )
+            )
+            view.addSubview(mascotImageView)
+            startMascotAnimation()
+            top -= mascotSide + mascotGap
+        }
 
         let title = NSTextField(labelWithString: "휴식 시간이에요")
         title.font = NSFont.systemFont(ofSize: compactHeight ? 40 : 48, weight: .bold)
@@ -187,8 +259,14 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             height: 196
         ))
         guideCardView.wantsLayer = true
-        guideCardView.layer?.backgroundColor = NSColor(white: 0.145, alpha: 0.96).cgColor
+        guideCardView.layer?.backgroundColor = NSColor(white: 0.13, alpha: 0.94).cgColor
         guideCardView.layer?.cornerRadius = 16
+        guideCardView.layer?.borderColor = NSColor.white.withAlphaComponent(0.08).cgColor
+        guideCardView.layer?.borderWidth = 1
+        guideCardView.layer?.shadowColor = NSColor.black.cgColor
+        guideCardView.layer?.shadowOpacity = 0.28
+        guideCardView.layer?.shadowRadius = 18
+        guideCardView.layer?.shadowOffset = CGSize(width: 0, height: -8)
         guideCardView.setAccessibilityElement(true)
         guideCardView.setAccessibilityRole(.group)
         view.addSubview(guideCardView)
@@ -304,6 +382,72 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         timer?.invalidate()
         for w in windows { w.orderOut(nil) }
         NSApp.terminate(nil)
+    }
+
+    private func loadMascotImage() -> NSImage? {
+        guard let url = Bundle.module.url(
+            forResource: BreakScreenVisuals.mascotResourceName,
+            withExtension: "png"
+        ), let image = NSImage(contentsOf: url) else {
+            return nil
+        }
+
+        image.isTemplate = false
+        return image
+    }
+
+    private func makeMascotImageView(image: NSImage, frame: NSRect) -> NSImageView {
+        let imageView = NSImageView(frame: frame)
+        imageView.image = image
+        imageView.imageScaling = .scaleProportionallyUpOrDown
+        imageView.imageAlignment = .alignCenter
+        imageView.wantsLayer = true
+        imageView.layer?.shadowColor = NSColor.black.cgColor
+        imageView.layer?.shadowOpacity = 0.22
+        imageView.layer?.shadowRadius = 12
+        imageView.layer?.shadowOffset = CGSize(width: 0, height: -5)
+        imageView.setAccessibilityElement(true)
+        imageView.setAccessibilityRole(.image)
+        imageView.setAccessibilityLabel("편안하게 쉬고 있는 햄스터")
+        return imageView
+    }
+
+    private func startMascotAnimation() {
+        guard let mascotImageView, let layer = mascotImageView.layer else { return }
+
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+            layer.opacity = 1
+            return
+        }
+
+        let scale = CGFloat(BreakScreenVisuals.breathingScale)
+        let contracted = CATransform3DMakeScale(1 - scale, 1 - scale, 1)
+        let expanded = CATransform3DMakeScale(1 + scale, 1 + scale, 1)
+
+        let breathing = CAKeyframeAnimation(keyPath: "transform")
+        breathing.values = [
+            NSValue(caTransform3D: contracted),
+            NSValue(caTransform3D: expanded),
+            NSValue(caTransform3D: contracted),
+        ]
+        breathing.keyTimes = [0, 0.5, 1]
+        breathing.duration = BreakScreenVisuals.breathingDuration
+        breathing.timingFunctions = [
+            CAMediaTimingFunction(name: .easeInEaseOut),
+            CAMediaTimingFunction(name: .easeInEaseOut),
+        ]
+        breathing.repeatCount = .greatestFiniteMagnitude
+        breathing.isRemovedOnCompletion = false
+
+        layer.opacity = 1
+        layer.add(breathing, forKey: "breakScreen.mascot.breathe")
+
+        let fadeIn = CABasicAnimation(keyPath: "opacity")
+        fadeIn.fromValue = 0
+        fadeIn.toValue = 1
+        fadeIn.duration = BreakScreenVisuals.entryFadeDuration
+        fadeIn.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        layer.add(fadeIn, forKey: "breakScreen.mascot.fadeIn")
     }
 
     private func makeCardLabel(

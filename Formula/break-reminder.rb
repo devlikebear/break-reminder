@@ -12,6 +12,7 @@ class BreakReminder < Formula
   def install
     bin.install "break-reminder"
     bin.install "break-screen"
+    bin.install "BreakReminderHelpers_BreakScreenApp.bundle"
     bin.install "break-dashboard"
     bin.install "break-menubar"
   end
