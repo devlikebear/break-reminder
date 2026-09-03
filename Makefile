@@ -2,6 +2,7 @@
 
 BINARY := break-reminder
 HELPER := break-screen
+HELPER_RESOURCE_BUNDLE := BreakReminderHelpers_BreakScreenApp.bundle
 BUILD_DIR := bin
 INSTALL_DIR := $(HOME)/.local/bin
 
@@ -12,6 +13,7 @@ build-helper:
 	@mkdir -p $(BUILD_DIR)
 	cd helpers && swift build -c release
 	cp helpers/.build/release/BreakScreenApp $(BUILD_DIR)/$(HELPER)
+	cp -R helpers/.build/release/$(HELPER_RESOURCE_BUNDLE) $(BUILD_DIR)/$(HELPER_RESOURCE_BUNDLE)
 	cp helpers/.build/release/DashboardApp $(BUILD_DIR)/break-dashboard
 	cp helpers/.build/release/MenuBarApp $(BUILD_DIR)/break-menubar
 
@@ -22,6 +24,7 @@ install: build
 	@mkdir -p $(INSTALL_DIR)
 	cp $(BUILD_DIR)/$(BINARY) $(INSTALL_DIR)/
 	cp $(BUILD_DIR)/$(HELPER) $(INSTALL_DIR)/
+	cp -R $(BUILD_DIR)/$(HELPER_RESOURCE_BUNDLE) $(INSTALL_DIR)/$(HELPER_RESOURCE_BUNDLE)
 	cp $(BUILD_DIR)/break-dashboard $(INSTALL_DIR)/
 	cp $(BUILD_DIR)/break-menubar $(INSTALL_DIR)/
 	$(INSTALL_DIR)/$(BINARY) service install
@@ -30,6 +33,7 @@ install: build
 uninstall:
 	$(INSTALL_DIR)/$(BINARY) service uninstall || true
 	rm -f $(INSTALL_DIR)/$(BINARY)
+	rm -rf $(INSTALL_DIR)/$(HELPER_RESOURCE_BUNDLE)
 	@echo "Uninstalled"
 
 test:
@@ -38,7 +42,7 @@ test:
 
 release: build
 	@echo "Creating release archive $(VERSION)..."
-	cd $(BUILD_DIR) && tar czf $(BINARY)-$(VERSION)-darwin-arm64.tar.gz $(BINARY) $(HELPER) break-dashboard break-menubar
+	cd $(BUILD_DIR) && tar czf $(BINARY)-$(VERSION)-darwin-arm64.tar.gz $(BINARY) $(HELPER) $(HELPER_RESOURCE_BUNDLE) break-dashboard break-menubar
 	cd $(BUILD_DIR) && shasum -a 256 $(BINARY)-$(VERSION)-darwin-arm64.tar.gz > $(BINARY)-$(VERSION)-darwin-arm64.tar.gz.sha256
 	@echo "Archive: $(BUILD_DIR)/$(BINARY)-$(VERSION)-darwin-arm64.tar.gz"
 	@cat $(BUILD_DIR)/$(BINARY)-$(VERSION)-darwin-arm64.tar.gz.sha256

@@ -10,7 +10,8 @@ let package = Package(
         ),
         .executableTarget(
             name: "BreakScreenApp",
-            dependencies: ["HelperCore"]
+            dependencies: ["HelperCore"],
+            resources: [.process("Resources")]
         ),
         .executableTarget(
             name: "DashboardApp",
