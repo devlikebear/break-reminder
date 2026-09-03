@@ -28,11 +28,9 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🚀 Auto-start** — LaunchAgent timer with 60-second check interval plus optional menu bar auto-start
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
-## 🆕 New In v0.13.0
+## 🆕 New In v0.14.0
 
-- **🟢 Work session detection** — The timer no longer waits for a fixed clock hour: it starts when you actually start working (first activity inside the detection window) and ends when you have been away for `session_idle_end_min`, announcing both with a notification and a daily summary
-- **▶️⏹️ Manual clock-in / clock-out** — `break-reminder start` and `break-reminder stop` (also in the menu bar and the TUI dashboard with `s`) run or hold the timer regardless of the schedule
-- **🍅 Pomodoro mode** — `break-reminder pomodoro on` switches to 25/5 cycles with a 15-minute long break every 4 pomodoros; the count is tracked per day and shown in `status`
+- **ℹ️ About / installed version** — Menu bar **About Break Reminder** shows the installed version and a GitHub link; the GUI dashboard Settings tab adds an **정보** section; the TUI title line and `status` also print the version
 
 ## 📦 Installation
 
