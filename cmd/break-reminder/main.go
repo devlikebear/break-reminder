@@ -59,7 +59,8 @@ func newRootCmd() *cobra.Command {
 			}
 			return setAppConfig()
 		},
-		SilenceUsage: true,
+		SilenceUsage:  true,
+		SilenceErrors: true,
 	}
 
 	root.AddCommand(
@@ -95,6 +96,7 @@ func main() {
 
 	root := newRootCmd()
 	if err := root.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

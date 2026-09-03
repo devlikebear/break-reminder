@@ -9,6 +9,7 @@ struct InsightsTabView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                refreshStatusView
                 if let report = vm.insights {
                     dailyReportCard(report)
                     Divider().background(theme.divider)
@@ -25,6 +26,62 @@ struct InsightsTabView: View {
         .scrollIndicators(.visible)
     }
 
+    @ViewBuilder
+    private var refreshStatusView: some View {
+        switch vm.insightsRefreshStatus {
+        case .idle:
+            EmptyView()
+        case .running:
+            refreshStatusCard(color: theme.accent) {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .controlSize(.small)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("AI 분석을 실행 중입니다")
+                            .font(.system(size: 11, weight: .medium))
+                        Text("최대 2분 정도 걸릴 수 있습니다.")
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                }
+            }
+        case .succeeded:
+            refreshStatusCard(color: theme.accent) {
+                Label("AI 분석이 완료되었습니다", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 11, weight: .medium))
+            }
+        case .failed(let message):
+            refreshStatusCard(color: .red) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Label("AI 분석 실패", systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(message)
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    Text("오류 내용을 확인하고 설정 또는 CLI를 수정한 뒤 다시 시도하세요.")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+
+    private func refreshStatusCard<Content: View>(color: Color, @ViewBuilder content: () -> Content) -> some View {
+        content()
+            .foregroundColor(color)
+            .padding(10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(color.opacity(theme.isDark ? 0.16 : 0.08))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(color.opacity(theme.isDark ? 0.45 : 0.3), lineWidth: 1)
+            )
+            .cornerRadius(8)
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "sparkles")
@@ -38,14 +95,16 @@ struct InsightsTabView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
             Button(action: { vm.refreshInsights() }) {
-                if vm.isRefreshingInsights {
-                    ProgressView().scaleEffect(0.7)
-                } else {
-                    Text("AI 분석 생성")
+                HStack(spacing: 4) {
+                    if vm.isRefreshingInsights {
+                        ProgressView().controlSize(.small)
+                    }
+                    Text(vm.isRefreshingInsights ? "분석 중…" : "AI 분석 생성")
                 }
             }
             .buttonStyle(DashboardButtonStyle())
             .frame(width: 140)
+            .disabled(vm.isRefreshingInsights)
         }
         .frame(maxWidth: .infinity, minHeight: 200)
         .padding(.top, 40)
@@ -123,14 +182,15 @@ struct InsightsTabView: View {
             Button(action: { vm.refreshInsights() }) {
                 HStack(spacing: 4) {
                     if vm.isRefreshingInsights {
-                        ProgressView().scaleEffect(0.6)
+                        ProgressView().controlSize(.small)
                     } else {
                         Text("🔄")
                     }
-                    Text("새로고침")
+                    Text(vm.isRefreshingInsights ? "분석 중…" : "새로고침")
                 }
             }
             .buttonStyle(DashboardButtonStyle())
+            .disabled(vm.isRefreshingInsights)
 
             Button(action: { copyReport(report) }) {
                 Text("📋 리포트 복사")

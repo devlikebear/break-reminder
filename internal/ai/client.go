@@ -2,6 +2,7 @@ package ai
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -45,8 +46,34 @@ func (c *Client) Query(ctx context.Context, prompt string) (string, error) {
 
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("AI CLI error: %w", err)
+		var exitErr *exec.ExitError
+		var stderr []byte
+		if errors.As(err, &exitErr) {
+			stderr = exitErr.Stderr
+		}
+		return "", formatQueryError(ctx, c.CLIName, err, stderr, out)
 	}
 
 	return strings.TrimSpace(string(out)), nil
+}
+
+// formatQueryError keeps the useful diagnostic emitted by the AI CLI. The
+// dashboard displays this error verbatim, so a failed refresh is actionable
+// instead of looking like an empty result.
+func formatQueryError(ctx context.Context, cliName string, commandErr error, stderr, stdout []byte) error {
+	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		return fmt.Errorf("AI CLI %q timed out", cliName)
+	}
+	if errors.Is(ctx.Err(), context.Canceled) {
+		return fmt.Errorf("AI CLI %q was canceled", cliName)
+	}
+
+	detail := strings.TrimSpace(string(stderr))
+	if detail == "" {
+		detail = strings.TrimSpace(string(stdout))
+	}
+	if detail != "" {
+		return fmt.Errorf("AI CLI %q error: %s: %w", cliName, detail, commandErr)
+	}
+	return fmt.Errorf("AI CLI %q error: %w", cliName, commandErr)
 }

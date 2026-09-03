@@ -11,6 +11,13 @@ enum DashboardTab: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+enum InsightsRefreshStatus: Equatable {
+    case idle
+    case running
+    case succeeded
+    case failed(String)
+}
+
 @MainActor
 final class DashboardViewModel: ObservableObject {
     @Published var state: AppState = AppState()
@@ -20,7 +27,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var selectedTab: DashboardTab = .timer
     @Published var history: [HistoryEntry] = []
     @Published var insights: InsightsReport?
-    @Published var isRefreshingInsights = false
+    @Published private(set) var insightsRefreshStatus: InsightsRefreshStatus = .idle
     @Published var showConfetti = false
     /// Version of the installed CLI, resolved once in `start()`.
     @Published private(set) var appVersion: String = AboutInfo.unknownVersion
@@ -50,6 +57,13 @@ final class DashboardViewModel: ObservableObject {
     }
 
     var isSessionRunning: Bool { timerIsRunning(state: state, config: config) }
+
+    var isRefreshingInsights: Bool {
+        if case .running = insightsRefreshStatus {
+            return true
+        }
+        return false
+    }
 
     var statusText: String {
         if isPaused {
@@ -150,63 +164,88 @@ final class DashboardViewModel: ObservableObject {
 
     func refreshInsights() {
         guard !isRefreshingInsights else { return }
-        isRefreshingInsights = true
-
-        Task.detached { [weak self] in
-            await self?.runInsightsRefresh()
-        }
-    }
-
-    @MainActor
-    private func runInsightsRefresh() async {
-        defer { isRefreshingInsights = false }
+        insightsRefreshStatus = .running
 
         dashLog("insights refresh: requested")
 
         var checked: [String] = []
         guard let cli = findHelper("break-reminder", checked: &checked) else {
-            dashLog("insights refresh: break-reminder helper not found. checked=\(checked)")
+            let message = """
+            break-reminder CLI를 찾지 못했습니다.
+            확인한 경로:
+            \(checked.map { "• \($0)" }.joined(separator: "\n"))
+            대시보드와 CLI를 같은 설치 위치에 두거나 `make install` 후 다시 시도하세요.
+            """
+            insightsRefreshStatus = .failed(message)
+            dashLog("insights refresh: \(message)")
             return
         }
-        dashLog("insights refresh: helper=\(cli) PATH=\(ProcessInfo.processInfo.environment["PATH"] ?? "<unset>")")
 
-        let process = Process()
-        process.launchPath = cli
-        process.arguments = ["insights", "--refresh"]
-        let outPipe = Pipe()
-        let errPipe = Pipe()
-        process.standardOutput = outPipe
-        process.standardError = errPipe
+        let environment = helperProcessEnvironment()
+        dashLog("insights refresh: helper=\(cli) PATH=\(environment["PATH"] ?? "<unset>")")
 
-        do {
-            try process.run()
-        } catch {
-            dashLog("insights refresh: spawn failed: \(error.localizedDescription)")
+        // Process.waitUntilExit() must stay off the main actor. Otherwise the
+        // spinner cannot render and the dashboard appears to ignore the click.
+        Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                executeInsightsRefresh(cliPath: cli, environment: environment)
+            }.value
+            self?.completeInsightsRefresh(result)
+        }
+    }
+
+    private func completeInsightsRefresh(_ result: InsightsProcessResult) {
+        dashLog("insights refresh: exit=\(result.terminationStatus) reason=\(result.terminationReason) outputBytes=\(result.output.utf8.count)")
+        if !result.output.isEmpty {
+            dashLog("insights refresh: output: \(truncated(result.output, max: 800))")
+        }
+
+        if result.launchError != nil || result.terminationStatus != 0 {
+            let message = insightsRefreshFailureMessage(result)
+            insightsRefreshStatus = .failed(message)
+            dashLog("insights refresh: failed: \(message)")
             return
-        }
-        process.waitUntilExit()
-
-        let outData = outPipe.fileHandleForReading.readDataToEndOfFile()
-        let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
-        let outStr = String(data: outData, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let errStr = String(data: errData, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-        dashLog("insights refresh: exit=\(process.terminationStatus) reason=\(process.terminationReason.rawValue) stdoutBytes=\(outData.count) stderrBytes=\(errData.count)")
-        if !outStr.isEmpty {
-            dashLog("insights refresh: stdout: \(truncated(outStr, max: 800))")
-        }
-        if !errStr.isEmpty {
-            dashLog("insights refresh: stderr: \(truncated(errStr, max: 800))")
         }
 
         loadInsights()
         if insights == nil {
-            dashLog("insights refresh: insights file still empty after run")
-        } else {
-            dashLog("insights refresh: insights loaded ok")
+            let message = """
+            CLI는 종료 코드 0으로 완료했지만 인사이트 리포트를 읽지 못했습니다.
+            파일: ~/.break-reminder-insights.json
+            CLI 출력:
+            \(result.output.isEmpty ? "(없음)" : truncated(result.output, max: 4000))
+            파일이 생성되었는지와 JSON 형식/권한을 확인한 뒤 다시 시도하세요.
+            """
+            insightsRefreshStatus = .failed(message)
+            dashLog("insights refresh: \(message)")
+            return
         }
+
+        insightsRefreshStatus = .succeeded
+        dashLog("insights refresh: insights loaded ok")
+    }
+
+    private func insightsRefreshFailureMessage(_ result: InsightsProcessResult) -> String {
+        var lines = [
+            "AI 분석 명령을 실행하지 못했습니다.",
+            "실행 파일: \(result.cliPath)",
+            "명령: insights --refresh",
+        ]
+
+        if let launchError = result.launchError {
+            lines.append("프로세스 시작 실패: \(launchError)")
+        } else {
+            lines.append("종료 코드: \(result.terminationStatus)")
+            lines.append("종료 사유: \(result.terminationReason)")
+            if result.output.isEmpty {
+                lines.append("CLI가 상세 오류 메시지를 반환하지 않았습니다.")
+            } else {
+                lines.append("CLI 출력:\n\(truncated(result.output, max: 4000))")
+            }
+        }
+        lines.append("실행 PATH: \(result.environmentPath)")
+        lines.append("상세 로그: ~/.break-reminder.log")
+        return lines.joined(separator: "\n")
     }
 
     private func truncated(_ s: String, max: Int) -> String {
@@ -315,4 +354,53 @@ final class DashboardViewModel: ObservableObject {
         writeStateToDisk(s)
         refresh()
     }
+}
+
+private struct InsightsProcessResult: Sendable {
+    let cliPath: String
+    let environmentPath: String
+    let terminationStatus: Int32
+    let terminationReason: String
+    let output: String
+    let launchError: String?
+}
+
+private func executeInsightsRefresh(cliPath: String, environment: [String: String]) -> InsightsProcessResult {
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: cliPath)
+    process.arguments = ["insights", "--refresh"]
+    process.environment = environment
+
+    // Merge stdout and stderr into one draining pipe. Reading before waiting
+    // prevents a verbose AI CLI from filling the pipe and hanging the refresh.
+    let outputPipe = Pipe()
+    process.standardOutput = outputPipe
+    process.standardError = outputPipe
+
+    do {
+        try process.run()
+    } catch {
+        return InsightsProcessResult(
+            cliPath: cliPath,
+            environmentPath: environment["PATH"] ?? "<unset>",
+            terminationStatus: -1,
+            terminationReason: "not started",
+            output: "",
+            launchError: error.localizedDescription
+        )
+    }
+
+    let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
+    process.waitUntilExit()
+    let output = String(data: outputData, encoding: .utf8)?
+        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+    return InsightsProcessResult(
+        cliPath: cliPath,
+        environmentPath: environment["PATH"] ?? "<unset>",
+        terminationStatus: process.terminationStatus,
+        terminationReason: process.terminationReason == .exit ? "normal exit" : "uncaught signal",
+        output: output,
+        launchError: nil
+    )
 }

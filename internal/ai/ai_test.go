@@ -1,10 +1,14 @@
 package ai
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewClient(t *testing.T) {
@@ -21,6 +25,46 @@ func TestNewClientCodex(t *testing.T) {
 	c := NewClient("codex")
 	if c.CLIName != "codex" {
 		t.Errorf("CLIName = %q, want 'codex'", c.CLIName)
+	}
+}
+
+func TestFormatQueryErrorIncludesCLIOutput(t *testing.T) {
+	err := formatQueryError(context.Background(), "claude", errors.New("exit status 1"), []byte("rate limit exceeded"), nil)
+
+	if got := err.Error(); got != `AI CLI "claude" error: rate limit exceeded: exit status 1` {
+		t.Fatalf("formatQueryError() = %q, want CLI output and exit status", got)
+	}
+}
+
+func TestFormatQueryErrorFallsBackToStdout(t *testing.T) {
+	err := formatQueryError(context.Background(), "codex", errors.New("exit status 2"), nil, []byte("authentication required"))
+
+	if got := err.Error(); got != `AI CLI "codex" error: authentication required: exit status 2` {
+		t.Fatalf("formatQueryError() = %q, want stdout detail and exit status", got)
+	}
+}
+
+func TestFormatQueryErrorReportsTimeout(t *testing.T) {
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
+	defer cancel()
+
+	err := formatQueryError(ctx, "claude", errors.New("signal: killed"), nil, nil)
+	if got := err.Error(); got != "AI CLI \"claude\" timed out" {
+		t.Fatalf("formatQueryError() = %q, want timeout detail", got)
+	}
+}
+
+func TestQueryIncludesCLIStderr(t *testing.T) {
+	cliDir := t.TempDir()
+	cliPath := filepath.Join(cliDir, "claude")
+	if err := os.WriteFile(cliPath, []byte("#!/bin/sh\necho 'authentication required' >&2\nexit 1\n"), 0o755); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	t.Setenv("PATH", cliDir)
+
+	_, err := NewClient("claude").Query(context.Background(), "test prompt")
+	if err == nil || !strings.Contains(err.Error(), "authentication required") {
+		t.Fatalf("Query() error = %v, want CLI stderr detail", err)
 	}
 }
 

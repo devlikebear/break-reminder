@@ -79,16 +79,57 @@ func findHelper(_ name: String, checked: UnsafeMutablePointer<[String]>?) -> Str
         )
     }
     let home = FileManager.default.homeDirectoryForCurrentUser.path
-    candidates.append("\(home)/.local/bin/\(name)")
-    if let checked = checked {
-        checked.pointee = candidates
+    candidates.append(contentsOf: commonHelperDirectories(home: home).map {
+        URL(fileURLWithPath: $0).appendingPathComponent(name).path
+    })
+
+    var uniqueCandidates: [String] = []
+    var seen = Set<String>()
+    for candidate in candidates where seen.insert(candidate).inserted {
+        uniqueCandidates.append(candidate)
     }
-    for candidate in candidates {
+    if let checked = checked {
+        checked.pointee = uniqueCandidates
+    }
+    for candidate in uniqueCandidates {
         if FileManager.default.isExecutableFile(atPath: candidate) {
             return candidate
         }
     }
     return nil
+}
+
+/// The dashboard may be launched by launchd, whose PATH does not include the
+/// user's shell paths. Keep helper discovery explicit and skip arbitrary
+/// working-directory/PATH entries while covering the supported install paths.
+private func commonHelperDirectories(home: String) -> [String] {
+    [
+        "\(home)/.local/bin",
+        "\(home)/bin",
+        "\(home)/.npm-global/bin",
+        "\(home)/.bun/bin",
+        "\(home)/.cargo/bin",
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+    ]
+}
+
+/// Adds common user and Homebrew binary directories to child-process PATH so
+/// AI CLIs installed outside launchd's minimal environment are discoverable.
+func helperProcessEnvironment() -> [String: String] {
+    var environment = ProcessInfo.processInfo.environment
+    let home = FileManager.default.homeDirectoryForCurrentUser.path
+    let existing = (environment["PATH"] ?? "")
+        .split(separator: ":")
+        .map(String.init)
+
+    var paths: [String] = []
+    var seen = Set<String>()
+    for path in commonHelperDirectories(home: home) + existing where seen.insert(path).inserted {
+        paths.append(path)
+    }
+    environment["PATH"] = paths.joined(separator: ":")
+    return environment
 }
 
 /// Asks the installed CLI for its version. The dashboard carries no version of
