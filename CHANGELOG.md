@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-09-03
+
 ### Fixed
 - Dashboard Insights AI analysis now shows running, completed, and actionable failure states instead of appearing unresponsive.
 - AI refresh errors now preserve CLI diagnostics and use the correct launchd environment so installation, authentication, and configuration issues can be fixed from the reported details.
