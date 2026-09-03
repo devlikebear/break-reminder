@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-09-03
+
 ### Added
 - Fullscreen break overlay now includes a bundled hamster mascot, a calm gradient backdrop, and subtle low-motion breathing/fade animation with a Reduce Motion fallback.
 
