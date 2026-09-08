@@ -13,7 +13,7 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 
 - **🖱️ Activity Detection** — Monitors keyboard/mouse idle time via `ioreg`
 - **⏰ Smart Timer** — 50 min work / 10 min break cycle (configurable)
-- **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support and an optional two-minute guided neck-and-shoulder stretch
+- **🖥️ Fullscreen Break Screen** — Swift AppKit overlay with multi-monitor support, transparent hamster mascot and calm gradient backdrop, and an optional two-minute guided neck-and-shoulder stretch
 - **📊 TUI Dashboard** — Real-time progress bars and daily statistics (Bubbletea)
 - **🖼️ Native GUI Dashboard** — macOS native window with circular progress bar
 - **🍎 Menu Bar App** — Native macOS status item with an animated hamster mascot, quick controls, and live session status
@@ -28,9 +28,11 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🚀 Auto-start** — LaunchAgent timer with 60-second check interval plus optional menu bar auto-start
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
-## 🆕 New In v0.14.0
+## 🆕 New In v0.15.1
 
-- **ℹ️ About / installed version** — Menu bar **About Break Reminder** shows the installed version and a GitHub link; the GUI dashboard Settings tab adds an **정보** section; the TUI title line and `status` also print the version
+- **🐹 Polished fullscreen break screen** — Bundled transparent hamster mascot, calm gradient backdrop, and subtle breathing/fade animation (with a Reduce Motion fallback); countdown and guided-break flow unchanged
+- **🤖 Clearer dashboard AI feedback** — When AI productivity analysis fails, the GUI dashboard shows actionable feedback instead of a silent miss
+- **ℹ️ About / installed version** *(since v0.14.0)* — Menu bar **About Break Reminder** shows the installed version and a GitHub link; the GUI dashboard Settings tab adds an **정보** section; the TUI title line and `status` also print the version
 
 ## 📦 Installation
 
