@@ -118,7 +118,7 @@ hermes computer-use install
 
 ### 범위·환경·사전 조건
 
-- 사용자 승인 범위: 이 1회 QA에서 `/Users/changheonshin/workspace/myworks/break-reminder/bin/break-screen` fixture와 CuaDriver로 확인한 각 `break-screen`의 정확한 PID/window만 캡처·조작했다. 브라우저·계정·네트워크·권한 UI·시스템 설정은 조작하지 않았다.
+- 사용자 승인 범위: 이 1회 QA에서 `~/workspace/myworks/break-reminder/bin/break-screen` fixture와 CuaDriver로 확인한 각 `break-screen`의 정확한 PID/window만 캡처·조작했다. 브라우저·계정·네트워크·권한 UI·시스템 설정은 조작하지 않았다.
 - OS/디스플레이: macOS 26.5.2 arm64, 캡처 가능한 2560×1440 단일 display. secondary display는 없어 multi-display는 `N/A`다.
 - `hermes computer-use doctor`: PASS — cua-driver 0.20.0, MCP active, `com.trycua.driver`, Accessibility/Screen Recording granted, AX trusted/reachable. Direct ScreenCaptureKit probe는 read-only doctor 특성상 생략됨.
 - `make build`: PASS — Swift release helper 3개와 Go binary 빌드 완료. 빌드 뒤 보호 대상 tracked diff가 새로 생기지 않았다.
