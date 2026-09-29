@@ -8,19 +8,23 @@ import (
 	"testing"
 
 	"github.com/devlikebear/break-reminder/internal/autoupdate"
+	"github.com/devlikebear/break-reminder/internal/launchd"
 )
 
 func restoreUpdateDependencies(t *testing.T) {
 	t.Helper()
+	oldCapture := updateCaptureRuntime
+	updateCaptureRuntime = func() launchd.RuntimeInstallation { return launchd.RuntimeInstallation{} }
 	oldExecutablePath := updateExecutablePath
 	oldDetectHomebrew := updateDetectHomebrew
 	oldRunCommand := updateRunCommand
-	oldRestartRuntime := updateRestartRuntime
+	oldRestartRuntime := updateMigrateRuntime
 	t.Cleanup(func() {
+		updateCaptureRuntime = oldCapture
 		updateExecutablePath = oldExecutablePath
 		updateDetectHomebrew = oldDetectHomebrew
 		updateRunCommand = oldRunCommand
-		updateRestartRuntime = oldRestartRuntime
+		updateMigrateRuntime = oldRestartRuntime
 	})
 }
 
@@ -55,7 +59,7 @@ func TestUpdateCommandReportsCurrentFormulaWithoutRestart(t *testing.T) {
 		calls++
 		return "", nil
 	}
-	updateRestartRuntime = func() error {
+	updateMigrateRuntime = func(_ context.Context, _ string, _ launchd.RuntimeInstallation) error {
 		t.Fatal("current formula restarted runtime")
 		return nil
 	}
@@ -82,7 +86,7 @@ func TestAutomaticUpdateStaysQuietWhenFormulaIsCurrent(t *testing.T) {
 		return autoupdate.HomebrewInstall{BrewPath: "/opt/homebrew/bin/brew"}, true
 	}
 	updateRunCommand = func(_ context.Context, _ string, _ ...string) (string, error) { return "", nil }
-	updateRestartRuntime = func() error {
+	updateMigrateRuntime = func(_ context.Context, _ string, _ launchd.RuntimeInstallation) error {
 		t.Fatal("current formula restarted runtime")
 		return nil
 	}
@@ -113,7 +117,7 @@ func TestUpdateCommandRestartsRuntimeAfterUpgrade(t *testing.T) {
 		return "", nil
 	}
 	restarted := false
-	updateRestartRuntime = func() error {
+	updateMigrateRuntime = func(_ context.Context, _ string, _ launchd.RuntimeInstallation) error {
 		restarted = true
 		return nil
 	}
@@ -146,7 +150,9 @@ func TestUpdateCommandProvidesRecoveryWhenRestartFails(t *testing.T) {
 		}
 		return "", nil
 	}
-	updateRestartRuntime = func() error { return errors.New("launchctl denied") }
+	updateMigrateRuntime = func(_ context.Context, _ string, _ launchd.RuntimeInstallation) error {
+		return errors.New("launchctl denied")
+	}
 
 	cmd := newUpdateCmd()
 	cmd.SetOut(new(bytes.Buffer))
@@ -165,5 +171,41 @@ func TestRootRegistersUpdateAsConfigIndependentCommand(t *testing.T) {
 	}
 	if !commandAllowsInvalidConfig(cmd) {
 		t.Fatal("update command requires a valid user config")
+	}
+}
+
+func TestUpdateInvokesNewBinaryWithPriorRuntime(t *testing.T) {
+	restoreUpdateDependencies(t)
+	oldCapture := updateCaptureRuntime
+	t.Cleanup(func() { updateCaptureRuntime = oldCapture })
+	updateExecutablePath = func() (string, error) { return "/opt/homebrew/bin/break-reminder", nil }
+	updateDetectHomebrew = func(string) (autoupdate.HomebrewInstall, bool) {
+		return autoupdate.HomebrewInstall{BrewPath: "/opt/homebrew/bin/brew", BinaryPath: "/opt/homebrew/bin/break-reminder"}, true
+	}
+	updateCaptureRuntime = func() launchd.RuntimeInstallation {
+		return launchd.RuntimeInstallation{Timer: launchd.JobInstallation{Installed: true, Loaded: false}}
+	}
+	calls := []string{}
+	updateRunCommand = func(_ context.Context, _ string, args ...string) (string, error) {
+		calls = append(calls, args[0])
+		if args[0] == "outdated" {
+			return "break-reminder", nil
+		}
+		return "", nil
+	}
+	updateMigrateRuntime = func(_ context.Context, path string, prior launchd.RuntimeInstallation) error {
+		if path != "/opt/homebrew/bin/break-reminder" || !prior.Timer.Installed || prior.Timer.Loaded {
+			t.Fatal(path, prior)
+		}
+		calls = append(calls, "migration")
+		return nil
+	}
+	cmd := newUpdateCmd()
+	cmd.SetOut(new(bytes.Buffer))
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(calls, ",") != "update,outdated,upgrade,migration" {
+		t.Fatal(calls)
 	}
 }

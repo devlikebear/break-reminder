@@ -64,6 +64,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	root.AddCommand(
+		newTimeToolsCmd(),
 		newCheckCmd(),
 		newStatusCmd(),
 		newDashboardCmd(),

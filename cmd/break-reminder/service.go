@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -29,6 +30,28 @@ func newServiceCmd() *cobra.Command {
 		Short: "Manage launchd service",
 	}
 
+	var priorJSON string
+	migrate := &cobra.Command{Use: "migrate-runtime", Hidden: true, Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, args []string) error {
+		var prior launchd.RuntimeInstallation
+		if priorJSON == "" {
+			return fmt.Errorf("--prior runtime snapshot required")
+		}
+		if err := json.Unmarshal([]byte(priorJSON), &prior); err != nil {
+			return err
+		}
+		exe, err := serviceExecutablePath()
+		if err != nil {
+			return err
+		}
+		menu := serviceFindMenuBar("break-menubar")
+		if install, ok := serviceDetectHomebrew(exe); ok {
+			exe = install.BinaryPath
+			menu = install.MenuBarPath
+		}
+		return launchd.MigrateRuntime(exe, menu, prior)
+	}}
+	migrate.Flags().StringVar(&priorJSON, "prior", "", "Captured runtime installation JSON")
+	cmd.AddCommand(migrate)
 	cmd.AddCommand(
 		&cobra.Command{
 			Use:   "install",
@@ -59,7 +82,7 @@ func newServiceCmd() *cobra.Command {
 
 				out := cmd.OutOrStdout()
 				fmt.Fprintln(out, "Successfully installed and loaded break-reminder agent!")
-				fmt.Fprintln(out, "It will now run every minute in the background.")
+				fmt.Fprintln(out, "Work reminders run every minute; the independent time tools worker stays running in the background.")
 				if menuBarInstalled {
 					fmt.Fprintln(out, "Menu bar app auto-start is enabled and will stay running in the background.")
 				} else {
@@ -102,11 +125,15 @@ func newServiceCmd() *cobra.Command {
 			Run: func(cmd *cobra.Command, args []string) {
 				out := cmd.OutOrStdout()
 				fmt.Fprintln(out, "Timer:", serviceTimerStatus())
+				fmt.Fprintln(out, "Time tools:", launchd.TimeToolsStatus())
 				fmt.Fprintln(out, "Menu Bar:", serviceMenuBarStatus())
 				fmt.Fprintln(out, "Auto Update:", serviceUpdaterStatus())
 			},
 		},
 	)
 
+	for _, child := range cmd.Commands() {
+		allowInvalidConfig(child)
+	}
 	return cmd
 }

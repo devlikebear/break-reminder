@@ -24,6 +24,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var config: AppConfig = AppConfig()
     @Published var idleSeconds: Int = 0
     @Published var launchdStatusText: String = "Unknown"
+    @Published var selectedTimeTool = ProcessInfo.processInfo.arguments.contains("--time-tools") ? "타이머" : "집중"
     @Published var selectedTab: DashboardTab = .timer
     @Published var history: [HistoryEntry] = []
     @Published var insights: InsightsReport?
@@ -105,9 +106,9 @@ final class DashboardViewModel: ObservableObject {
     var modeDetail: String {
         let sp = sessionProgress
         if isWork {
-            return "\(sp.elapsedSec / 60) / \(config.workDurationMin) min"
+            return "\(sp.elapsedSec / 60) / \(config.effectiveWorkMin) min"
         } else {
-            return "\(sp.elapsedSec / 60) / \(config.breakDurationMin) min"
+            return "\(sp.elapsedSec / 60) / \(config.effectiveBreakMin(completedPomodoros: state.pomodoroCount)) min"
         }
     }
 

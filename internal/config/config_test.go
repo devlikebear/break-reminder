@@ -699,3 +699,12 @@ func TestApplyYAMLChangesAcceptsPomodoroMode(t *testing.T) {
 		t.Errorf("TimerMode = %q, want pomodoro", updated.TimerMode)
 	}
 }
+
+func TestConfigDirAcceptsAbsoluteTestDirectory(t *testing.T) {
+	previous := configDir
+	t.Cleanup(func() { configDir = previous })
+	configDir = t.TempDir()
+	if got := ConfigDir(); got != configDir {
+		t.Fatalf("ConfigDir = %q, want %q", got, configDir)
+	}
+}

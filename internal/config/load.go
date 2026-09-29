@@ -15,6 +15,9 @@ var (
 
 // ConfigDir returns the configuration directory path.
 func ConfigDir() string {
+	if filepath.IsAbs(configDir) {
+		return configDir
+	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, configDir)
 }

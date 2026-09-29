@@ -28,7 +28,50 @@ Work 50 minutes → Rest 10 minutes → Repeat!
 - **🚀 Auto-start** — LaunchAgent timer with 60-second check interval plus optional menu bar auto-start
 - **🏥 Diagnostics** — `doctor` command to verify all components
 
-## 🆕 New In v0.15.1
+## 🆕 New In v0.16.0
+
+- **Pomodoro controls** in the dashboard and menu bar: select the mode, start a work session, see focus/break cycles, and edit durations.
+- **Independent countdown timers** with names, presets, pause/resume, restart, and persistent completion cards. They keep running when the UI closes and do not change work statistics.
+- **Background worker and diagnostics** with completion notices on the break overlay and notification failure recovery.
+
+After upgrading from an older version, run `break-reminder service install` once,
+or use **시간 도구 설정 / 복구** in the UI. Direct `brew upgrade` does not install or
+reload LaunchAgents. Future updates through `break-reminder update` preserve
+which services were stopped and migrate installed runtime agents automatically.
+
+### Countdown timers
+
+Open the dashboard's timer page and select **일반 타이머**, or use the menu bar's
+time-tools submenu. CLI examples:
+
+```bash
+break-reminder time-tools timer start --duration 10m --label "차 우리기"
+break-reminder time-tools --json status
+break-reminder time-tools timer pause --id <timer-id>
+break-reminder time-tools timer resume --id <timer-id>
+break-reminder time-tools timer cancel --id <timer-id>
+break-reminder time-tools acknowledge --event-id <event-id>
+```
+
+Only one countdown runs at a time. Replacing it requires explicit confirmation.
+Countdowns use wall-clock deadlines, including time asleep; the worker reconciles
+after wake. Completion discovered more than five minutes late stays visible without
+a notification burst. This does not wake the Mac or guarantee an alarm while asleep.
+Changing the system clock also changes the remaining wall-clock interval.
+
+Notifications use `terminal-notifier`; macOS permissions and Focus settings can
+hide banners. Completion cards and menu bar indicators persist until acknowledged,
+and the primary break overlay shows unread completion text. If notification sending
+fails, the UI offers an explicit retry and `break-reminder doctor` explains recovery.
+No sound or banner is guaranteed when the notification helper is unavailable.
+
+Time tools store data in `~/.config/break-reminder/time-tools.json`, separately from
+work/break state. Service stop/uninstall preserves this data; stopping the service
+also stops the countdown worker. Pomodoro remains activity-based: an absence longer
+than `natural_break_sec` resets accumulated focus time. Stopwatch and scheduled
+alarms are planned separately after a one-week usage review.
+
+## Previous: v0.15.1
 
 - **🐹 Polished fullscreen break screen** — Bundled transparent hamster mascot, calm gradient backdrop, and subtle breathing/fade animation (with a Reduce Motion fallback); countdown and guided-break flow unchanged
 - **🤖 Clearer dashboard AI feedback** — When AI productivity analysis fails, the GUI dashboard shows actionable feedback instead of a silent miss
@@ -46,7 +89,7 @@ break-reminder service install
 When installed through Homebrew, `service install` also registers a dedicated
 LaunchAgent that checks the tap every day at 04:00. If a newer release is
 available, it runs `brew upgrade devlikebear/tap/break-reminder` and reloads the
-timer and menu bar agents from Homebrew's stable `bin` symlinks. Source and
+previously running timer, menu bar, and time-tools agents from Homebrew's stable `bin` symlinks. Intentionally stopped services remain stopped. Source and
 standalone installs never enable this updater.
 
 Run `break-reminder update` to perform the same check immediately.

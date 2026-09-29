@@ -27,6 +27,8 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
     var guideInstructionLabel: NSTextField!
     var guideStatusLabel: NSTextField!
     var guideActionButton: NSButton!
+    var timeToolsCompletionLabel: NSTextField?
+    private let timeToolsFiles = TimeToolsFiles()
 
     let args: BreakScreenArgs
     var remaining: Int
@@ -332,10 +334,30 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         escHint.frame = NSRect(x: centerX - contentWidth / 2, y: top - 18, width: contentWidth, height: 18)
         view.addSubview(escHint)
 
+        let toolsLabel = NSTextField(wrappingLabelWithString: "")
+        toolsLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        toolsLabel.textColor = .systemOrange
+        toolsLabel.alignment = .center
+        toolsLabel.maximumNumberOfLines = 2
+        toolsLabel.frame = NSRect(x: 24, y: 18, width: frame.width - 48, height: 42)
+        toolsLabel.autoresizingMask = [.width]
+        view.addSubview(toolsLabel)
+        timeToolsCompletionLabel = toolsLabel
+        refreshTimeToolsCompletion()
         renderGuidedSession()
     }
 
+    private func refreshTimeToolsCompletion() {
+        guard let snapshot = try? timeToolsFiles.loadSnapshot() else { return }
+        let text = timeToolsOverlayText(snapshot: snapshot)
+        if timeToolsCompletionLabel?.stringValue != text {
+            timeToolsCompletionLabel?.stringValue = text
+            timeToolsCompletionLabel?.setAccessibilityLabel(text)
+        }
+    }
+
     func tick() {
+        refreshTimeToolsCompletion()
         elapsed += 1
         remaining -= 1
 
