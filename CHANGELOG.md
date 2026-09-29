@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-09-29
+
 ### Fixed
 - Pomodoro and countdown UI, menu controls, completion notifications, and time-tools errors now use a shared English/Korean translation catalog instead of hard-coded Korean. Unsupported languages fall back to English; helpers follow macOS preferences and pass their language to CLI commands.
 - Timer selection uses language-independent values. New unnamed timers keep an empty stored label and localize only their displayed default, preserving user-entered names across language changes.
