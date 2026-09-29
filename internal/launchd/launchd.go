@@ -104,12 +104,16 @@ func Install(binaryPath, menuBarPath string) (bool, error) {
 	if err := writePlist(PlistPath(), generateTimerPlist(binaryPath)); err != nil {
 		return false, err
 	}
-	if err := loadJob(PlistPath()); err != nil {
+	if err := loadJobForInstall(PlistPath()); err != nil {
 		return false, err
 	}
 
+	if err := installTimeTools(binaryPath, true); err != nil {
+		return false, fmt.Errorf("install time tools: %w", err)
+	}
+
 	if menuBarPath == "" {
-		if err := removeJob(MenuBarPlistPath()); err != nil {
+		if err := removeRuntimeJob(MenuBarPlistPath()); err != nil {
 			return false, fmt.Errorf("remove stale menu bar agent: %w", err)
 		}
 		return false, nil
@@ -118,7 +122,7 @@ func Install(binaryPath, menuBarPath string) (bool, error) {
 	if err := writePlist(MenuBarPlistPath(), generateMenuBarPlist(menuBarPath)); err != nil {
 		return false, err
 	}
-	if err := loadJob(MenuBarPlistPath()); err != nil {
+	if err := loadJobForInstall(MenuBarPlistPath()); err != nil {
 		return false, err
 	}
 
@@ -130,23 +134,29 @@ func Uninstall() error {
 	timerInstalled := Status() != "Not Installed"
 	menuInstalled := MenuBarStatus() != "Not Installed"
 	updaterInstalled := UpdaterStatus() != "Not Installed"
-	if !timerInstalled && !menuInstalled && !updaterInstalled {
+	toolsInstalled := TimeToolsStatus() != "Not Installed"
+	if !timerInstalled && !menuInstalled && !updaterInstalled && !toolsInstalled {
 		return fmt.Errorf("agent not installed (plist not found)")
 	}
 
 	var errs []error
+	if toolsInstalled {
+		if err := removeRuntimeJob(TimeToolsPlistPath()); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	if timerInstalled {
-		if err := removeJob(PlistPath()); err != nil {
+		if err := removeRuntimeJob(PlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("remove timer agent: %w", err))
 		}
 	}
 	if menuInstalled {
-		if err := removeJob(MenuBarPlistPath()); err != nil {
+		if err := removeRuntimeJob(MenuBarPlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("remove menu bar agent: %w", err))
 		}
 	}
 	if updaterInstalled {
-		if err := removeJob(UpdaterPlistPath()); err != nil {
+		if err := removeRuntimeJob(UpdaterPlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("remove updater agent: %w", err))
 		}
 	}
@@ -156,11 +166,16 @@ func Uninstall() error {
 // RestartRuntime reloads only the timer and menu bar jobs after a binary upgrade.
 func RestartRuntime() error {
 	var errs []error
-	if err := loadJob(PlistPath()); err != nil {
+	if TimeToolsStatus() != "Not Installed" {
+		if err := loadJobForInstall(TimeToolsPlistPath()); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	if err := loadJobForInstall(PlistPath()); err != nil {
 		errs = append(errs, fmt.Errorf("start timer agent: %w", err))
 	}
 	if MenuBarStatus() != "Not Installed" {
-		if err := loadJob(MenuBarPlistPath()); err != nil {
+		if err := loadJobForInstall(MenuBarPlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("start menu bar agent: %w", err))
 		}
 	}
@@ -174,7 +189,7 @@ func Start() error {
 		errs = append(errs, err)
 	}
 	if UpdaterStatus() != "Not Installed" {
-		if err := loadJob(UpdaterPlistPath()); err != nil {
+		if err := loadJobForInstall(UpdaterPlistPath()); err != nil {
 			errs = append(errs, fmt.Errorf("start updater agent: %w", err))
 		}
 	}
@@ -184,6 +199,11 @@ func Start() error {
 // Stop unloads the agents.
 func Stop() error {
 	var errs []error
+	if TimeToolsStatus() != "Not Installed" {
+		if err := unloadJob(TimeToolsPlistPath()); err != nil {
+			errs = append(errs, err)
+		}
+	}
 	if err := unloadJob(PlistPath()); err != nil {
 		errs = append(errs, fmt.Errorf("stop timer agent: %w", err))
 	}

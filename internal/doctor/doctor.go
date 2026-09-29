@@ -13,6 +13,7 @@ import (
 	"github.com/devlikebear/break-reminder/internal/notify"
 	"github.com/devlikebear/break-reminder/internal/schedule"
 	"github.com/devlikebear/break-reminder/internal/state"
+	"github.com/devlikebear/break-reminder/internal/timetools"
 	"github.com/devlikebear/break-reminder/internal/tts"
 )
 
@@ -76,9 +77,9 @@ func Run(cfg config.Config) Report {
 	// Notification
 	notifier := notify.NewNotifier()
 	if err := notifier.Send("Break Reminder", "Doctor test", "Glass"); err != nil {
-		r.add("fail", "Notification", err.Error())
+		r.add("fail", "Notification", err.Error()+"; timer completions remain in menu/dashboard; sound is not guaranteed")
 	} else {
-		r.add("ok", "Notification", "working")
+		r.add("ok", "Notification", "request sent (banner visibility depends on macOS settings)")
 	}
 
 	// Idle detection
@@ -118,6 +119,8 @@ func Run(cfg config.Config) Report {
 	default:
 		r.add("ok", "Menu bar auto-start", menuBarStatus)
 	}
+
+	r.Checks = append(r.Checks, timeToolsDiagnostic(launchd.TimeToolsStatus(), timetools.ReadRuntime(timetools.NewStore(timetools.DefaultDirectory())), time.Now().UnixMilli()))
 
 	// Work session
 	now := time.Now()

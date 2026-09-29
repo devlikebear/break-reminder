@@ -3,6 +3,7 @@
 package notify
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,13 +12,13 @@ import (
 const notificationGroup = "com.devlikebear.break-reminder"
 
 var (
-	lookPath = exec.LookPath
+	lookPath   = exec.LookPath
 	fileExists = func(path string) bool {
 		info, err := os.Stat(path)
 		return err == nil && !info.IsDir()
 	}
 	terminalNotifierPath = resolveTerminalNotifier
-	runCommand = func(name string, args ...string) error {
+	runCommand           = func(name string, args ...string) error {
 		return exec.Command(name, args...).Run()
 	}
 )
@@ -67,4 +68,22 @@ func (n *DarwinNotifier) Send(title, message, sound string) error {
 		return fmt.Errorf("send notification: %w", err)
 	}
 	return nil
+}
+
+// Available checks the backend without sending an unsolicited notification.
+func Available() bool { _, err := terminalNotifierPath(); return err == nil }
+
+var runEventCommand = func(ctx context.Context, path string, args ...string) error {
+	return exec.CommandContext(ctx, path, args...).Run()
+}
+
+// SendEvent uses its own group so work/break notifications cannot replace it.
+func SendEvent(ctx context.Context, title, message, eventID string) error {
+	path, err := terminalNotifierPath()
+	if err != nil {
+		return err
+	}
+	args := notificationArgs(title, message, "Glass")
+	args[len(args)-1] = notificationGroup + ".time-tools." + eventID
+	return runEventCommand(ctx, path, args...)
 }

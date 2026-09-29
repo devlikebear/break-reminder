@@ -3,6 +3,7 @@
 package notify
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strings"
@@ -177,5 +178,24 @@ func TestDarwinNotifierReturnsResolutionError(t *testing.T) {
 	err := (&DarwinNotifier{}).Send("Title", "Message", "Glass")
 	if err == nil || err.Error() != "missing notifier" {
 		t.Fatalf("Send() error = %v, want resolution error", err)
+	}
+}
+
+func TestEventNotificationHasIndependentGroup(t *testing.T) {
+	oldPath, oldRun := terminalNotifierPath, runEventCommand
+	t.Cleanup(func() { terminalNotifierPath = oldPath; runEventCommand = oldRun })
+	terminalNotifierPath = func() (string, error) { return "/notifier", nil }
+	var args []string
+	runEventCommand = func(_ context.Context, _ string, a ...string) error { args = a; return nil }
+	if err := SendEvent(context.Background(), "Timer", "Done", "event-a"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(strings.Join(args, " "), notificationGroup+".time-tools.event-a") {
+		t.Fatal(args)
+	}
+	for _, a := range args {
+		if a == notificationGroup {
+			t.Fatal("reused work notification group")
+		}
 	}
 }

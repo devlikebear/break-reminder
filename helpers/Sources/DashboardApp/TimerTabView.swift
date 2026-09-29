@@ -6,16 +6,27 @@ struct TimerTabView: View {
     @EnvironmentObject var theme: ThemeManager
 
     var body: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 16) {
+            Picker("시간 도구", selection: $vm.selectedTimeTool) {
+                Text("집중").tag("집중")
+                Text("타이머").tag("타이머")
+            }.pickerStyle(.segmented)
+            if vm.selectedTimeTool == "타이머" {
+                CountdownView()
+            } else {
+            PomodoroControlsView(vm: vm)
             dailyStatsSection
             Divider().background(theme.divider)
             systemInfoSection
             Spacer()
             actionButtons
             shortcutHint
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
+        }
     }
 
     private var dailyStatsSection: some View {

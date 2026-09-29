@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -18,7 +20,18 @@ var (
 	updateExecutablePath = os.Executable
 	updateDetectHomebrew = autoupdate.DetectHomebrewInstall
 	updateRunCommand     = autoupdate.ExecuteCommand
-	updateRestartRuntime = launchd.RestartRuntime
+	updateCaptureRuntime = launchd.CaptureRuntimeInstallation
+	updateMigrateRuntime = func(ctx context.Context, binary string, prior launchd.RuntimeInstallation) error {
+		data, err := json.Marshal(prior)
+		if err != nil {
+			return err
+		}
+		output, err := exec.CommandContext(ctx, binary, "service", "migrate-runtime", "--prior", string(data)).CombinedOutput()
+		if err != nil {
+			return fmt.Errorf("%w: %s", err, string(output))
+		}
+		return nil
+	}
 )
 
 func newUpdateCmd() *cobra.Command {
@@ -38,6 +51,7 @@ func newUpdateCmd() *cobra.Command {
 
 			ctx, cancel := updateContext(cmd.Context())
 			defer cancel()
+			prior := updateCaptureRuntime()
 			result, err := autoupdate.CheckAndUpgrade(ctx, install, updateRunCommand)
 			if err != nil {
 				return err
@@ -48,10 +62,10 @@ func newUpdateCmd() *cobra.Command {
 				}
 				return nil
 			}
-			if err := updateRestartRuntime(); err != nil {
+			if err := updateMigrateRuntime(ctx, install.BinaryPath, prior); err != nil {
 				return fmt.Errorf("restart services after update: %w; update was installed, run 'break-reminder service install' to recover", err)
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "break-reminder updated successfully; services restarted.")
+			fmt.Fprintln(cmd.OutOrStdout(), "break-reminder updated successfully; runtime services reconciled (stopped services remain stopped).")
 			return nil
 		},
 	}

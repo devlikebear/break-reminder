@@ -18,7 +18,7 @@ class BreakReminder < Formula
   end
 
   def post_install
-    ohai "Run 'break-reminder service install' to set up timer/menu bar agents and daily automatic updates"
+    ohai "Run 'break-reminder service install' to set up timer/menu bar/time-tools agents and daily automatic updates"
     ohai "Run 'break-reminder doctor' to verify your setup"
     ohai "Run 'break-reminder dashboard' for the TUI dashboard"
     ohai "Optional: run 'break-reminder tts install kittentts' or " \
@@ -29,6 +29,9 @@ class BreakReminder < Formula
     <<~EOS
       To start break-reminder as a background service and enable daily updates:
         break-reminder service install
+
+      After upgrading from a version without time tools, run service install once.
+      Closing the menu bar does not stop active countdowns; service stop does.
 
       Homebrew installations check for updates every day at 04:00.
       To check immediately:

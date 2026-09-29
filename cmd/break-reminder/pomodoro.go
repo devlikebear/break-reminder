@@ -25,16 +25,16 @@ func newPomodoroCmd() *cobra.Command {
 		Short: "Enable pomodoro mode",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			changes := map[string]any{"timer_mode": config.TimerModePomodoro}
-			if workMin > 0 {
+			if cmd.Flags().Changed("work") {
 				changes["pomodoro_work_min"] = workMin
 			}
-			if breakMin > 0 {
+			if cmd.Flags().Changed("break") {
 				changes["pomodoro_break_min"] = breakMin
 			}
-			if longBreakMin > 0 {
+			if cmd.Flags().Changed("long-break") {
 				changes["pomodoro_long_break_min"] = longBreakMin
 			}
-			if longBreakEvery > 0 {
+			if cmd.Flags().Changed("every") {
 				changes["pomodoro_long_break_every"] = longBreakEvery
 			}
 
@@ -42,7 +42,9 @@ func newPomodoroCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resetCurrentCycle()
+			if err := resetCurrentCycle(); err != nil {
+				return fmt.Errorf("configuration saved, but cycle reset failed: %w", err)
+			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Pomodoro mode on: %d min work / %d min break, %d min long break every %d pomodoros.\n",
 				updated.PomodoroWorkMin, updated.PomodoroBreakMin, updated.PomodoroLongBreakMin, updated.PomodoroLongBreakEvery)
@@ -62,7 +64,9 @@ func newPomodoroCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			resetCurrentCycle()
+			if err := resetCurrentCycle(); err != nil {
+				return fmt.Errorf("configuration saved, but cycle reset failed: %w", err)
+			}
 
 			fmt.Fprintf(cmd.OutOrStdout(), "Classic mode on: %d min work / %d min break.\n",
 				updated.WorkDurationMin, updated.BreakDurationMin)
@@ -109,8 +113,8 @@ func applyConfigChanges(changes map[string]any) (config.Config, error) {
 
 // resetCurrentCycle restarts the running work block so a mode switch does not
 // trigger an immediate break with the work time counted under the old mode.
-func resetCurrentCycle() {
-	_ = state.Update(state.DefaultStatePath(), func(s state.State) (state.State, error) {
+func resetCurrentCycle() error {
+	return state.Update(state.DefaultStatePath(), func(s state.State) (state.State, error) {
 		if s.Mode == "work" {
 			s.WorkSeconds = 0
 			s.SnoozeUntil = 0

@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- Native dashboard and menu bar Pomodoro controls, including explicit work-session start, cycle status, duration settings, and activity-detection guidance.
+- Independent countdown timer with custom names, presets, pause/resume, explicit replacement, restart, and persistent completion cards. Timer data is separate from work/break state and uses locked atomic writes with ID/revision conflict checks.
+- A dedicated Aqua launchd worker reconciles wall-clock deadlines every second even when the dashboard and menu bar are closed. Completion notifications have separate event groups, persistent failure states, and explicit retry.
+- Read-only countdown completion notice on the primary fullscreen break overlay, plus worker and notification diagnostics in `doctor`.
+- Complete implementation plans and review resolution for time tools; stopwatch and alarms remain gated on one week of initial timer use.
+
+### Changed
+- Service install/start/stop/uninstall now manages the time-tools worker. Upgrades initiated by the new updater migrate runtime agents through the new binary while preserving stopped services.
+- Upgrading from older versions or using `brew upgrade` directly requires a one-time `break-reminder service install` (also available from the time-tools setup UI).
+- Dashboard text fields protect typed q/r/b from global shortcuts; countdown uses a compact work-status header.
+
+### Fixed
+- Pomodoro commands reject explicit nonpositive durations and report state-reset failures after configuration is saved.
+- Time-tools worker health recovers when the system clock moves backward.
+
 ## [0.15.1] - 2026-09-03
 
 ### Fixed

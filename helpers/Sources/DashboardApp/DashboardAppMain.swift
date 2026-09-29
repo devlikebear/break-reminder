@@ -55,6 +55,7 @@ struct DashboardContentView: View {
     @FocusState private var isFocused: Bool
     @Environment(\.controlActiveState) private var controlActiveState
     @Environment(\.colorScheme) private var systemColorScheme
+    @State private var keyMonitor: Any?
     @State private var confettiParticles: [ConfettiParticle] = []
 
     private var isWindowActive: Bool {
@@ -69,7 +70,18 @@ struct DashboardContentView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                StatusHeaderView(vm: vm)
+                if vm.selectedTab == .timer && vm.selectedTimeTool == "타이머" {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("업무·휴식").font(.caption).foregroundStyle(.secondary)
+                            Text(vm.statusText).font(.caption.weight(.semibold))
+                        }
+                        Spacer()
+                        Button("집중 보기") { vm.selectedTimeTool = "집중" }
+                    }.padding(16)
+                } else {
+                    StatusHeaderView(vm: vm)
+                }
                 Divider().background(theme.divider)
                 TabBarView(selectedTab: $vm.selectedTab, accentColor: accentColor)
 
@@ -115,8 +127,12 @@ struct DashboardContentView: View {
                 )
             }
         }
+        .onDisappear {
+            if let keyMonitor { NSEvent.removeMonitor(keyMonitor) }
+            keyMonitor = nil
+        }
         .onChange(of: isWindowActive) { _, newValue in
-            if newValue { isFocused = true }
+            if newValue && !(NSApp.keyWindow?.firstResponder is NSTextView) { isFocused = true }
         }
         .onChange(of: systemColorScheme) { _, newValue in
             theme.systemIsDark = (newValue == .dark)
@@ -127,17 +143,21 @@ struct DashboardContentView: View {
             if let window = NSApp.windows.first(where: { $0.title == "Break Reminder" }) {
                 window.makeKeyAndOrderFront(nil)
             }
-            isFocused = true
+            if !(NSApp.keyWindow?.firstResponder is NSTextView) { isFocused = true }
         }
     }
 
     private func installKeyMonitor() {
-        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             // Only handle plain keys (no modifiers like Cmd/Ctrl/Opt)
             let relevantFlags: NSEvent.ModifierFlags = [.command, .control, .option]
-            if !event.modifierFlags.intersection(relevantFlags).isEmpty {
+            let isEditing = event.window?.firstResponder is NSTextView
+            if !shouldHandlePlainShortcut(isEditing: isEditing, hasModifiers: !event.modifierFlags.intersection(relevantFlags).isEmpty) {
                 return event
             }
+
+            if (event.keyCode == 15 || event.keyCode == 11) && (vm.selectedTab != .timer || vm.selectedTimeTool != "집중") { return event }
 
             switch event.keyCode {
             case 12:  // Q (physical key)
