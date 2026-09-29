@@ -13,6 +13,7 @@ import (
 )
 
 func TestPauseAndResumeCommands(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origLoadConfig := loadConfig
 	origNowFunc := nowFunc
 	defer func() {
@@ -89,6 +90,7 @@ func TestPauseAndResumeCommands(t *testing.T) {
 }
 
 func TestPauseModeFlagPersistsReason(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origLoadConfig := loadConfig
 	origNowFunc := nowFunc
 	defer func() {
@@ -134,6 +136,7 @@ func TestPauseModeFlagPersistsReason(t *testing.T) {
 }
 
 func TestPauseModeFlagRejectsInvalid(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origLoadConfig := loadConfig
 	origNowFunc := nowFunc
 	defer func() {
@@ -161,6 +164,7 @@ func TestPauseModeFlagRejectsInvalid(t *testing.T) {
 }
 
 func TestPauseAlreadyPausedIsSafe(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origLoadConfig := loadConfig
 	origNowFunc := nowFunc
 	defer func() {

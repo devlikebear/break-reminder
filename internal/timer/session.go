@@ -1,6 +1,8 @@
 package timer
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"time"
 
 	"github.com/devlikebear/break-reminder/internal/config"
@@ -86,7 +88,7 @@ func evaluateSession(cfg config.Config, r TickResult, now time.Time, idleSec int
 	if schedule.InDetectWindow(cfg, now) && idleSec < cfg.IdleThresholdSec {
 		r.State = r.State.StartSession(unix, false)
 		r.Actions = append(r.Actions, ActionNotifySessionStart)
-		r.LogMsg = "Work session started (auto-detected)"
+		r.LogMsg = i18n.Text("Work session started (auto-detected)")
 		return r, true
 	}
 
@@ -122,6 +124,6 @@ func endSession(r TickResult, at int64, reason string) TickResult {
 	r.State = r.State.EndSession(at, false)
 	r.SessionEnded = &summary
 	r.Actions = append(r.Actions, ActionNotifySessionEnd)
-	r.LogMsg = "Work session ended (" + reason + ")"
+	r.LogMsg = i18n.Text("Work session ended (") + reason + ")"
 	return r
 }

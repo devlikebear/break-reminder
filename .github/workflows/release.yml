@@ -126,8 +126,11 @@ jobs:
       - name: Run tests
         run: |
           python3 scripts/generate-localizations.py --check
-          go test ./...
-          cd helpers && swift test
+          BREAK_REMINDER_LANGUAGE=en go test ./...
+          BREAK_REMINDER_LANGUAGE=ko go test ./...
+          cd helpers
+          BREAK_REMINDER_LANGUAGE=en swift test
+          BREAK_REMINDER_LANGUAGE=ko swift test
 
       - name: Commit version bump
         if: steps.version.outputs.BUMPED == 'true'

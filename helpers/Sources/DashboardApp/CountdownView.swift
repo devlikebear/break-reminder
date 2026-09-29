@@ -99,6 +99,6 @@ struct CountdownView: View {
     }
     private var integerFormatter: NumberFormatter { let f = NumberFormatter(); f.numberStyle = .none; f.allowsFloats = false; f.minimum = 0; f.maximum = 86400; return f }
     private func phaseLabel(_ phase: String) -> String {
-        switch phase { case "running": return L10n.text("Running"); case "paused": return L10n.text("Paused"); case "completed": return L10n.text("Completed"); default: return L10n.text("Canceled") }
+        switch phase { case "running": return L10n.text("Running"); case L10n.text("paused"): return L10n.text("Paused"); case "completed": return L10n.text("Completed"); default: return L10n.text("Canceled") }
     }
 }

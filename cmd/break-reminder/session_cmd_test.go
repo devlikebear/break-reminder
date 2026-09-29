@@ -44,6 +44,7 @@ func setupSessionTest(t *testing.T, cfg config.Config, now time.Time) string {
 }
 
 func TestStartCommandOpensManualSession(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	now := time.Unix(1_700_000_000, 0)
 	statePath := setupSessionTest(t, config.Default(), now)
 
@@ -68,6 +69,7 @@ func TestStartCommandOpensManualSession(t *testing.T) {
 }
 
 func TestStartCommandOnRunningSessionKeepsItUnchanged(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	now := time.Unix(1_700_000_000, 0)
 	statePath := setupSessionTest(t, config.Default(), now)
 
@@ -85,6 +87,7 @@ func TestStartCommandOnRunningSessionKeepsItUnchanged(t *testing.T) {
 }
 
 func TestStopCommandEndsSessionAndHoldsReminders(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	now := time.Unix(1_700_000_000, 0)
 	statePath := setupSessionTest(t, config.Default(), now)
 
@@ -121,6 +124,7 @@ func TestStopCommandEndsSessionAndHoldsReminders(t *testing.T) {
 }
 
 func TestStopCommandWithoutSessionStillHoldsReminders(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	now := time.Unix(1_700_000_000, 0)
 	statePath := setupSessionTest(t, config.Default(), now)
 
@@ -153,6 +157,7 @@ func TestStartAfterStopReopensTheSession(t *testing.T) {
 }
 
 func TestPomodoroOnAndOffUpdateConfig(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	now := time.Unix(1_700_000_000, 0)
 	setupSessionTest(t, config.Default(), now)
 

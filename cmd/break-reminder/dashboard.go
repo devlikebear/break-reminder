@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,7 +20,7 @@ func newDashboardCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "dashboard",
-		Short: "Interactive TUI dashboard (--gui for native macOS window)",
+		Short: i18n.Text("Interactive TUI dashboard (--gui for native macOS window)"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if gui {
 				return runGUIDashboard()
@@ -26,13 +28,13 @@ func newDashboardCmd() *cobra.Command {
 			m := dashboard.New(cfg, version)
 			p := tea.NewProgram(m, tea.WithAltScreen())
 			if _, err := p.Run(); err != nil {
-				return fmt.Errorf("dashboard: %w", err)
+				return fmt.Errorf(i18n.Text("dashboard: %w"), err)
 			}
 			return nil
 		},
 	}
 
-	cmd.Flags().BoolVar(&gui, "gui", false, "Launch native macOS dashboard window")
+	cmd.Flags().BoolVar(&gui, "gui", false, i18n.Text("Launch native macOS dashboard window"))
 	return cmd
 }
 
@@ -42,7 +44,7 @@ func runGUIDashboard() error {
 		return helperNotFoundError("break-dashboard")
 	}
 
-	log.Info().Str("helper", helperPath).Msg("Launching GUI dashboard")
+	log.Info().Str("helper", helperPath).Msg(i18n.Text("Launching GUI dashboard"))
 
 	cmd := exec.Command(helperPath)
 	cmd.Stdout = os.Stdout

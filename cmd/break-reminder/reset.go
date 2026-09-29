@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 func newResetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "reset",
-		Short: "Reset the timer",
+		Short: i18n.Text("Reset the timer"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			now := time.Now()
 			if err := state.Update(state.DefaultStatePath(), func(state.State) (state.State, error) {
@@ -23,8 +25,8 @@ func newResetCmd() *cobra.Command {
 			}); err != nil {
 				return err
 			}
-			logging.Log(logging.DefaultLogPath(), "Timer manually reset")
-			fmt.Println("Timer has been reset.")
+			logging.Log(logging.DefaultLogPath(), i18n.Text("Timer manually reset"))
+			fmt.Println(i18n.Text("Timer has been reset."))
 			return nil
 		},
 	}

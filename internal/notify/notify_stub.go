@@ -3,6 +3,8 @@
 package notify
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"fmt"
 )
@@ -14,11 +16,11 @@ func NewNotifier() Notifier {
 }
 
 func (n *StubNotifier) Send(title, message, sound string) error {
-	fmt.Printf("[notification] %s: %s\n", title, message)
+	fmt.Printf(i18n.Text("[notification] %s: %s\n"), title, message)
 	return nil
 }
 
 func Available() bool { return false }
 func SendEvent(ctx context.Context, title, message, eventID string) error {
-	return fmt.Errorf("desktop notifications require macOS")
+	return fmt.Errorf("%s", i18n.Text("desktop notifications require macOS"))
 }

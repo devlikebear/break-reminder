@@ -101,6 +101,7 @@ func TestAICmdRejectsInvalidConfigBeforeCheckingAIFeatures(t *testing.T) {
 }
 
 func TestMenuBarCmdReturnsHelpfulErrorWhenHelperMissing(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	t.Setenv("HOME", t.TempDir())
 	t.Setenv("PATH", "")
 

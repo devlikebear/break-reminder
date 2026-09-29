@@ -26,7 +26,7 @@ public func todayTotals(state: AppState, config: AppConfig, now: Int64) -> Today
 
 public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) -> MenuBarPresentation {
     let totals = todayTotals(state: state, config: config, now: now)
-    let statsLine = "Today · Work \(formatMinutes(totals.workMinutes)) · Break \(formatMinutes(totals.breakMinutes))"
+    let statsLine = L10n.text("Today · Work {0} · Break {1}", formatMinutes(totals.workMinutes), formatMinutes(totals.breakMinutes))
 
     if !state.paused && !timerIsRunning(state: state, config: config) {
         return MenuBarPresentation(
@@ -44,15 +44,15 @@ public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) 
 
         if state.paused {
             return MenuBarPresentation(
-                title: "PAUSED (BREAK) · \(remainingMinutes)m left",
-                statusLine: "PAUSED (BREAK) · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until work",
+                title: L10n.text("PAUSED (BREAK) · {0}m left", remainingMinutes),
+                statusLine: L10n.text("PAUSED (BREAK) · {0}m elapsed · {1}m until work", elapsedMinutes, remainingMinutes),
                 statsLine: statsLine
             )
         }
 
         return MenuBarPresentation(
-            title: "\(percent)% · \(remainingMinutes)m left",
-            statusLine: "On break · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until work",
+            title: L10n.text("{0}% · {1}m left", percent, remainingMinutes),
+            statusLine: L10n.text("On break · {0}m elapsed · {1}m until work", elapsedMinutes, remainingMinutes),
             statsLine: statsLine
         )
     }
@@ -64,15 +64,15 @@ public func menuBarPresentation(state: AppState, config: AppConfig, now: Int64) 
 
     if state.paused {
         return MenuBarPresentation(
-            title: "PAUSED (WORK) · \(remainingMinutes)m left",
-            statusLine: "PAUSED (WORK) · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until break",
+            title: L10n.text("PAUSED (WORK) · {0}m left", remainingMinutes),
+            statusLine: L10n.text("PAUSED (WORK) · {0}m elapsed · {1}m until break", elapsedMinutes, remainingMinutes),
             statsLine: statsLine
         )
     }
 
     return MenuBarPresentation(
-        title: "\(percent)% · \(remainingMinutes)m left",
-        statusLine: "Working · \(elapsedMinutes)m elapsed · \(remainingMinutes)m until break",
+        title: L10n.text("{0}% · {1}m left", percent, remainingMinutes),
+        statusLine: L10n.text("Working · {0}m elapsed · {1}m until break", elapsedMinutes, remainingMinutes),
         statsLine: statsLine
     )
 }

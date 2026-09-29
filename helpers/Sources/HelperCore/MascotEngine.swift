@@ -13,20 +13,20 @@ public struct Mascot: Equatable {
 /// Selects a mascot (emoji + message) based on the current state.
 public func mascotFor(state: AppState, config: AppConfig, now: Int64) -> Mascot {
     if state.paused {
-        return Mascot(emoji: "😶", message: "일시 정지 중이에요")
+        return Mascot(emoji: "😶", message: L10n.text("Paused for now"))
     }
 
     if !timerIsRunning(state: state, config: config) {
-        return Mascot(emoji: "🌙", message: "업무 세션이 꺼져 있어요")
+        return Mascot(emoji: "🌙", message: L10n.text("Your work session is off"))
     }
 
     if state.mode == "break" {
         let breakElapsed = state.breakStart > 0 ? Int(now - state.breakStart) : 0
         let breakTotal = config.effectiveBreakMin(completedPomodoros: state.pomodoroCount) * 60
         if breakElapsed > breakTotal - 60 {
-            return Mascot(emoji: "☕", message: "곧 다시 시작해요~")
+            return Mascot(emoji: "☕", message: L10n.text("Starting again soon~"))
         }
-        return Mascot(emoji: "😴", message: "푹 쉬고 와요~ ☕")
+        return Mascot(emoji: "😴", message: L10n.text("Enjoy your break~ ☕"))
     }
 
     let workTotal = config.effectiveWorkMin * 60
@@ -34,19 +34,19 @@ public func mascotFor(state: AppState, config: AppConfig, now: Int64) -> Mascot 
 
     // Long continuous work warning (2x or more of the configured work duration)
     if workTotal > 0 && elapsed >= workTotal * 2 {
-        return Mascot(emoji: "😰", message: "쉬어가는 게 어때요? 🙏")
+        return Mascot(emoji: "😰", message: L10n.text("How about a break? 🙏"))
     }
 
     // Near break time (last 5 minutes)
     if workTotal - elapsed <= 300 && workTotal - elapsed > 0 {
-        return Mascot(emoji: "🐹", message: "곧 휴식 시간이에요~ ☕")
+        return Mascot(emoji: "🐹", message: L10n.text("Almost break time~ ☕"))
     }
 
-    return Mascot(emoji: "🐹", message: "집중 모드! 화이팅 💪")
+    return Mascot(emoji: "🐹", message: L10n.text("Focus mode! You can do it 💪"))
 }
 
 /// Selects a mascot for achievement moments (e.g., daily goal).
 public func mascotForAchievement(dailyWorkMinutes: Int, goalMinutes: Int) -> Mascot? {
     guard goalMinutes > 0, dailyWorkMinutes >= goalMinutes else { return nil }
-    return Mascot(emoji: "🎉", message: "오늘도 잘 해냈어요! 🏆")
+    return Mascot(emoji: "🎉", message: L10n.text("Great work today! 🏆"))
 }

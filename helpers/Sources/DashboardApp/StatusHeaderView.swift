@@ -64,7 +64,7 @@ struct StatusHeaderView: View {
                 Circle()
                     .fill(vm.pauseModeAccent)
                     .frame(width: 8, height: 8)
-                Text(vm.pauseModeLabel.isEmpty ? "Paused" : "Paused · \(vm.pauseModeLabel)")
+                Text(vm.pauseModeLabel.isEmpty ? "Paused" : L10n.text("Paused · {0}", vm.pauseModeLabel))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(vm.pauseModeAccent)
                 if let remaining = vm.pauseRemainingText {
@@ -76,7 +76,7 @@ struct StatusHeaderView: View {
                 Button {
                     vm.resume()
                 } label: {
-                    Label("Resume", systemImage: "play.fill")
+                    Label(L10n.text("Resume"), systemImage: "play.fill")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .buttonStyle(.borderedProminent)
@@ -86,7 +86,7 @@ struct StatusHeaderView: View {
                     Circle()
                         .fill(theme.textSecondary)
                         .frame(width: 8, height: 8)
-                    Text("업무 세션 꺼짐")
+                    Text(L10n.text("Work session off"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(theme.textSecondary)
                 }
@@ -94,18 +94,18 @@ struct StatusHeaderView: View {
                 Button {
                     vm.toggleSession()
                 } label: {
-                    Label(vm.isSessionRunning ? "Stop" : "Start",
+                    Label(vm.isSessionRunning ? L10n.text("Stop") : "Start",
                           systemImage: vm.isSessionRunning ? "stop.fill" : "play.fill")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 Menu {
-                    pauseModeMenu(mode: "meeting", titleKR: "회의", titleEN: "Meeting", icon: "person.2.fill")
-                    pauseModeMenu(mode: "focus", titleKR: "집중", titleEN: "Focus", icon: "bolt.fill")
-                    pauseModeMenu(mode: "afk", titleKR: "외출", titleEN: "AFK", icon: "figure.walk")
+                    pauseModeMenu(mode: "meeting", title: L10n.text("Meeting"), icon: "person.2.fill")
+                    pauseModeMenu(mode: "focus", title: L10n.text("Focus"), icon: "bolt.fill")
+                    pauseModeMenu(mode: "afk", title: L10n.text("Away"), icon: "figure.walk")
                 } label: {
-                    Label("Pause", systemImage: "pause.fill")
+                    Label(L10n.text("Pause"), systemImage: "pause.fill")
                         .font(.system(size: 12, weight: .medium))
                 }
                 .menuStyle(.borderlessButton)
@@ -122,16 +122,16 @@ struct StatusHeaderView: View {
     }
 
     @ViewBuilder
-    private func pauseModeMenu(mode: String, titleKR: String, titleEN: String, icon: String) -> some View {
+    private func pauseModeMenu(mode: String, title: String, icon: String) -> some View {
         Menu {
-            Button("15분") { vm.pause(mode: mode, durationMinutes: 15) }
-            Button("30분") { vm.pause(mode: mode, durationMinutes: 30) }
-            Button("1시간") { vm.pause(mode: mode, durationMinutes: 60) }
-            Button("2시간") { vm.pause(mode: mode, durationMinutes: 120) }
+            Button(L10n.text("15 min")) { vm.pause(mode: mode, durationMinutes: 15) }
+            Button(L10n.text("30 min")) { vm.pause(mode: mode, durationMinutes: 30) }
+            Button(L10n.text("1 hour")) { vm.pause(mode: mode, durationMinutes: 60) }
+            Button(L10n.text("2 hours")) { vm.pause(mode: mode, durationMinutes: 120) }
             Divider()
-            Button("무제한") { vm.pause(mode: mode, durationMinutes: nil) }
+            Button(L10n.text("Indefinitely")) { vm.pause(mode: mode, durationMinutes: nil) }
         } label: {
-            Label("\(titleKR) (\(titleEN))", systemImage: icon)
+            Label(title, systemImage: icon)
         }
     }
 

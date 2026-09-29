@@ -56,13 +56,13 @@ public struct GuidedBreakSession {
         case .ready:
             return ""
         case let .running(remainingSeconds) where remainingSeconds >= 81:
-            return "편안히 서서 어깨의 힘을 빼세요."
+            return L10n.text("Stand comfortably and relax your shoulders.")
         case let .running(remainingSeconds) where remainingSeconds >= 41:
-            return "고개를 천천히 좌우로 기울이고, 통증이 있으면 멈추세요."
+            return L10n.text("Slowly tilt your head from side to side. Stop if it hurts.")
         case .running:
-            return "어깨를 뒤로 천천히 돌리며 호흡하세요."
+            return L10n.text("Slowly roll your shoulders back and breathe.")
         case .completed:
-            return "완료했어요 — 편안하게 남은 휴식을 이어가세요."
+            return L10n.text("All done — relax and enjoy the rest of your break.")
         }
     }
 }

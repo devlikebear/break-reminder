@@ -17,16 +17,16 @@ public func timerIsRunning(state: AppState, config: AppConfig) -> Bool {
 
 /// Short menu-bar title for a timer that is not running.
 public func sessionOffTitle(state: AppState) -> String {
-    (state.sessionState == "ended" && state.sessionManual) ? "Off" : "Idle"
+    (state.sessionState == "ended" && state.sessionManual) ? L10n.text("Off") : L10n.text("Idle")
 }
 
 /// One-line explanation of why the timer is not running.
 public func sessionOffStatusLine(state: AppState) -> String {
     if state.sessionState == "ended" && state.sessionManual {
-        return "Stopped by hand · start a session to resume"
+        return L10n.text("Stopped by hand · start a session to resume")
     }
     if state.sessionState == "ended" {
-        return "Work session ended · starts again on your next activity"
+        return L10n.text("Work session ended · starts again on your next activity")
     }
-    return "Waiting · starts on your first activity"
+    return L10n.text("Waiting · starts on your first activity")
 }

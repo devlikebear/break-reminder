@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -38,15 +40,15 @@ func newUpdateCmd() *cobra.Command {
 	var automatic bool
 	cmd := &cobra.Command{
 		Use:   "update",
-		Short: "Check for and install a Homebrew update",
+		Short: i18n.Text("Check for and install a Homebrew update"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			exe, err := updateExecutablePath()
 			if err != nil {
-				return fmt.Errorf("resolve executable path: %w", err)
+				return fmt.Errorf(i18n.Text("resolve executable path: %w"), err)
 			}
 			install, ok := updateDetectHomebrew(exe)
 			if !ok {
-				return fmt.Errorf("Homebrew update is unavailable: break-reminder was not installed by Homebrew")
+				return fmt.Errorf("%s", i18n.Text("Homebrew update is unavailable: break-reminder was not installed by Homebrew"))
 			}
 
 			ctx, cancel := updateContext(cmd.Context())
@@ -58,18 +60,18 @@ func newUpdateCmd() *cobra.Command {
 			}
 			if !result.Updated {
 				if !automatic {
-					fmt.Fprintln(cmd.OutOrStdout(), "break-reminder is already up to date.")
+					fmt.Fprintln(cmd.OutOrStdout(), i18n.Text("break-reminder is already up to date."))
 				}
 				return nil
 			}
 			if err := updateMigrateRuntime(ctx, install.BinaryPath, prior); err != nil {
-				return fmt.Errorf("restart services after update: %w; update was installed, run 'break-reminder service install' to recover", err)
+				return fmt.Errorf(i18n.Text("restart services after update: %w; update was installed, run 'break-reminder service install' to recover"), err)
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), "break-reminder updated successfully; runtime services reconciled (stopped services remain stopped).")
+			fmt.Fprintln(cmd.OutOrStdout(), i18n.Text("break-reminder updated successfully; runtime services reconciled (stopped services remain stopped)."))
 			return nil
 		},
 	}
-	cmd.Flags().BoolVar(&automatic, "automatic", false, "run from the scheduled updater")
+	cmd.Flags().BoolVar(&automatic, "automatic", false, i18n.Text("run from the scheduled updater"))
 	_ = cmd.Flags().MarkHidden("automatic")
 	allowInvalidConfig(cmd)
 	return cmd

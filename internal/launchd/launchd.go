@@ -1,6 +1,8 @@
 package launchd
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"errors"
 	"fmt"
 	"html"
@@ -44,11 +46,11 @@ func plistPath(label string) string {
 func writePlist(path, plist string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("create LaunchAgents dir: %w", err)
+		return fmt.Errorf(i18n.Text("create LaunchAgents dir: %w"), err)
 	}
 
 	if err := os.WriteFile(path, []byte(plist), 0o644); err != nil {
-		return fmt.Errorf("write plist: %w", err)
+		return fmt.Errorf(i18n.Text("write plist: %w"), err)
 	}
 
 	return nil
@@ -57,7 +59,7 @@ func writePlist(path, plist string) error {
 func loadJob(path string) error {
 	_ = exec.Command("launchctl", "unload", path).Run()
 	if err := exec.Command("launchctl", "load", path).Run(); err != nil {
-		return fmt.Errorf("launchctl load: %w", err)
+		return fmt.Errorf(i18n.Text("launchctl load: %w"), err)
 	}
 	return nil
 }
@@ -67,7 +69,7 @@ func unloadJob(path string) error {
 		return nil
 	}
 	if err := exec.Command("launchctl", "unload", path).Run(); err != nil {
-		return fmt.Errorf("launchctl unload: %w", err)
+		return fmt.Errorf(i18n.Text("launchctl unload: %w"), err)
 	}
 	return nil
 }
@@ -83,13 +85,13 @@ func removeJob(path string) error {
 // InstallUpdater creates and loads the daily Homebrew updater agent.
 func InstallUpdater(binaryPath string) error {
 	if err := os.MkdirAll(updaterLogDir(), 0o755); err != nil {
-		return fmt.Errorf("create updater log dir: %w", err)
+		return fmt.Errorf(i18n.Text("create updater log dir: %w"), err)
 	}
 	if err := writePlist(UpdaterPlistPath(), generateUpdaterPlist(binaryPath)); err != nil {
 		return err
 	}
 	if err := loadJobForInstall(UpdaterPlistPath()); err != nil {
-		return fmt.Errorf("load updater agent: %w", err)
+		return fmt.Errorf(i18n.Text("load updater agent: %w"), err)
 	}
 	return nil
 }
@@ -109,12 +111,12 @@ func Install(binaryPath, menuBarPath string) (bool, error) {
 	}
 
 	if err := installTimeTools(binaryPath, true); err != nil {
-		return false, fmt.Errorf("install time tools: %w", err)
+		return false, fmt.Errorf(i18n.Text("install time tools: %w"), err)
 	}
 
 	if menuBarPath == "" {
 		if err := removeRuntimeJob(MenuBarPlistPath()); err != nil {
-			return false, fmt.Errorf("remove stale menu bar agent: %w", err)
+			return false, fmt.Errorf(i18n.Text("remove stale menu bar agent: %w"), err)
 		}
 		return false, nil
 	}
@@ -136,7 +138,7 @@ func Uninstall() error {
 	updaterInstalled := UpdaterStatus() != "Not Installed"
 	toolsInstalled := TimeToolsStatus() != "Not Installed"
 	if !timerInstalled && !menuInstalled && !updaterInstalled && !toolsInstalled {
-		return fmt.Errorf("agent not installed (plist not found)")
+		return fmt.Errorf("%s", i18n.Text("agent not installed (plist not found)"))
 	}
 
 	var errs []error
@@ -147,17 +149,17 @@ func Uninstall() error {
 	}
 	if timerInstalled {
 		if err := removeRuntimeJob(PlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("remove timer agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("remove timer agent: %w"), err))
 		}
 	}
 	if menuInstalled {
 		if err := removeRuntimeJob(MenuBarPlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("remove menu bar agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("remove menu bar agent: %w"), err))
 		}
 	}
 	if updaterInstalled {
 		if err := removeRuntimeJob(UpdaterPlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("remove updater agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("remove updater agent: %w"), err))
 		}
 	}
 	return errors.Join(errs...)
@@ -172,11 +174,11 @@ func RestartRuntime() error {
 		}
 	}
 	if err := loadJobForInstall(PlistPath()); err != nil {
-		errs = append(errs, fmt.Errorf("start timer agent: %w", err))
+		errs = append(errs, fmt.Errorf(i18n.Text("start timer agent: %w"), err))
 	}
 	if MenuBarStatus() != "Not Installed" {
 		if err := loadJobForInstall(MenuBarPlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("start menu bar agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("start menu bar agent: %w"), err))
 		}
 	}
 	return errors.Join(errs...)
@@ -190,7 +192,7 @@ func Start() error {
 	}
 	if UpdaterStatus() != "Not Installed" {
 		if err := loadJobForInstall(UpdaterPlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("start updater agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("start updater agent: %w"), err))
 		}
 	}
 	return errors.Join(errs...)
@@ -205,16 +207,16 @@ func Stop() error {
 		}
 	}
 	if err := unloadJob(PlistPath()); err != nil {
-		errs = append(errs, fmt.Errorf("stop timer agent: %w", err))
+		errs = append(errs, fmt.Errorf(i18n.Text("stop timer agent: %w"), err))
 	}
 	if MenuBarStatus() != "Not Installed" {
 		if err := unloadJob(MenuBarPlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("stop menu bar agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("stop menu bar agent: %w"), err))
 		}
 	}
 	if UpdaterStatus() != "Not Installed" {
 		if err := unloadJob(UpdaterPlistPath()); err != nil {
-			errs = append(errs, fmt.Errorf("stop updater agent: %w", err))
+			errs = append(errs, fmt.Errorf(i18n.Text("stop updater agent: %w"), err))
 		}
 	}
 	return errors.Join(errs...)

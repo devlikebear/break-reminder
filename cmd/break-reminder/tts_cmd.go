@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"bufio"
 	"fmt"
 	"io"
@@ -32,7 +34,7 @@ var ttsSpeakAndWait = tts.SpeakAndWait
 func runTTSTest(message string) error {
 	apiKey := tts.ResolveAPIKey(cfg)
 	if !ttsVoiceAvailable(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice) {
-		return fmt.Errorf("voice %q is not available for engine %q", cfg.Voice, cfg.TTSEngine)
+		return fmt.Errorf(i18n.Text("voice %q is not available for engine %q"), cfg.Voice, cfg.TTSEngine)
 	}
 	return ttsSpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice, message)
 }
@@ -40,7 +42,7 @@ func runTTSTest(message string) error {
 func newTTSCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tts",
-		Short: "Manage optional text-to-speech backends",
+		Short: i18n.Text("Manage optional text-to-speech backends"),
 	}
 
 	var bootstrapPython string
@@ -50,12 +52,12 @@ func newTTSCmd() *cobra.Command {
 
 	installCmd := &cobra.Command{
 		Use:       "install [engine]",
-		Short:     "Install an optional TTS backend into a managed environment (gemini is config-only, no install needed)",
+		Short:     i18n.Text("Install an optional TTS backend into a managed environment (gemini is config-only, no install needed)"),
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: []string{"kittentts", "supertonic"},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.EnsureConfigFile(); err != nil {
-				return fmt.Errorf("ensure config file: %w", err)
+				return fmt.Errorf(i18n.Text("ensure config file: %w"), err)
 			}
 
 			opts := tts.InstallOptions{
@@ -81,55 +83,55 @@ func newTTSCmd() *cobra.Command {
 				label = "Supertonic"
 				updatedCfg, result, err = tts.InstallSupertonic(cfg, opts)
 			case "gemini":
-				return fmt.Errorf("gemini engine requires no install; set tts_engine: gemini and GEMINI_API_KEY (or tts_api_key in config)")
+				return fmt.Errorf("%s", i18n.Text("gemini engine requires no install; set tts_engine: gemini and GEMINI_API_KEY (or tts_api_key in config)"))
 			default:
-				return fmt.Errorf("unsupported TTS engine %q", args[0])
+				return fmt.Errorf(i18n.Text("unsupported TTS engine %q"), args[0])
 			}
 			if err != nil {
 				return err
 			}
 
 			if err := config.Save(updatedCfg); err != nil {
-				return fmt.Errorf("save config: %w", err)
+				return fmt.Errorf(i18n.Text("save config: %w"), err)
 			}
 			cfg = updatedCfg
 
-			status := label + " already present; configuration updated"
+			status := label + i18n.Text(" already present; configuration updated")
 			if result.Installed {
-				status = label + " installed and configuration updated"
+				status = label + i18n.Text(" installed and configuration updated")
 			}
 
 			fmt.Println(status)
-			fmt.Printf("Bootstrap Python: %s\n", result.BootstrapPython)
-			fmt.Printf("Python: %s\n", result.PythonCmd)
-			fmt.Printf("Model: %s\n", result.Model)
-			fmt.Printf("Voice: %s\n", result.Voice)
-			fmt.Printf("Config: %s\n", config.ConfigPath())
+			fmt.Printf(i18n.Text("Bootstrap Python: %s\n"), result.BootstrapPython)
+			fmt.Printf(i18n.Text("Python: %s\n"), result.PythonCmd)
+			fmt.Printf(i18n.Text("Model: %s\n"), result.Model)
+			fmt.Printf(i18n.Text("Voice: %s\n"), result.Voice)
+			fmt.Printf(i18n.Text("Config: %s\n"), config.ConfigPath())
 			return nil
 		},
 	}
 
-	installCmd.Flags().StringVar(&bootstrapPython, "bootstrap-python", "", "Python used to create the managed virtual environment (default: auto-select a compatible interpreter)")
-	installCmd.Flags().StringVar(&voice, "voice", "", "Voice to activate after install")
-	installCmd.Flags().StringVar(&model, "model", "", "Model identifier to activate after install")
-	installCmd.Flags().BoolVar(&force, "force", false, "Re-run pip installation even if the package is already installed")
+	installCmd.Flags().StringVar(&bootstrapPython, "bootstrap-python", "", i18n.Text("Python used to create the managed virtual environment (default: auto-select a compatible interpreter)"))
+	installCmd.Flags().StringVar(&voice, "voice", "", i18n.Text("Voice to activate after install"))
+	installCmd.Flags().StringVar(&model, "model", "", i18n.Text("Model identifier to activate after install"))
+	installCmd.Flags().BoolVar(&force, "force", false, i18n.Text("Re-run pip installation even if the package is already installed"))
 
 	testCmd := &cobra.Command{
 		Use:   "test [message]",
-		Short: "Speak a test phrase with the current TTS configuration (say, kittentts, supertonic, gemini)",
+		Short: i18n.Text("Speak a test phrase with the current TTS configuration (say, kittentts, supertonic, gemini)"),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := runTTSTest(args[0]); err != nil {
 				return err
 			}
-			fmt.Printf("TTS playback completed via %s voice %s\n", cfg.TTSEngine, cfg.Voice)
+			fmt.Printf(i18n.Text("TTS playback completed via %s voice %s\n"), cfg.TTSEngine, cfg.Voice)
 			return nil
 		},
 	}
 
 	uninstallCmd := &cobra.Command{
 		Use:       "uninstall [engine]",
-		Short:     "Remove a managed TTS backend installation",
+		Short:     i18n.Text("Remove a managed TTS backend installation"),
 		Args:      cobra.ExactArgs(1),
 		ValidArgs: []string{"kittentts", "supertonic"},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -148,7 +150,7 @@ func newTTSCmd() *cobra.Command {
 				label = "Supertonic"
 				updatedCfg, result, err = tts.UninstallSupertonic(cfg)
 			default:
-				return fmt.Errorf("unsupported TTS engine %q", args[0])
+				return fmt.Errorf(i18n.Text("unsupported TTS engine %q"), args[0])
 			}
 			if err != nil {
 				return err
@@ -156,25 +158,25 @@ func newTTSCmd() *cobra.Command {
 
 			if result.ConfigUpdated {
 				if err := config.Save(updatedCfg); err != nil {
-					return fmt.Errorf("save config: %w", err)
+					return fmt.Errorf(i18n.Text("save config: %w"), err)
 				}
 				cfg = updatedCfg
 			}
 
 			switch {
 			case result.Removed && result.ConfigUpdated:
-				fmt.Printf("%s removed and configuration restored to say defaults\n", label)
+				fmt.Printf(i18n.Text("%s removed and configuration restored to say defaults\n"), label)
 			case result.Removed:
-				fmt.Printf("%s managed environment removed\n", label)
+				fmt.Printf(i18n.Text("%s managed environment removed\n"), label)
 			case result.ConfigUpdated:
-				fmt.Printf("%s configuration restored to say defaults\n", label)
+				fmt.Printf(i18n.Text("%s configuration restored to say defaults\n"), label)
 			default:
-				fmt.Printf("%s was not installed; no changes made\n", label)
+				fmt.Printf(i18n.Text("%s was not installed; no changes made\n"), label)
 			}
 
-			fmt.Printf("Managed path: %s\n", result.VenvDir)
+			fmt.Printf(i18n.Text("Managed path: %s\n"), result.VenvDir)
 			if result.ConfigUpdated {
-				fmt.Printf("Config: %s\n", config.ConfigPath())
+				fmt.Printf(i18n.Text("Config: %s\n"), config.ConfigPath())
 			}
 			return nil
 		},
@@ -182,12 +184,12 @@ func newTTSCmd() *cobra.Command {
 
 	setAPIKeyCmd := &cobra.Command{
 		Use:   "set-api-key [key]",
-		Short: "Save the Gemini API key to config (permissions 0600)",
-		Long: "Save the Gemini API key to the config file with restricted permissions.\n" +
-			"If no key is provided as an argument, the command reads one line from stdin\n" +
-			"(piped input). When stdin is a terminal, the command refuses and asks you\n" +
-			"to pass the key as an argument instead. The stored key never appears in\n" +
-			"command output.",
+		Short: i18n.Text("Save the Gemini API key to config (permissions 0600)"),
+		Long: i18n.Text("Save the Gemini API key to the config file with restricted permissions.\n") +
+			i18n.Text("If no key is provided as an argument, the command reads one line from stdin\n") +
+			i18n.Text("(piped input). When stdin is a terminal, the command refuses and asks you\n") +
+			i18n.Text("to pass the key as an argument instead. The stored key never appears in\n") +
+			i18n.Text("command output."),
 		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSetAPIKey(args)
@@ -205,29 +207,29 @@ func runSetAPIKey(args []string) error {
 	}
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return fmt.Errorf("api key must not be empty")
+		return fmt.Errorf("%s", i18n.Text("api key must not be empty"))
 	}
 	if strings.ContainsAny(key, "\n\r") {
-		return fmt.Errorf("api key must not contain newline characters")
+		return fmt.Errorf("%s", i18n.Text("api key must not contain newline characters"))
 	}
 
 	if err := config.EnsureConfigFile(); err != nil {
-		return fmt.Errorf("ensure config file: %w", err)
+		return fmt.Errorf(i18n.Text("ensure config file: %w"), err)
 	}
 
 	updated := cfg
 	updated.TTSAPIKey = key
 	if err := config.Save(updated); err != nil {
-		return fmt.Errorf("save config: %w", err)
+		return fmt.Errorf(i18n.Text("save config: %w"), err)
 	}
 	cfg = updated
 
 	path := config.ConfigPath()
 	if err := os.Chmod(path, 0o600); err != nil {
-		return fmt.Errorf("restrict permissions on %s: %w", path, err)
+		return fmt.Errorf(i18n.Text("restrict permissions on %s: %w"), path, err)
 	}
 
-	fmt.Printf("Gemini API key saved (%d chars) to %s with permissions 0600\n", len(key), path)
+	fmt.Printf(i18n.Text("Gemini API key saved (%d chars) to %s with permissions 0600\n"), len(key), path)
 	return nil
 }
 
@@ -236,7 +238,7 @@ func readAPIKey(args []string) (string, error) {
 		return args[0], nil
 	}
 	if stdinIsTerminal() {
-		return "", fmt.Errorf("pass key as argument: break-reminder tts set-api-key $GEMINI_API_KEY (or pipe it via stdin)")
+		return "", fmt.Errorf("%s", i18n.Text("pass key as argument: break-reminder tts set-api-key $GEMINI_API_KEY (or pipe it via stdin)"))
 	}
 	scanner := bufio.NewScanner(stdinForSetAPIKey)
 	scanner.Buffer(make([]byte, 0, 4096), 1<<20)
@@ -244,7 +246,7 @@ func readAPIKey(args []string) (string, error) {
 		return scanner.Text(), nil
 	}
 	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("read stdin: %w", err)
+		return "", fmt.Errorf(i18n.Text("read stdin: %w"), err)
 	}
-	return "", fmt.Errorf("no api key provided on stdin")
+	return "", fmt.Errorf("%s", i18n.Text("no api key provided on stdin"))
 }

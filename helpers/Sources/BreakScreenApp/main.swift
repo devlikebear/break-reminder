@@ -144,7 +144,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             view.addSubview(imageView)
         }
 
-        let title = NSTextField(labelWithString: "잠깐 쉬어가요")
+        let title = NSTextField(labelWithString: L10n.text("Take a short break"))
         title.font = NSFont.systemFont(ofSize: compactHeight ? 28 : 36, weight: .semibold)
         title.textColor = NSColor(white: 0.94, alpha: 1.0)
         title.alignment = .center
@@ -156,7 +156,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         )
         view.addSubview(title)
 
-        let subtitle = NSTextField(labelWithString: "☕ Break Time")
+        let subtitle = NSTextField(labelWithString: L10n.text("☕ Break Time"))
         subtitle.font = NSFont.systemFont(ofSize: compactHeight ? 16 : 18, weight: .regular)
         subtitle.textColor = NSColor(white: 0.62, alpha: 1.0)
         subtitle.alignment = .center
@@ -203,12 +203,12 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             top -= mascotSide + mascotGap
         }
 
-        let title = NSTextField(labelWithString: "휴식 시간이에요")
+        let title = NSTextField(labelWithString: L10n.text("Time for a break"))
         title.font = NSFont.systemFont(ofSize: compactHeight ? 40 : 48, weight: .bold)
         title.textColor = .white
         title.alignment = .center
         title.frame = NSRect(x: centerX - contentWidth / 2, y: top - titleHeight, width: contentWidth, height: titleHeight)
-        title.setAccessibilityLabel("휴식 시간이에요")
+        title.setAccessibilityLabel(L10n.text("Time for a break"))
         view.addSubview(title)
         top -= titleHeight + titleGap
 
@@ -225,7 +225,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             width: contentWidth,
             height: countdownHeight
         )
-        countdownLabel.setAccessibilityLabel("전체 휴식 남은 시간")
+        countdownLabel.setAccessibilityLabel(L10n.text("Total break time remaining"))
         countdownLabel.setAccessibilityValue(accessibilityDuration(remaining))
         view.addSubview(countdownLabel)
         top -= countdownHeight + 8
@@ -242,8 +242,8 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         progressView.layer?.cornerRadius = barHeight / 2
         progressView.setAccessibilityElement(true)
         progressView.setAccessibilityRole(.progressIndicator)
-        progressView.setAccessibilityLabel("전체 휴식 진행률")
-        progressView.setAccessibilityValue("0퍼센트")
+        progressView.setAccessibilityLabel(L10n.text("Overall break progress"))
+        progressView.setAccessibilityValue(L10n.text("0 percent"))
         view.addSubview(progressView)
 
         progressFill = NSView(frame: NSRect(x: 0, y: 0, width: 0, height: barHeight))
@@ -291,7 +291,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         guideStatusLabel.textColor = NSColor(white: 0.5, alpha: 1.0)
         guideCardView.addSubview(guideStatusLabel)
 
-        guideActionButton = NSButton(title: "시작", target: self, action: #selector(startGuidedBreak))
+        guideActionButton = NSButton(title: L10n.text("Start"), target: self, action: #selector(startGuidedBreak))
         guideActionButton.bezelStyle = .rounded
         guideActionButton.font = NSFont.systemFont(ofSize: 16, weight: .medium)
         guideActionButton.frame = NSRect(x: (contentWidth - 120) / 2, y: 14, width: 120, height: 44)
@@ -300,7 +300,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
         if statsVisible {
             top -= compactHeight ? 8 : 16
-            let statsText = "오늘: 작업 \(formatMinutes(args.todayWorkMin)) · 휴식 \(formatMinutes(args.todayBreakMin))"
+            let statsText = L10n.text("Today · Work {0} · Break {1}", formatMinutes(args.todayWorkMin), formatMinutes(args.todayBreakMin))
             let statsLabel = NSTextField(labelWithString: statsText)
             statsLabel.font = NSFont.systemFont(ofSize: 16, weight: .medium)
             statsLabel.textColor = NSColor(white: 0.5, alpha: 1.0)
@@ -312,7 +312,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
         top -= lowerGap
         skipButton = NSButton(
-            title: "Skip (available in \(args.skipAfter / 60)min)",
+            title: L10n.text("Skip (available in {0}min)", args.skipAfter / 60),
             target: self,
             action: #selector(skipBreak)
         )
@@ -320,14 +320,14 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         skipButton.font = NSFont.systemFont(ofSize: 16, weight: .medium)
         skipButton.isEnabled = false
         skipButton.contentTintColor = NSColor(white: 0.5, alpha: 1.0)
-        skipButton.setAccessibilityLabel("휴식 건너뛰기")
-        skipButton.setAccessibilityHelp("현재 휴식 화면을 닫습니다.")
+        skipButton.setAccessibilityLabel(L10n.text("Skip Break"))
+        skipButton.setAccessibilityHelp(L10n.text("Closes the current break screen."))
         let skipWidth = max(120, skipButton.fittingSize.width + 24)
         skipButton.frame = NSRect(x: centerX - skipWidth / 2, y: top - 44, width: skipWidth, height: 44)
         view.addSubview(skipButton)
         top -= 52
 
-        let escHint = NSTextField(labelWithString: "Esc를 누르면 언제든 닫혀요")
+        let escHint = NSTextField(labelWithString: L10n.text("Press Esc to close at any time"))
         escHint.font = NSFont.systemFont(ofSize: 14, weight: .light)
         escHint.textColor = NSColor(white: 0.35, alpha: 1.0)
         escHint.alignment = .center
@@ -430,7 +430,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
         imageView.layer?.shadowOffset = CGSize(width: 0, height: -5)
         imageView.setAccessibilityElement(true)
         imageView.setAccessibilityRole(.image)
-        imageView.setAccessibilityLabel("편안하게 쉬고 있는 햄스터")
+        imageView.setAccessibilityLabel(L10n.text("A hamster resting comfortably"))
         return imageView
     }
 
@@ -503,11 +503,11 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             width: barWidth * progress,
             height: progressView.frame.height
         )
-        progressView.setAccessibilityValue("\(Int((progress * 100).rounded()))퍼센트")
+        progressView.setAccessibilityValue(L10n.text("{0} percent", Int((progress * 100).rounded())))
 
         if elapsed >= args.skipAfter && !skipButton.isEnabled {
             skipButton.isEnabled = true
-            skipButton.title = "Skip Break"
+            skipButton.title = L10n.text("Skip Break")
             skipButton.contentTintColor = .white
             return true
         }
@@ -526,17 +526,17 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
                 + GuidedBreakSession.completionDisplaySeconds
 
             guideEyebrowLabel.isHidden = false
-            guideEyebrowLabel.stringValue = "2분 가이드"
+            guideEyebrowLabel.stringValue = L10n.text("2-minute guide")
             guideEyebrowLabel.frame = NSRect(x: 24, y: 164, width: cardWidth - 48, height: 18)
 
-            guideTitleLabel.stringValue = "2분 동안 서서 목과 어깨를 풀어보세요"
+            guideTitleLabel.stringValue = L10n.text("Stand and loosen your neck and shoulders for 2 minutes")
             guideTitleLabel.frame = NSRect(x: 24, y: 110, width: cardWidth - 48, height: 48)
 
             guideCountdownLabel.isHidden = true
 
             let instruction = canStart
-                ? "같은 화면에서 천천히 따라 해요."
-                : "이번 휴식에는 2분이 남지 않았어요."
+                ? L10n.text("Follow along slowly on this screen.")
+                : L10n.text("Less than 2 minutes remain in this break.")
             guideInstructionLabel.stringValue = instruction
             guideInstructionLabel.frame = NSRect(x: 24, y: 66, width: cardWidth - 48, height: 36)
 
@@ -544,14 +544,14 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
             guideActionButton.isHidden = false
             guideActionButton.isEnabled = canStart
-            guideActionButton.title = "시작"
+            guideActionButton.title = L10n.text("Start")
             guideActionButton.action = #selector(startGuidedBreak)
             guideActionButton.contentTintColor = canStart ? .white : NSColor(white: 0.5, alpha: 1.0)
             guideActionButton.frame = NSRect(x: (cardWidth - 120) / 2, y: 14, width: 120, height: 44)
-            guideActionButton.setAccessibilityLabel("2분 목과 어깨 스트레칭 시작")
-            guideActionButton.setAccessibilityHelp("같은 화면에서 2분 가이드를 시작합니다.")
+            guideActionButton.setAccessibilityLabel(L10n.text("Start a 2-minute neck and shoulder stretch"))
+            guideActionButton.setAccessibilityHelp(L10n.text("Starts the 2-minute guide on this screen."))
 
-            guideCardView.setAccessibilityLabel("2분 가이드")
+            guideCardView.setAccessibilityLabel(L10n.text("2-minute guide"))
             guideCardView.setAccessibilityValue("\(guideTitleLabel.stringValue). \(instruction)")
 
         case let .running(remainingSeconds):
@@ -559,13 +559,13 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
             guideEyebrowLabel.isHidden = true
 
-            guideTitleLabel.stringValue = "목과 어깨 스트레칭"
+            guideTitleLabel.stringValue = L10n.text("Neck and shoulder stretch")
             guideTitleLabel.frame = NSRect(x: 24, y: 158, width: cardWidth - 48, height: 28)
 
             guideCountdownLabel.isHidden = false
             guideCountdownLabel.stringValue = formatTime(remainingSeconds)
             guideCountdownLabel.frame = NSRect(x: 24, y: 100, width: cardWidth - 48, height: 56)
-            guideCountdownLabel.setAccessibilityLabel("가이드 남은 시간")
+            guideCountdownLabel.setAccessibilityLabel(L10n.text("Guide time remaining"))
             guideCountdownLabel.setAccessibilityValue(accessibilityDuration(remainingSeconds))
 
             guideInstructionLabel.stringValue = instruction
@@ -575,39 +575,39 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
             guideActionButton.isHidden = false
             guideActionButton.isEnabled = true
-            guideActionButton.title = "가이드 취소"
+            guideActionButton.title = L10n.text("Cancel guide")
             guideActionButton.action = #selector(cancelGuidedBreak)
             guideActionButton.contentTintColor = .white
             guideActionButton.frame = NSRect(x: (cardWidth - 140) / 2, y: 8, width: 140, height: 44)
-            guideActionButton.setAccessibilityLabel("가이드 취소")
-            guideActionButton.setAccessibilityHelp("가이드를 멈추고 휴식 화면으로 돌아갑니다.")
+            guideActionButton.setAccessibilityLabel(L10n.text("Cancel guide"))
+            guideActionButton.setAccessibilityHelp(L10n.text("Stops the guide and returns to the break screen."))
 
-            guideCardView.setAccessibilityLabel("목과 어깨 스트레칭")
+            guideCardView.setAccessibilityLabel(L10n.text("Neck and shoulder stretch"))
             guideCardView.setAccessibilityValue(
-                "남은 시간 \(accessibilityDuration(remainingSeconds)), \(instruction)"
+                L10n.text("Remaining: {0}, {1}", accessibilityDuration(remainingSeconds), instruction)
             )
 
         case .completed:
             guideEyebrowLabel.isHidden = true
 
-            guideTitleLabel.stringValue = "완료했어요"
+            guideTitleLabel.stringValue = L10n.text("All done")
             guideTitleLabel.frame = NSRect(x: 24, y: 142, width: cardWidth - 48, height: 32)
 
             guideCountdownLabel.isHidden = true
 
-            guideInstructionLabel.stringValue = "편안하게 남은 휴식을 이어가세요."
+            guideInstructionLabel.stringValue = L10n.text("Relax and enjoy the rest of your break.")
             guideInstructionLabel.frame = NSRect(x: 24, y: 86, width: cardWidth - 48, height: 48)
 
             guideStatusLabel.isHidden = false
-            guideStatusLabel.stringValue = "3초 후 이 화면을 닫아요."
+            guideStatusLabel.stringValue = L10n.text("This screen closes in 3 seconds.")
             guideStatusLabel.frame = NSRect(x: 24, y: 54, width: cardWidth - 48, height: 22)
 
             guideActionButton.isHidden = true
             guideActionButton.isEnabled = false
 
-            guideCardView.setAccessibilityLabel("완료했어요")
+            guideCardView.setAccessibilityLabel(L10n.text("All done"))
             guideCardView.setAccessibilityValue(guidedSession.instructionText())
-            guideCardView.setAccessibilityHelp("3초 후 이 화면을 닫아요.")
+            guideCardView.setAccessibilityHelp(L10n.text("This screen closes in 3 seconds."))
         }
 
         updateKeyViewLoop(focusAction: focusAction)
@@ -659,7 +659,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
             element: element,
             notification: .announcementRequested,
             userInfo: [
-                .announcement: "2분 스트레칭을 완료했습니다.",
+                .announcement: L10n.text("You completed the 2-minute stretch."),
                 .priority: NSAccessibilityPriorityLevel.high.rawValue,
             ]
         )
@@ -667,7 +667,7 @@ class BreakScreenApp: NSObject, NSApplicationDelegate {
 
     private func accessibilityDuration(_ seconds: Int) -> String {
         let clampedSeconds = max(0, seconds)
-        return "\(clampedSeconds / 60)분 \(clampedSeconds % 60)초"
+        return L10n.text("{0} min {1} sec", clampedSeconds / 60, clampedSeconds % 60)
     }
 
     private var shouldPreferSkipFocus: Bool {

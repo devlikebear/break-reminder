@@ -34,3 +34,12 @@ final class LocalizationTests: XCTestCase {
         }
     }
 }
+
+extension LocalizationTests {
+    func testEntireMenuUsesKoreanIncludingLegacyItems() {
+        XCTAssertEqual(L10n.text("Open Dashboard", language: .korean), "대시보드 열기")
+        XCTAssertEqual(L10n.text("Reset Timer", language: .korean), "타이머 초기화")
+        XCTAssertEqual(L10n.text("Stop Work Session", language: .korean), "업무 세션 종료")
+        XCTAssertEqual(L10n.text("Force Break", language: .korean), "지금 휴식")
+    }
+}

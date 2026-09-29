@@ -57,7 +57,7 @@ final class MascotEngineTests: XCTestCase {
         let mascot = mascotFor(state: state, config: config, now: Int64(Date().timeIntervalSince1970))
 
         XCTAssertEqual(mascot.emoji, "🐹")
-        XCTAssertTrue(mascot.message.contains("휴식"), "message should hint at break: \(mascot.message)")
+        XCTAssertTrue(mascot.message == L10n.text("Almost break time~ ☕"), "message should hint at break: \(mascot.message)")
     }
 
     func testStoppedSessionReturnsMoon() {

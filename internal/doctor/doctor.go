@@ -1,6 +1,8 @@
 package doctor
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"strings"
@@ -54,17 +56,17 @@ func Run(cfg config.Config) Report {
 	speaker := tts.NewSpeaker(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey)
 	voiceLabel := cfg.TTSEngine + ":" + cfg.Voice
 	if speaker.Available(cfg.Voice) {
-		r.add("ok", "Voice ("+voiceLabel+")", "available")
+		r.add("ok", i18n.Text("Voice (")+voiceLabel+")", "available")
 	} else {
-		detail := "not found"
+		detail := i18n.Text("not found")
 		if installHint != "" {
-			detail = "not found (" + installHint + ")"
+			detail = i18n.Text("not found (") + installHint + ")"
 		}
-		r.add("fail", "Voice ("+voiceLabel+")", detail)
+		r.add("fail", i18n.Text("Voice (")+voiceLabel+")", detail)
 	}
 
 	// TTS
-	if err := tts.SpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice, "테스트"); err != nil {
+	if err := tts.SpeakAndWait(cfg.TTSEngine, cfg.TTSModel, cfg.TTSPythonCmd, apiKey, cfg.Voice, i18n.Text("Test")); err != nil {
 		detail := err.Error()
 		if installHint != "" && !strings.Contains(detail, installHint) {
 			detail += " (" + installHint + ")"
@@ -76,38 +78,38 @@ func Run(cfg config.Config) Report {
 
 	// Notification
 	notifier := notify.NewNotifier()
-	if err := notifier.Send("Break Reminder", "Doctor test", "Glass"); err != nil {
-		r.add("fail", "Notification", err.Error()+"; timer completions remain in menu/dashboard; sound is not guaranteed")
+	if err := notifier.Send("Break Reminder", i18n.Text("Doctor test"), "Glass"); err != nil {
+		r.add("fail", "Notification", err.Error()+i18n.Text("; timer completions remain in menu/dashboard; sound is not guaranteed"))
 	} else {
-		r.add("ok", "Notification", "request sent (banner visibility depends on macOS settings)")
+		r.add("ok", "Notification", i18n.Text("request sent (banner visibility depends on macOS settings)"))
 	}
 
 	// Idle detection
 	detector := idle.NewDetector()
 	idleSec := detector.IdleSeconds()
-	r.add("ok", "Idle detection", fmt.Sprintf("current: %ds", idleSec))
+	r.add("ok", i18n.Text("Idle detection"), fmt.Sprintf(i18n.Text("current: %ds"), idleSec))
 
 	// State file
 	statePath := state.DefaultStatePath()
 	if _, err := os.Stat(statePath); err == nil {
-		r.add("ok", "State file", statePath)
+		r.add("ok", i18n.Text("State file"), statePath)
 	} else {
-		r.add("warn", "State file", "not found (will be created on first run)")
+		r.add("warn", i18n.Text("State file"), i18n.Text("not found (will be created on first run)"))
 	}
 
 	// Log file
 	logPath := logging.DefaultLogPath()
 	if info, err := os.Stat(logPath); err == nil {
-		r.add("ok", "Log file", fmt.Sprintf("%s (%d bytes)", logPath, info.Size()))
+		r.add("ok", i18n.Text("Log file"), fmt.Sprintf(i18n.Text("%s (%d bytes)"), logPath, info.Size()))
 	} else {
-		r.add("warn", "Log file", "not found (will be created on first run)")
+		r.add("warn", i18n.Text("Log file"), i18n.Text("not found (will be created on first run)"))
 	}
 
 	// LaunchAgent
 	status := launchd.Status()
 	switch {
 	case status == "Not Installed":
-		r.add("warn", "LaunchAgent", "not installed (run 'service install')")
+		r.add("warn", "LaunchAgent", i18n.Text("not installed (run 'service install')"))
 	default:
 		r.add("ok", "LaunchAgent", status)
 	}
@@ -115,9 +117,9 @@ func Run(cfg config.Config) Report {
 	menuBarStatus := launchd.MenuBarStatus()
 	switch {
 	case menuBarStatus == "Not Installed":
-		r.add("info", "Menu bar auto-start", "not installed")
+		r.add("info", i18n.Text("Menu bar auto-start"), i18n.Text("not installed"))
 	default:
-		r.add("ok", "Menu bar auto-start", menuBarStatus)
+		r.add("ok", i18n.Text("Menu bar auto-start"), menuBarStatus)
 	}
 
 	r.Checks = append(r.Checks, timeToolsDiagnostic(launchd.TimeToolsStatus(), timetools.ReadRuntime(timetools.NewStore(timetools.DefaultDirectory())), time.Now().UnixMilli()))
@@ -127,31 +129,31 @@ func Run(cfg config.Config) Report {
 	current, _ := state.Load(statePath)
 	switch {
 	case schedule.IsActive(cfg, current, now):
-		r.add("ok", "Work session", "running - timer active")
+		r.add("ok", i18n.Text("Work session"), i18n.Text("running - timer active"))
 	case current.SessionState == state.SessionStateEnded && current.SessionManual:
-		r.add("info", "Work session", "stopped by hand - run `break-reminder start` to resume")
+		r.add("info", i18n.Text("Work session"), i18n.Text("stopped by hand - run `break-reminder start` to resume"))
 	case cfg.AutoSessionDetect && schedule.InDetectWindow(cfg, now):
-		r.add("info", "Work session", "not started - begins on your next activity")
+		r.add("info", i18n.Text("Work session"), i18n.Text("not started - begins on your next activity"))
 	case cfg.AutoSessionDetect:
-		r.add("info", "Work session", fmt.Sprintf("outside the detection window (%02d:00-%02d:00 on working days)",
+		r.add("info", i18n.Text("Work session"), fmt.Sprintf(i18n.Text("outside the detection window (%02d:00-%02d:00 on working days)"),
 			cfg.SessionDetectStartHour, cfg.SessionDetectEndHour))
 	default:
-		r.add("info", "Working hours", "outside working hours - inactive")
+		r.add("info", "Working hours", i18n.Text("outside working hours - inactive"))
 	}
 
 	// Timer mode
 	if cfg.PomodoroEnabled() {
-		r.add("ok", "Timer mode", fmt.Sprintf("pomodoro (%d/%d min, %d min long break every %d)",
+		r.add("ok", i18n.Text("Timer mode"), fmt.Sprintf(i18n.Text("pomodoro (%d/%d min, %d min long break every %d)"),
 			cfg.PomodoroWorkMin, cfg.PomodoroBreakMin, cfg.PomodoroLongBreakMin, cfg.PomodoroLongBreakEvery))
 	} else {
-		r.add("ok", "Timer mode", fmt.Sprintf("classic (%d/%d min)", cfg.WorkDurationMin, cfg.BreakDurationMin))
+		r.add("ok", i18n.Text("Timer mode"), fmt.Sprintf(i18n.Text("classic (%d/%d min)"), cfg.WorkDurationMin, cfg.BreakDurationMin))
 	}
 
 	// Config file
 	if _, err := os.Stat(config.ConfigPath()); err == nil {
-		r.add("ok", "Config file", config.ConfigPath())
+		r.add("ok", i18n.Text("Config file"), config.ConfigPath())
 	} else {
-		r.add("warn", "Config file", "not found (using defaults)")
+		r.add("warn", i18n.Text("Config file"), i18n.Text("not found (using defaults)"))
 	}
 
 	return r
@@ -160,11 +162,11 @@ func Run(cfg config.Config) Report {
 func ttsInstallHint(engine string) string {
 	switch strings.ToLower(strings.TrimSpace(engine)) {
 	case "kitten", "kittentts":
-		return "run 'break-reminder tts install kittentts'"
+		return i18n.Text("run 'break-reminder tts install kittentts'")
 	case "supertonic":
-		return "run 'break-reminder tts install supertonic'"
+		return i18n.Text("run 'break-reminder tts install supertonic'")
 	case "gemini":
-		return "set GEMINI_API_KEY env or tts_api_key in config"
+		return i18n.Text("set GEMINI_API_KEY env or tts_api_key in config")
 	default:
 		return ""
 	}

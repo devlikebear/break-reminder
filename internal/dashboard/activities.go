@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"strings"
 	"time"
@@ -49,12 +51,12 @@ func (m *EyeActivity) View() string {
 	style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("6"))
 	var b strings.Builder
 
-	b.WriteString(style.Render("👁  눈 운동 - 20-20-20 규칙") + "\n\n")
+	b.WriteString(style.Render(i18n.Text("👁  Eye exercise - 20-20-20 rule")) + "\n\n")
 
 	phases := []string{
-		"20피트(6m) 먼 곳을 20초간 바라보세요 [1/3]",
-		"20피트(6m) 먼 곳을 20초간 바라보세요 [2/3]",
-		"20피트(6m) 먼 곳을 20초간 바라보세요 [3/3]",
+		i18n.Text("Look at something 20 feet (6m) away for 20 seconds [1/3]"),
+		i18n.Text("Look at something 20 feet (6m) away for 20 seconds [2/3]"),
+		i18n.Text("Look at something 20 feet (6m) away for 20 seconds [3/3]"),
 	}
 
 	if m.phase < 3 {
@@ -65,14 +67,14 @@ func (m *EyeActivity) View() string {
 	remaining := 20 - phaseElapsed
 	pct := (phaseElapsed * 100) / 20
 	bar := renderBar(pct, 30, lipgloss.NewStyle().Foreground(lipgloss.Color("6")))
-	b.WriteString(fmt.Sprintf("  %s  %ds remaining\n\n", bar, remaining))
+	b.WriteString(fmt.Sprintf(i18n.Text("  %s  %ds remaining\n\n"), bar, remaining))
 
 	totalRemaining := int(m.totalDur.Seconds() - m.elapsed.Seconds())
 	if totalRemaining < 0 {
 		totalRemaining = 0
 	}
-	b.WriteString(fmt.Sprintf("  Total: %ds remaining\n", totalRemaining))
-	b.WriteString("\n  Press Esc to exit")
+	b.WriteString(fmt.Sprintf(i18n.Text("  Total: %ds remaining\n"), totalRemaining))
+	b.WriteString(i18n.Text("\n  Press Esc to exit"))
 
 	return b.String()
 }
@@ -112,17 +114,17 @@ func (m *StretchActivity) View() string {
 	style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5"))
 	var b strings.Builder
 
-	b.WriteString(style.Render("🤸 스트레칭 가이드") + "\n\n")
+	b.WriteString(style.Render(i18n.Text("🤸 Stretching guide")) + "\n\n")
 
 	steps := []struct {
 		name string
 		dur  int // seconds
 	}{
-		{"목 스트레칭 - 좌우로 천천히 기울이기", 60},
-		{"어깨 돌리기 - 앞뒤로 크게 원 그리기", 60},
-		{"손목 스트레칭 - 손목을 앞뒤로 꺾기", 60},
-		{"기립 & 허리 펴기", 60},
-		{"자유 스트레칭", 60},
+		{i18n.Text("Neck stretch - slowly tilt side to side"), 60},
+		{i18n.Text("Shoulder rolls - circle forward and backward"), 60},
+		{i18n.Text("Wrist stretch - bend wrists gently back and forth"), 60},
+		{i18n.Text("Stand up and straighten your back"), 60},
+		{i18n.Text("Free stretching"), 60},
 	}
 
 	elapsed := int(m.elapsed.Seconds())
@@ -159,8 +161,8 @@ func (m *StretchActivity) View() string {
 	if totalRemaining < 0 {
 		totalRemaining = 0
 	}
-	b.WriteString(fmt.Sprintf("\n  Total: %ds remaining\n", totalRemaining))
-	b.WriteString("  Press Esc to exit")
+	b.WriteString(fmt.Sprintf(i18n.Text("\n  Total: %ds remaining\n"), totalRemaining))
+	b.WriteString(i18n.Text("  Press Esc to exit"))
 
 	return b.String()
 }
@@ -200,7 +202,7 @@ func (m *BreatheActivity) View() string {
 	style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
 	var b strings.Builder
 
-	b.WriteString(style.Render("🌬  호흡 운동 - 박스 호흡법") + "\n\n")
+	b.WriteString(style.Render(i18n.Text("🌬  Breathing - box breathing")) + "\n\n")
 
 	// Each cycle: 4s inhale + 4s hold + 4s exhale + 4s hold = 16s
 	cycleLen := 16
@@ -212,10 +214,10 @@ func (m *BreatheActivity) View() string {
 		name string
 		dur  int
 	}{
-		{"들이쉬기 (Inhale)", 4},
-		{"멈추기 (Hold)", 4},
-		{"내쉬기 (Exhale)", 4},
-		{"멈추기 (Hold)", 4},
+		{i18n.Text("Inhale"), 4},
+		{i18n.Text("Hold"), 4},
+		{i18n.Text("Exhale"), 4},
+		{i18n.Text("Hold"), 4},
 	}
 
 	cumulative := 0
@@ -232,7 +234,7 @@ func (m *BreatheActivity) View() string {
 	phaseElapsed := phaseTime - cumulative
 	phaseRemaining := phases[currentPhase].dur - phaseElapsed
 
-	b.WriteString(fmt.Sprintf("  Cycle %d/15\n\n", cycle))
+	b.WriteString(fmt.Sprintf(i18n.Text("  Cycle %d/15\n\n"), cycle))
 
 	for i, p := range phases {
 		if i == currentPhase {
@@ -250,8 +252,8 @@ func (m *BreatheActivity) View() string {
 	if totalRemaining < 0 {
 		totalRemaining = 0
 	}
-	b.WriteString(fmt.Sprintf("\n  Total: %ds remaining\n", totalRemaining))
-	b.WriteString("  Press Esc to exit")
+	b.WriteString(fmt.Sprintf(i18n.Text("\n  Total: %ds remaining\n"), totalRemaining))
+	b.WriteString(i18n.Text("  Press Esc to exit"))
 
 	return b.String()
 }
@@ -291,8 +293,8 @@ func (m *WalkActivity) View() string {
 	style := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("2"))
 	var b strings.Builder
 
-	b.WriteString(style.Render("🚶 산책 타이머") + "\n\n")
-	b.WriteString("  자리에서 일어나 가볍게 걸으세요!\n\n")
+	b.WriteString(style.Render(i18n.Text("🚶 Walking timer")) + "\n\n")
+	b.WriteString(i18n.Text("  Stand up and take a short walk!\n\n"))
 
 	totalRemaining := int(m.totalDur.Seconds() - m.elapsed.Seconds())
 	if totalRemaining < 0 {
@@ -306,8 +308,8 @@ func (m *WalkActivity) View() string {
 	bar := renderBar(pct, 30, style)
 
 	b.WriteString(fmt.Sprintf("  %s\n\n", bar))
-	b.WriteString(fmt.Sprintf("  남은 시간: %d:%02d\n", min, sec))
-	b.WriteString("\n  Press Esc to exit")
+	b.WriteString(fmt.Sprintf(i18n.Text("  Time remaining: %d:%02d\n"), min, sec))
+	b.WriteString(i18n.Text("\n  Press Esc to exit"))
 
 	return b.String()
 }

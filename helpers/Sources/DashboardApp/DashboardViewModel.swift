@@ -23,7 +23,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var state: AppState = AppState()
     @Published var config: AppConfig = AppConfig()
     @Published var idleSeconds: Int = 0
-    @Published var launchdStatusText: String = "Unknown"
+    @Published var launchdStatusText: String = L10n.text("Unknown")
     @Published var selectedTimeTool = ProcessInfo.processInfo.arguments.contains("--time-tools") ? "countdown" : "focus"
     @Published var selectedTab: DashboardTab = .timer
     @Published var history: [HistoryEntry] = []
@@ -69,19 +69,19 @@ final class DashboardViewModel: ObservableObject {
     var statusText: String {
         if isPaused {
             let label = pauseModeLabel
-            return label.isEmpty ? "PAUSED" : "PAUSED · \(label)"
+            return label.isEmpty ? L10n.text("PAUSED") : L10n.text("PAUSED · {0}", label)
         }
         if !isSessionRunning {
-            return state.sessionManual ? "STOPPED" : "IDLE"
+            return state.sessionManual ? L10n.text("STOPPED") : L10n.text("IDLE")
         }
-        return isWork ? "WORKING" : "ON BREAK"
+        return isWork ? L10n.text("WORKING") : L10n.text("ON BREAK")
     }
 
     var pauseModeLabel: String {
         switch state.pauseReason {
-        case "meeting": return "회의"
-        case "focus":   return "집중"
-        case "afk":     return "외출"
+        case "meeting": return L10n.text("Meeting")
+        case "focus":   return L10n.text("Focus")
+        case "afk":     return L10n.text("Away")
         default:        return ""
         }
     }
@@ -91,7 +91,7 @@ final class DashboardViewModel: ObservableObject {
         let remaining = max(0, state.pauseUntil - now)
         let m = remaining / 60
         let s = remaining % 60
-        return String(format: "%d:%02d 남음", m, s)
+        return String(format: L10n.text("%d:%02d remaining"), m, s)
     }
 
     var pauseModeAccent: Color {
@@ -106,15 +106,15 @@ final class DashboardViewModel: ObservableObject {
     var modeDetail: String {
         let sp = sessionProgress
         if isWork {
-            return "\(sp.elapsedSec / 60) / \(config.effectiveWorkMin) min"
+            return L10n.text("{0} / {1} min", sp.elapsedSec / 60, config.effectiveWorkMin)
         } else {
-            return "\(sp.elapsedSec / 60) / \(config.effectiveBreakMin(completedPomodoros: state.pomodoroCount)) min"
+            return L10n.text("{0} / {1} min", sp.elapsedSec / 60, config.effectiveBreakMin(completedPomodoros: state.pomodoroCount))
         }
     }
 
     var sessionSubtitle: String {
-        if isPaused { return "paused" }
-        return isWork ? "until break" : "until work"
+        if isPaused { return L10n.text("paused") }
+        return isWork ? L10n.text("until break") : L10n.text("until work")
     }
 
     func start() {
@@ -171,12 +171,7 @@ final class DashboardViewModel: ObservableObject {
 
         var checked: [String] = []
         guard let cli = findHelper("break-reminder", checked: &checked) else {
-            let message = """
-            break-reminder CLI를 찾지 못했습니다.
-            확인한 경로:
-            \(checked.map { "• \($0)" }.joined(separator: "\n"))
-            대시보드와 CLI를 같은 설치 위치에 두거나 `make install` 후 다시 시도하세요.
-            """
+            let message = L10n.text("Could not find break-reminder CLI.\nSearched paths:\n{0}\nPlace the dashboard and CLI in the same installation directory or run `make install`.", checked.map { "• \($0)" }.joined(separator: "\n"))
             insightsRefreshStatus = .failed(message)
             dashLog("insights refresh: \(message)")
             return
@@ -210,13 +205,7 @@ final class DashboardViewModel: ObservableObject {
 
         loadInsights()
         if insights == nil {
-            let message = """
-            CLI는 종료 코드 0으로 완료했지만 인사이트 리포트를 읽지 못했습니다.
-            파일: ~/.break-reminder-insights.json
-            CLI 출력:
-            \(result.output.isEmpty ? "(없음)" : truncated(result.output, max: 4000))
-            파일이 생성되었는지와 JSON 형식/권한을 확인한 뒤 다시 시도하세요.
-            """
+            let message = L10n.text("The CLI exited successfully, but the insights report could not be read.\nFile: ~/.break-reminder-insights.json\nCLI output:\n{0}\nCheck that the file exists and its JSON format and permissions are correct.", result.output.isEmpty ? L10n.text("None") : truncated(result.output, max: 4000))
             insightsRefreshStatus = .failed(message)
             dashLog("insights refresh: \(message)")
             return
@@ -228,24 +217,24 @@ final class DashboardViewModel: ObservableObject {
 
     private func insightsRefreshFailureMessage(_ result: InsightsProcessResult) -> String {
         var lines = [
-            "AI 분석 명령을 실행하지 못했습니다.",
-            "실행 파일: \(result.cliPath)",
-            "명령: insights --refresh",
+            L10n.text("Could not run AI analysis."),
+            L10n.text("Executable: {0}", result.cliPath),
+            L10n.text("Command: insights --refresh"),
         ]
 
         if let launchError = result.launchError {
-            lines.append("프로세스 시작 실패: \(launchError)")
+            lines.append(L10n.text("Process launch failed: {0}", launchError))
         } else {
-            lines.append("종료 코드: \(result.terminationStatus)")
-            lines.append("종료 사유: \(result.terminationReason)")
+            lines.append(L10n.text("Exit code: {0}", result.terminationStatus))
+            lines.append(L10n.text("Exit reason: {0}", result.terminationReason))
             if result.output.isEmpty {
-                lines.append("CLI가 상세 오류 메시지를 반환하지 않았습니다.")
+                lines.append(L10n.text("The CLI did not return a detailed error message."))
             } else {
-                lines.append("CLI 출력:\n\(truncated(result.output, max: 4000))")
+                lines.append(L10n.text("CLI output:\n{0}", truncated(result.output, max: 4000)))
             }
         }
-        lines.append("실행 PATH: \(result.environmentPath)")
-        lines.append("상세 로그: ~/.break-reminder.log")
+        lines.append(L10n.text("Execution PATH: {0}", result.environmentPath))
+        lines.append(L10n.text("Detailed log: ~/.break-reminder.log"))
         return lines.joined(separator: "\n")
     }
 
@@ -314,7 +303,7 @@ final class DashboardViewModel: ObservableObject {
     func saveSettings(_ changes: [(String, String)]) -> Result<Void, Error> {
         guard let cli = findHelper("break-reminder") else {
             return .failure(NSError(domain: "ConfigSave", code: 1,
-                userInfo: [NSLocalizedDescriptionKey: "break-reminder CLI not found"]))
+                userInfo: [NSLocalizedDescriptionKey: L10n.text("break-reminder CLI not found")]))
         }
         let args = ["config", "set"] + changes.map { "\($0.0)=\($0.1)" }
         let process = Process()
@@ -329,7 +318,7 @@ final class DashboardViewModel: ObservableObject {
             process.waitUntilExit()
             if process.terminationStatus != 0 {
                 let msg = String(data: errPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
-                    ?? "Unknown error"
+                    ?? L10n.text("Unknown error")
                 return .failure(NSError(domain: "ConfigSave", code: Int(process.terminationStatus),
                     userInfo: [NSLocalizedDescriptionKey: msg.trimmingCharacters(in: .whitespacesAndNewlines)]))
             }
@@ -385,7 +374,7 @@ private func executeInsightsRefresh(cliPath: String, environment: [String: Strin
             cliPath: cliPath,
             environmentPath: environment["PATH"] ?? "<unset>",
             terminationStatus: -1,
-            terminationReason: "not started",
+            terminationReason: L10n.text("not started"),
             output: "",
             launchError: error.localizedDescription
         )
@@ -400,7 +389,7 @@ private func executeInsightsRefresh(cliPath: String, environment: [String: Strin
         cliPath: cliPath,
         environmentPath: environment["PATH"] ?? "<unset>",
         terminationStatus: process.terminationStatus,
-        terminationReason: process.terminationReason == .exit ? "normal exit" : "uncaught signal",
+        terminationReason: process.terminationReason == .exit ? L10n.text("normal exit") : L10n.text("uncaught signal"),
         output: output,
         launchError: nil
     )

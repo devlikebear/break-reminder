@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- Complete English/Korean localization across legacy menu items and status lines, every dashboard tab, break guides and accessibility labels, CLI help, notifications, TTS, and application diagnostics. All native helper commands inherit the UI language; newly generated AI insights request the selected language.
+- Add regression coverage for mixed-language menus, both-language command help, message formatting, and untranslated UI literals. Keep command/config identifiers, user-entered names, and existing recorded content unchanged.
+
 ## [0.16.1] - 2026-09-29
 
 ### Fixed

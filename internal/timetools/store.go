@@ -67,7 +67,7 @@ func (s *Store) Update(revision *uint64, fn func(Snapshot) (Snapshot, error)) (S
 		return previous, nil
 	}
 	if previous.Revision == ^uint64(0) {
-		return previous, fmt.Errorf("revision overflow")
+		return previous, fmt.Errorf("%s", i18n.Text("revision overflow"))
 	}
 	next.Revision = previous.Revision + 1
 	data, err := json.Marshal(next)

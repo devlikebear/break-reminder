@@ -41,6 +41,7 @@ func TestParseResponseStripsCodeFences(t *testing.T) {
 }
 
 func TestParseResponseInvalidJSON(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	_, err := ParseResponse("not json")
 	if err == nil {
 		t.Error("expected error for invalid JSON")

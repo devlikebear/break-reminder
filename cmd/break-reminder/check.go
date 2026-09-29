@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"fmt"
 	"strings"
@@ -25,7 +27,7 @@ import (
 func newCheckCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "check",
-		Short: "Run a single timer check (used by launchd)",
+		Short: i18n.Text("Run a single timer check (used by launchd)"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runCheck()
 		},
@@ -46,7 +48,7 @@ func runCheck() error {
 			}
 			return s, nil
 		}); err != nil {
-			log.Warn().Err(err).Msg("Failed to update state while the timer is off, resetting state")
+			log.Warn().Err(err).Msg(i18n.Text("Failed to update state while the timer is off, resetting state"))
 			recovered := state.New()
 			recovered.LastCheck = now.Unix()
 			return state.Save(statePath, recovered)
@@ -62,7 +64,7 @@ func runCheck() error {
 		result = timer.Tick(cfg, s, now, idleSec)
 		return result.State, nil
 	}); err != nil {
-		log.Warn().Err(err).Msg("Failed to update state, using fresh state")
+		log.Warn().Err(err).Msg(i18n.Text("Failed to update state, using fresh state"))
 		result = timer.Tick(cfg, state.New(), now, idleSec)
 		if saveErr := state.Save(statePath, result.State); saveErr != nil {
 			return saveErr
@@ -113,22 +115,22 @@ func executeActions(actions []timer.Action, s state.State, daySummary *timer.Day
 		case timer.ActionNotifyBreakTime:
 			breakscreen.Show(cfg, cfg.EffectiveBreakSec(s.PomodoroCount), s.BreakStart)
 		case timer.ActionNotifyBreakOver:
-			_ = notifier.Send("Break Over!", fmt.Sprintf("Back to work! %d-minute timer started~", workMin), "Hero")
+			_ = notifier.Send(i18n.Text("Break Over!"), fmt.Sprintf(i18n.Text("Back to work! %d-minute timer started~"), workMin), "Hero")
 		case timer.ActionNotifyFiveMinWarning:
-			_ = notifier.Send("5 minutes left", "Break time coming up~", "")
+			_ = notifier.Send(i18n.Text("5 minutes left"), i18n.Text("Break time coming up~"), "")
 		case timer.ActionNotifyStillOnBreak:
-			_ = notifier.Send("Still on break!", "Keep resting!", "")
+			_ = notifier.Send(i18n.Text("Still on break!"), i18n.Text("Keep resting!"), "")
 		case timer.ActionNotifySessionStart:
-			_ = notifier.Send("Work session started", fmt.Sprintf("Timer is running — first break in %d minutes.", workMin), "Submarine")
+			_ = notifier.Send(i18n.Text("Work session started"), fmt.Sprintf(i18n.Text("Timer is running — first break in %d minutes."), workMin), "Submarine")
 		case timer.ActionNotifySessionEnd:
-			_ = notifier.Send("Work session ended", sessionEndMessage(sessionEnd), "Glass")
+			_ = notifier.Send(i18n.Text("Work session ended"), sessionEndMessage(sessionEnd), "Glass")
 		case timer.ActionSpeakBreakTime:
-			if err := speaker.Speak(cfg.Voice, fmt.Sprintf("Time for a break! You've been working for %d minutes.", workMin)); err != nil {
-				log.Warn().Err(err).Msg("TTS speak failed (break time)")
+			if err := speaker.Speak(cfg.Voice, fmt.Sprintf(i18n.Text("Time for a break! You've been working for %d minutes."), workMin)); err != nil {
+				log.Warn().Err(err).Msg(i18n.Text("TTS speak failed (break time)"))
 			}
 		case timer.ActionSpeakBreakOver:
-			if err := speaker.Speak(cfg.Voice, "Break time is over! Let's get back to work!"); err != nil {
-				log.Warn().Err(err).Msg("TTS speak failed (break over)")
+			if err := speaker.Speak(cfg.Voice, i18n.Text("Break time is over! Let's get back to work!")); err != nil {
+				log.Warn().Err(err).Msg(i18n.Text("TTS speak failed (break over)"))
 			}
 		case timer.ActionSaveDailyHistory:
 			if daySummary != nil {
@@ -154,13 +156,13 @@ func executeActions(actions []timer.Action, s state.State, daySummary *timer.Day
 func generateDailyInsights() {
 	client := ai.NewClient(cfg.AICLI)
 	if !client.Available() {
-		log.Warn().Str("cli", cfg.AICLI).Msg("AI CLI unavailable, skipping insights generation")
+		log.Warn().Str("cli", cfg.AICLI).Msg(i18n.Text("AI CLI unavailable, skipping insights generation"))
 		return
 	}
 
 	history, err := ai.LoadHistory()
 	if err != nil {
-		log.Warn().Err(err).Msg("Load history for insights")
+		log.Warn().Err(err).Msg(i18n.Text("Load history for insights"))
 		return
 	}
 	recent := history
@@ -173,28 +175,28 @@ func generateDailyInsights() {
 
 	report, err := insights.Generate(ctx, client, recent, time.Now())
 	if err != nil {
-		log.Warn().Err(err).Msg("Generate insights")
+		log.Warn().Err(err).Msg(i18n.Text("Generate insights"))
 		return
 	}
 	if err := insights.Save(report); err != nil {
-		log.Warn().Err(err).Msg("Save insights")
+		log.Warn().Err(err).Msg(i18n.Text("Save insights"))
 		return
 	}
-	log.Info().Msg("Insights auto-generated")
+	log.Info().Msg(i18n.Text("Insights auto-generated"))
 }
 
 // sessionEndMessage renders the notification body for a finished work session.
 func sessionEndMessage(sum *timer.SessionSummary) string {
 	if sum == nil {
-		return "Timer stopped. See you next session!"
+		return i18n.Text("Timer stopped. See you next session!")
 	}
 
 	parts := []string{
-		fmt.Sprintf("Work %s", fmtMin(sum.WorkSeconds/60)),
-		fmt.Sprintf("Break %s", fmtMin(sum.BreakSeconds/60)),
+		fmt.Sprintf(i18n.Text("Work %s"), fmtMin(sum.WorkSeconds/60)),
+		fmt.Sprintf(i18n.Text("Break %s"), fmtMin(sum.BreakSeconds/60)),
 	}
 	if sum.Pomodoros > 0 {
-		parts = append(parts, fmt.Sprintf("%d pomodoro%s", sum.Pomodoros, pluralS(sum.Pomodoros)))
+		parts = append(parts, fmt.Sprintf(i18n.Text("%d pomodoro%s"), sum.Pomodoros, pluralS(sum.Pomodoros)))
 	}
-	return "Today · " + strings.Join(parts, " · ")
+	return i18n.Text("Today · ") + strings.Join(parts, " · ")
 }

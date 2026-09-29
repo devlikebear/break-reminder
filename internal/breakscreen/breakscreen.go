@@ -1,6 +1,8 @@
 package breakscreen
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 
 	"github.com/devlikebear/break-reminder/internal/config"
@@ -31,13 +33,13 @@ func Show(cfg config.Config, breakDurSec int, breakStartUnix int64) {
 		case "block":
 			cfg.BreakScreenMode = "block"
 			if err := config.Save(cfg); err != nil {
-				log.Warn().Err(err).Msg("Failed to save break_screen_mode preference")
+				log.Warn().Err(err).Msg(i18n.Text("Failed to save break_screen_mode preference"))
 			}
 			showOverlay(workMin, breakDurSec, breakStartUnix, todayWorkMin, todayBreakMin)
 		default:
 			cfg.BreakScreenMode = "notify"
 			if err := config.Save(cfg); err != nil {
-				log.Warn().Err(err).Msg("Failed to save break_screen_mode preference")
+				log.Warn().Err(err).Msg(i18n.Text("Failed to save break_screen_mode preference"))
 			}
 			sendNotification(workMin, breakMin)
 		}
@@ -48,5 +50,5 @@ func Show(cfg config.Config, breakDurSec int, breakStartUnix int64) {
 
 func sendNotification(workMin, breakMin int) {
 	notifier := notify.NewNotifier()
-	_ = notifier.Send("Break Time!", fmt.Sprintf("%d minutes complete! Take a %d-minute break~", workMin, breakMin), "Blow")
+	_ = notifier.Send(i18n.Text("Break Time!"), fmt.Sprintf(i18n.Text("%d minutes complete! Take a %d-minute break~"), workMin, breakMin), "Blow")
 }

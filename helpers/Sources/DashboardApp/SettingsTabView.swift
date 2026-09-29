@@ -103,7 +103,7 @@ final class SettingsFormState: ObservableObject {
 }
 
 private let weekdayLabels: [(Int, String)] = [
-    (1, "월"), (2, "화"), (3, "수"), (4, "목"), (5, "금"), (6, "토"), (7, "일")
+    (1, L10n.text("Mon")), (2, L10n.text("Tue")), (3, L10n.text("Wed")), (4, L10n.text("Thu")), (5, L10n.text("Fri")), (6, L10n.text("Sat")), (7, L10n.text("Sun"))
 ]
 
 struct SettingsTabView: View {
@@ -128,7 +128,7 @@ struct SettingsTabView: View {
                 themeSection
                 buttonRow
                 if showSavedToast {
-                    Text("저장됨")
+                    Text(L10n.text("Saved"))
                         .font(.system(size: 11))
                         .foregroundColor(theme.accentBreak)
                 }
@@ -138,8 +138,8 @@ struct SettingsTabView: View {
             .padding(16)
         }
         .background(theme.background)
-        .alert("저장 실패", isPresented: $showError) {
-            Button("확인", role: .cancel) {}
+        .alert(L10n.text("Save failed"), isPresented: $showError) {
+            Button(L10n.text("OK"), role: .cancel) {}
         } message: {
             Text(errorMessage)
         }
@@ -149,18 +149,18 @@ struct SettingsTabView: View {
     }
 
     private var timerSection: some View {
-        sectionCard(title: "타이머") {
-            stepperRow("작업 시간 (work_duration_min)", value: $form.workDurationMin, range: 5...180, suffix: "분")
-            stepperRow("휴식 시간 (break_duration_min)", value: $form.breakDurationMin, range: 1...60, suffix: "분")
-            stepperRow("Idle 임계값 (idle_threshold_sec)", value: $form.idleThresholdSec, range: 30...600, step: 10, suffix: "초")
-            stepperRow("Natural break (natural_break_sec)", value: $form.naturalBreakSec, range: 60...1800, step: 30, suffix: "초")
+        sectionCard(title: L10n.text("Timer")) {
+            stepperRow(L10n.text("Work duration"), value: $form.workDurationMin, range: 5...180, suffix: L10n.text("min"))
+            stepperRow(L10n.text("Break duration"), value: $form.breakDurationMin, range: 1...60, suffix: L10n.text("min"))
+            stepperRow(L10n.text("Idle threshold"), value: $form.idleThresholdSec, range: 30...600, step: 10, suffix: L10n.text("s"))
+            stepperRow(L10n.text("Natural break threshold"), value: $form.naturalBreakSec, range: 60...1800, step: 30, suffix: L10n.text("s"))
         }
     }
 
     private var scheduleSection: some View {
-        sectionCard(title: "근무 시간") {
+        sectionCard(title: L10n.text("Working hours")) {
             HStack {
-                Text("시작 (work_start_*)")
+                Text(L10n.text("Start time"))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Stepper(value: $form.workStartHour, in: 0...23) {
                     Text(String(format: "%02d:%02d", form.workStartHour, form.workStartMinute))
@@ -172,7 +172,7 @@ struct SettingsTabView: View {
                 .labelsHidden()
             }
             HStack {
-                Text("종료 (work_end_*)")
+                Text(L10n.text("End time"))
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Stepper(value: $form.workEndHour, in: 0...23) {
                     Text(String(format: "%02d:%02d", form.workEndHour, form.workEndMinute))
@@ -183,7 +183,7 @@ struct SettingsTabView: View {
                 }
                 .labelsHidden()
             }
-            Text("근무 요일 (work_days)")
+            Text(L10n.text("Working days"))
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: 4) {
                 ForEach(weekdayLabels, id: \.0) { day, label in
@@ -198,40 +198,40 @@ struct SettingsTabView: View {
     }
 
     private var behaviorSection: some View {
-        sectionCard(title: "동작") {
-            Picker("Break screen mode (break_screen_mode)", selection: $form.breakScreenMode) {
-                Text("ask").tag("ask")
-                Text("block").tag("block")
-                Text("notify").tag("notify")
+        sectionCard(title: L10n.text("Behavior")) {
+            Picker(L10n.text("Break screen mode"), selection: $form.breakScreenMode) {
+                Text(L10n.text("Ask first")).tag("ask")
+                Text(L10n.text("Block screen")).tag("block")
+                Text(L10n.text("Notify only")).tag("notify")
             }
             .pickerStyle(.segmented)
-            Toggle("알림 (notifications_enabled)", isOn: $form.notificationsEnabled)
-            Toggle("TTS (tts_enabled)", isOn: $form.ttsEnabled)
-            Toggle("휴식 활동 (break_activities_enabled)", isOn: $form.breakActivitiesEnabled)
+            Toggle(L10n.text("Notifications"), isOn: $form.notificationsEnabled)
+            Toggle(L10n.text("Spoken reminders"), isOn: $form.ttsEnabled)
+            Toggle(L10n.text("Break activities"), isOn: $form.breakActivitiesEnabled)
         }
     }
 
     private var themeSection: some View {
-        sectionCard(title: "테마") {
-            Picker("테마 (theme)", selection: $form.theme) {
-                Text("auto").tag("auto")
-                Text("dark").tag("dark")
-                Text("light").tag("light")
+        sectionCard(title: L10n.text("Theme")) {
+            Picker(L10n.text("Theme"), selection: $form.theme) {
+                Text(L10n.text("Follow system")).tag("auto")
+                Text(L10n.text("Dark")).tag("dark")
+                Text(L10n.text("Light")).tag("light")
             }
             .pickerStyle(.segmented)
         }
     }
 
     private var aboutSection: some View {
-        sectionCard(title: "정보") {
+        sectionCard(title: L10n.text("About")) {
             HStack {
-                Text("버전")
+                Text(L10n.text("Version"))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(vm.appVersion)
+                Text(vm.appVersion == AboutInfo.unknownVersion ? L10n.text("unknown") : vm.appVersion)
                     .monospacedDigit()
                     .foregroundColor(theme.textPrimary)
             }
-            Button("GitHub 저장소 열기") {
+            Button(L10n.text("Open GitHub repository")) {
                 if let url = URL(string: AboutInfo.repositoryURL) {
                     NSWorkspace.shared.open(url)
                 }
@@ -241,11 +241,11 @@ struct SettingsTabView: View {
 
     private var buttonRow: some View {
         HStack {
-            Button("취소") { form.revert() }
+            Button(L10n.text("Cancel")) { form.revert() }
                 .disabled(!form.isDirty)
             Spacer()
-            Button("기본값 복원") { form.reset(to: AppConfig()) }
-            Button("저장") {
+            Button(L10n.text("Restore defaults")) { form.reset(to: AppConfig()) }
+            Button(L10n.text("Save")) {
                 let result = vm.saveSettings(form.toChanges())
                 switch result {
                 case .success:

@@ -39,6 +39,7 @@ func runRootCmd(t *testing.T, args ...string) (string, error) {
 }
 
 func TestConfigSetSingleIntKey(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	setupConfigTestHome(t)
 
 	out, err := runRootCmd(t, "config", "set", "work_duration_min=45")
@@ -109,6 +110,7 @@ func TestConfigSetRejectsInvalidScheduleAtomically(t *testing.T) {
 }
 
 func TestConfigSetRejectsUnknownKey(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	setupConfigTestHome(t)
 
 	_, err := runRootCmd(t, "config", "set", "unknown_key=foo")

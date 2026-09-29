@@ -37,3 +37,15 @@ func TestBuildPromptEmptyHistory(t *testing.T) {
 		t.Error("should embed empty history array")
 	}
 }
+
+func TestPromptSelectsProseLanguageAndPreservesSchema(t *testing.T) {
+	for _, tc := range []struct{ locale, language string }{{"ko", "Korean"}, {"en", "English"}} {
+		t.Setenv("BREAK_REMINDER_LANGUAGE", tc.locale)
+		prompt := BuildPrompt(nil)
+		for _, want := range []string{"in " + tc.language, `"daily_report"`, `"patterns"`, `"type":"info"`} {
+			if !strings.Contains(prompt, want) {
+				t.Fatalf("missing %s in %s", want, prompt)
+			}
+		}
+	}
+}

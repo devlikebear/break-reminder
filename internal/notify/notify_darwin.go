@@ -3,6 +3,8 @@
 package notify
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"fmt"
 	"os"
@@ -44,7 +46,7 @@ func resolveTerminalNotifier() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("terminal-notifier not found; install it with 'brew install terminal-notifier'")
+	return "", fmt.Errorf("%s", i18n.Text("terminal-notifier not found; install it with 'brew install terminal-notifier'"))
 }
 
 func notificationArgs(title, message, sound string) []string {
@@ -65,7 +67,7 @@ func (n *DarwinNotifier) Send(title, message, sound string) error {
 		return err
 	}
 	if err := runCommand(path, notificationArgs(title, message, sound)...); err != nil {
-		return fmt.Errorf("send notification: %w", err)
+		return fmt.Errorf(i18n.Text("send notification: %w"), err)
 	}
 	return nil
 }

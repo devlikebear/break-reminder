@@ -31,7 +31,7 @@ struct TimerTabView: View {
 
     private var dailyStatsSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Daily Statistics")
+            Text(L10n.text("Daily Statistics"))
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(theme.textPrimary)
 
@@ -41,11 +41,11 @@ struct TimerTabView: View {
             let totalMin = workMin + breakMin
 
             HStack {
-                Text("Work: \(formatMinutes(workMin))")
+                Text(L10n.text("Work: {0}", formatMinutes(workMin)))
                     .font(.system(size: 13))
                     .foregroundColor(theme.textPrimary)
                 Spacer()
-                Text("Break: \(formatMinutes(breakMin))")
+                Text(L10n.text("Break: {0}", formatMinutes(breakMin)))
                     .font(.system(size: 13))
                     .foregroundColor(theme.accentBreak)
             }
@@ -77,10 +77,10 @@ struct TimerTabView: View {
 
     private var systemInfoSection: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("System: \(vm.launchdStatusText)")
+            Text(L10n.text("System: {0}", vm.launchdStatusText))
                 .font(.system(size: 12))
                 .foregroundColor(theme.textSecondary)
-            Text("Idle: \(vm.idleSeconds)s / Threshold: \(vm.config.idleThresholdSec)s")
+            Text(L10n.text("Idle: {0}s / Threshold: {1}s", vm.idleSeconds, vm.config.idleThresholdSec))
                 .font(.system(size: 12))
                 .foregroundColor(theme.textSecondary)
         }
@@ -88,9 +88,9 @@ struct TimerTabView: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
-            Button("Reset") { vm.resetTimer() }
+            Button(L10n.text("Reset")) { vm.resetTimer() }
                 .buttonStyle(DashboardButtonStyle())
-            Button("Force Break") { vm.forceBreak() }
+            Button(L10n.text("Force Break")) { vm.forceBreak() }
                 .buttonStyle(DashboardButtonStyle())
         }
     }
@@ -98,7 +98,7 @@ struct TimerTabView: View {
     private var shortcutHint: some View {
         HStack {
             Spacer()
-            Text("q: quit   r: reset   b: break")
+            Text(L10n.text("q: quit   r: reset   b: break"))
                 .font(.system(size: 10))
                 .foregroundColor(theme.textSecondary)
             Spacer()

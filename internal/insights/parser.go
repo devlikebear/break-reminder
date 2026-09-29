@@ -1,6 +1,8 @@
 package insights
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -17,7 +19,7 @@ func ParseResponse(raw string) (*Report, error) {
 
 	var r Report
 	if err := json.Unmarshal([]byte(cleaned), &r); err != nil {
-		return nil, fmt.Errorf("parse AI response: %w", err)
+		return nil, fmt.Errorf(i18n.Text("parse AI response: %w"), err)
 	}
 	return &r, nil
 }

@@ -110,6 +110,7 @@ func TestServiceInstallDisablesUpdaterOutsideHomebrew(t *testing.T) {
 }
 
 func TestServiceStatusIncludesUpdater(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	oldTimerStatus := serviceTimerStatus
 	oldMenuBarStatus := serviceMenuBarStatus
 	oldUpdaterStatus := serviceUpdaterStatus

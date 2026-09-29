@@ -1,6 +1,8 @@
 package dashboard
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"strings"
 	"time"
@@ -86,7 +88,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lastConfigError = ""
 		} else {
 			if err.Error() != m.lastConfigError {
-				log.Warn().Err(err).Msg("Ignoring invalid config reload")
+				log.Warn().Err(err).Msg(i18n.Text("Ignoring invalid config reload"))
 				m.lastConfigError = err.Error()
 			}
 		}
@@ -198,12 +200,12 @@ func (m Model) View() string {
 	blueStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("4"))
 	yellowStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 
-	b.WriteString(titleStyle.Render("🐹 Break Reminder Dashboard v"+m.version) + " (q:quit r:reset b:break s:start/stop)\n")
+	b.WriteString(titleStyle.Render(i18n.Text("🐹 Break Reminder Dashboard v")+m.version) + i18n.Text(" (q:quit r:reset b:break s:start/stop)\n"))
 	b.WriteString("══════════════════════════════════════════════════\n")
 
 	// System status
-	b.WriteString("System: " + launchd.Status() + "\n")
-	b.WriteString("Menu Bar: " + launchd.MenuBarStatus() + "\n")
+	b.WriteString(i18n.Text("System: ") + i18n.Text(launchd.Status()) + "\n")
+	b.WriteString(i18n.Text("Menu Bar: ") + i18n.Text(launchd.MenuBarStatus()) + "\n")
 
 	now := time.Now()
 	referenceNow := now
@@ -215,16 +217,16 @@ func (m Model) View() string {
 		if pausedMode == "" {
 			pausedMode = "WORK"
 		}
-		b.WriteString("Status: " + yellowStyle.Render("PAUSED ("+pausedMode+")") + "\n")
+		b.WriteString(i18n.Text("Status: ") + yellowStyle.Render(i18n.Text("PAUSED (")+i18n.Text(pausedMode)+")") + "\n")
 	} else if !schedule.IsActive(m.cfg, m.state, now) {
-		b.WriteString("Status: " + yellowStyle.Render("SLEEPING ("+sleepReason(m.cfg, m.state, now)+")") + "\n")
+		b.WriteString(i18n.Text("Status: ") + yellowStyle.Render(i18n.Text("SLEEPING (")+sleepReason(m.cfg, m.state, now)+")") + "\n")
 	} else if m.state.Mode == "work" {
-		b.WriteString("Status: " + greenStyle.Render("WORKING") + "\n")
+		b.WriteString(i18n.Text("Status: ") + greenStyle.Render(i18n.Text("WORKING")) + "\n")
 	} else {
-		b.WriteString("Status: " + blueStyle.Render("ON BREAK") + "\n")
+		b.WriteString(i18n.Text("Status: ") + blueStyle.Render(i18n.Text("ON BREAK")) + "\n")
 	}
 
-	b.WriteString(fmt.Sprintf("Idle: %ds / Limit: %ds\n\n", m.idleSec, m.cfg.IdleThresholdSec))
+	b.WriteString(fmt.Sprintf(i18n.Text("Idle: %ds / Limit: %ds\n\n"), m.idleSec, m.cfg.IdleThresholdSec))
 
 	// Progress bar
 	if m.state.Mode == "work" {
@@ -237,7 +239,7 @@ func (m Model) View() string {
 			pct = 100
 		}
 		bar := renderBar(pct, 30, greenStyle)
-		b.WriteString(fmt.Sprintf("Session Work: %s (%d / %d min)\n",
+		b.WriteString(fmt.Sprintf(i18n.Text("Session Work: %s (%d / %d min)\n"),
 			bar, m.state.WorkSeconds/60, m.cfg.EffectiveWorkMin()))
 	} else {
 		breakDur := m.cfg.EffectiveBreakSec(m.state.PomodoroCount)
@@ -250,7 +252,7 @@ func (m Model) View() string {
 			pct = 100
 		}
 		bar := renderBar(pct, 30, blueStyle)
-		b.WriteString(fmt.Sprintf("Break Timer:  %s (%d / %d min)\n",
+		b.WriteString(fmt.Sprintf(i18n.Text("Break Timer:  %s (%d / %d min)\n"),
 			bar, breakElapsed/60, m.cfg.EffectiveBreakMin(m.state.PomodoroCount)))
 	}
 
@@ -261,26 +263,26 @@ func (m Model) View() string {
 	dailyBreakMin := m.state.TodayBreakSeconds / 60
 	totalMin := dailyWorkMin + dailyBreakMin
 
-	b.WriteString("Daily Statistics:\n")
-	b.WriteString(fmt.Sprintf("  Work: %s\n", fmtMin(dailyWorkMin)))
-	b.WriteString(fmt.Sprintf("  Rest: %s\n", fmtMin(dailyBreakMin)))
+	b.WriteString(i18n.Text("Daily Statistics:\n"))
+	b.WriteString(fmt.Sprintf(i18n.Text("  Work: %s\n"), fmtMin(dailyWorkMin)))
+	b.WriteString(fmt.Sprintf(i18n.Text("  Rest: %s\n"), fmtMin(dailyBreakMin)))
 	if m.cfg.PomodoroEnabled() {
-		b.WriteString(fmt.Sprintf("  Pomodoros: %d (cycle %d/%d)\n",
+		b.WriteString(fmt.Sprintf(i18n.Text("  Pomodoros: %d (cycle %d/%d)\n"),
 			m.state.TodayPomodoros, m.state.PomodoroCount, m.cfg.PomodoroLongBreakEvery))
 	}
 	if totalMin > 0 {
 		ratio := (dailyWorkMin * 100) / totalMin
 		bar := renderBar(ratio, 20, yellowStyle)
-		b.WriteString(fmt.Sprintf("  Ratio: %s\n", bar))
+		b.WriteString(fmt.Sprintf(i18n.Text("  Ratio: %s\n"), bar))
 	}
 
 	b.WriteString("\n")
 
 	// Logs
-	b.WriteString("Recent Logs:\n")
+	b.WriteString(i18n.Text("Recent Logs:\n"))
 	b.WriteString("──────────────────────────────────────────────────\n")
 	if len(m.logs) == 0 {
-		b.WriteString("  (No logs yet)\n")
+		b.WriteString(i18n.Text("  (No logs yet)\n"))
 	} else {
 		for _, line := range m.logs {
 			b.WriteString("  " + line + "\n")
@@ -291,13 +293,13 @@ func (m Model) View() string {
 	// Break menu overlay
 	if m.showBreakMenu {
 		b.WriteString("\n")
-		b.WriteString(blueStyle.Render("🧘 휴식 시간! 활동을 선택하세요 (Esc로 건너뛰기):") + "\n")
+		b.WriteString(blueStyle.Render(i18n.Text("🧘 Break time! Choose an activity (Esc to skip):")) + "\n")
 		items := []string{
-			"👁  눈 운동 (20-20-20 규칙) - 2분",
-			"🤸 스트레칭 - 5분",
-			"🌬  호흡 운동 - 4분",
-			"🚶 산책 - 5분",
-			"⏭  건너뛰기",
+			i18n.Text("👁  Eye exercise (20-20-20 rule) - 2 min"),
+			i18n.Text("🤸 Stretching - 5 min"),
+			i18n.Text("🌬  Breathing - 4 min"),
+			i18n.Text("🚶 Walking - 5 min"),
+			i18n.Text("⏭  Skip"),
 		}
 		for i, item := range items {
 			if i == m.breakMenuCursor {
@@ -316,11 +318,11 @@ func fmtMin(min int) string {
 		h := min / 60
 		m := min % 60
 		if m > 0 {
-			return fmt.Sprintf("%dh %dm", h, m)
+			return fmt.Sprintf(i18n.Text("%dh %dm"), h, m)
 		}
-		return fmt.Sprintf("%dh", h)
+		return fmt.Sprintf(i18n.Text("%dh"), h)
 	}
-	return fmt.Sprintf("%dm", min)
+	return fmt.Sprintf(i18n.Text("%dm"), min)
 }
 
 func renderBar(pct, length int, style lipgloss.Style) string {
@@ -352,14 +354,14 @@ var keys = keyMap{
 func sleepReason(cfg config.Config, s state.State, now time.Time) string {
 	switch {
 	case s.SessionState == state.SessionStateEnded && s.SessionManual:
-		return "Stopped - press s to start"
+		return i18n.Text("Stopped - press s to start")
 	case s.SessionState == state.SessionStateEnded:
-		return "Work Session Ended"
+		return i18n.Text("Work Session Ended")
 	case cfg.AutoSessionDetect && schedule.InDetectWindow(cfg, now):
-		return "Waiting For Activity"
+		return i18n.Text("Waiting For Activity")
 	case cfg.AutoSessionDetect:
-		return "Outside Detection Window"
+		return i18n.Text("Outside Detection Window")
 	default:
-		return "Outside Working Hours"
+		return i18n.Text("Outside Working Hours")
 	}
 }

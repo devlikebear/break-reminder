@@ -262,6 +262,7 @@ func TestSynthesizeGeminiVoiceCaseInsensitive(t *testing.T) {
 }
 
 func TestSynthesizeGeminiEmptyAPIKey(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	_, err := synthesizeGemini(context.Background(), "  ", "", "Zephyr", "x")
 	if err == nil || !strings.Contains(err.Error(), "api key") {
 		t.Fatalf("err = %v, want api key error", err)
@@ -288,6 +289,7 @@ func TestSynthesizeGeminiHTTPError(t *testing.T) {
 }
 
 func TestSynthesizeGeminiEmptyCandidates(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"candidates":[]}`))
 	}))
@@ -304,6 +306,7 @@ func TestSynthesizeGeminiEmptyCandidates(t *testing.T) {
 }
 
 func TestSynthesizeGeminiMissingInline(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte(`{"candidates":[{"content":{"parts":[{}]}}]}`))
 	}))

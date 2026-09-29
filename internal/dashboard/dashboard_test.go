@@ -55,6 +55,7 @@ func TestManualBreakResetsWarningBucket(t *testing.T) {
 }
 
 func TestUpdateLogsInvalidConfigReloadOnlyOncePerError(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origLoadConfig := loadConfig
 	origLogger := log.Logger
 	defer func() {
@@ -84,6 +85,7 @@ func TestUpdateLogsInvalidConfigReloadOnlyOncePerError(t *testing.T) {
 }
 
 func TestUpdateLogsInvalidConfigReloadAgainAfterRecovery(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origLoadConfig := loadConfig
 	origLogger := log.Logger
 	defer func() {
@@ -129,6 +131,7 @@ func TestUpdateLogsInvalidConfigReloadAgainAfterRecovery(t *testing.T) {
 }
 
 func TestViewShowsPausedStateAndFrozenBreakProgress(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	pausedAt := time.Now().Add(-2 * time.Minute).Unix()
 	breakStart := time.Unix(pausedAt, 0).Add(-3 * time.Minute).Unix()
 	m := Model{

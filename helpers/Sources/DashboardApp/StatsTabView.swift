@@ -3,9 +3,9 @@ import Charts
 import HelperCore
 
 enum StatsPeriod: String, CaseIterable, Identifiable {
-    case week = "주간"
-    case month = "월간"
-    case all = "전체"
+    case week = "Weekly"
+    case month = "Monthly"
+    case all = "All time"
 
     var id: String { rawValue }
 
@@ -48,9 +48,9 @@ struct StatsTabView: View {
     }
 
     private var periodSelector: some View {
-        Picker("Period", selection: $period) {
+        Picker(L10n.text("Period"), selection: $period) {
             ForEach(StatsPeriod.allCases) { p in
-                Text(p.rawValue).tag(p)
+                Text(L10n.text(p.rawValue)).tag(p)
             }
         }
         .pickerStyle(.segmented)
@@ -59,21 +59,21 @@ struct StatsTabView: View {
 
     private var workBreakChart: some View {
         return VStack(alignment: .leading, spacing: 8) {
-            Text("작업 / 휴식 시간")
+            Text(L10n.text("Work / break time"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.primary)
 
             Chart {
                 ForEach(filteredHistory, id: \.date) { entry in
                     BarMark(
-                        x: .value("날짜", shortDate(entry.date)),
-                        y: .value("분", entry.workMin)
+                        x: .value(L10n.text("Date"), shortDate(entry.date)),
+                        y: .value(L10n.text("min"), entry.workMin)
                     )
                     .foregroundStyle(theme.accent)
 
                     BarMark(
-                        x: .value("날짜", shortDate(entry.date)),
-                        y: .value("분", entry.breakMin)
+                        x: .value(L10n.text("Date"), shortDate(entry.date)),
+                        y: .value(L10n.text("min"), entry.breakMin)
                     )
                     .foregroundStyle(theme.accentBreak)
                 }
@@ -101,13 +101,13 @@ struct StatsTabView: View {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(theme.accent)
                         .frame(width: 8, height: 8)
-                    Text("작업").font(.system(size: 10)).foregroundColor(theme.textSecondary)
+                    Text(L10n.text("Work")).font(.system(size: 10)).foregroundColor(theme.textSecondary)
                 }
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
                         .fill(theme.accentBreak)
                         .frame(width: 8, height: 8)
-                    Text("휴식").font(.system(size: 10)).foregroundColor(theme.textSecondary)
+                    Text(L10n.text("Break")).font(.system(size: 10)).foregroundColor(theme.textSecondary)
                 }
             }
         }
@@ -121,7 +121,7 @@ struct StatsTabView: View {
 
     private var heatmapView: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("시간대별 집중도")
+            Text(L10n.text("Focus by hour"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.primary)
 
@@ -164,13 +164,13 @@ struct StatsTabView: View {
 
     private var heatmapLegend: some View {
         HStack(spacing: 4) {
-            Text("낮음").font(.system(size: 9)).foregroundColor(theme.textSecondary)
+            Text(L10n.text("Low")).font(.system(size: 9)).foregroundColor(theme.textSecondary)
             ForEach([0, 15, 35, 55], id: \.self) { v in
                 RoundedRectangle(cornerRadius: 2)
                     .fill(heatColor(for: v))
                     .frame(width: 12, height: 8)
             }
-            Text("높음").font(.system(size: 9)).foregroundColor(theme.textSecondary)
+            Text(L10n.text("High")).font(.system(size: 9)).foregroundColor(theme.textSecondary)
         }
     }
 
@@ -189,7 +189,7 @@ struct StatsTabView: View {
         guard let date = formatter.date(from: iso) else { return "" }
 
         let weekdayFormatter = DateFormatter()
-        weekdayFormatter.locale = Locale(identifier: "ko_KR")
+        weekdayFormatter.locale = Locale(identifier: AppLanguage.current == .korean ? "ko_KR" : "en_US")
         weekdayFormatter.dateFormat = "E"
         return weekdayFormatter.string(from: date)
     }
@@ -201,9 +201,9 @@ struct StatsTabView: View {
         let ratio = total > 0 ? (totalWork * 100) / total : 0
 
         return HStack(spacing: 8) {
-            summaryCard(label: "\(period.rawValue) 작업", value: formatMinutes(totalWork), color: theme.accent)
-            summaryCard(label: "\(period.rawValue) 휴식", value: formatMinutes(totalBreak), color: theme.accentBreak)
-            summaryCard(label: "작업 비율", value: "\(ratio)%", color: theme.warning)
+            summaryCard(label: L10n.text("{0} work", L10n.text(period.rawValue)), value: formatMinutes(totalWork), color: theme.accent)
+            summaryCard(label: L10n.text("{0} break", L10n.text(period.rawValue)), value: formatMinutes(totalBreak), color: theme.accentBreak)
+            summaryCard(label: L10n.text("Work ratio"), value: "\(ratio)%", color: theme.warning)
         }
     }
 

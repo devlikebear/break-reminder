@@ -1,6 +1,11 @@
 package i18n
 
-import "testing"
+import (
+	"reflect"
+	"regexp"
+	"sort"
+	"testing"
+)
 
 func TestResolveLanguage(t *testing.T) {
 	for _, tc := range []struct{ tag, want string }{{"ko-KR", "ko"}, {"ko_KR.UTF-8", "ko"}, {"en-US", "en"}, {"ja-JP", "en"}, {"C", "en"}, {"", "en"}} {
@@ -25,5 +30,25 @@ func TestOverride(t *testing.T) {
 	t.Setenv("BREAK_REMINDER_LANGUAGE", "en")
 	if Text("Timer") != "Timer" {
 		t.Fatal("override cached")
+	}
+}
+
+func TestCatalogPreservesFormattingArguments(t *testing.T) {
+	printf := regexp.MustCompile(`%[-+# 0]*(?:[0-9]+)?(?:\.[0-9]+)?[a-zA-Z%]`)
+	indexed := regexp.MustCompile(`\{[0-9]+\}`)
+	for english, korean := range korean {
+		if korean == "" {
+			t.Errorf("empty translation: %q", english)
+		}
+		want, got := printf.FindAllString(english, -1), printf.FindAllString(korean, -1)
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("printf mismatch %q: %v != %v", english, want, got)
+		}
+		want, got = indexed.FindAllString(english, -1), indexed.FindAllString(korean, -1)
+		sort.Strings(want)
+		sort.Strings(got) // Indexed placeholders may change order.
+		if !reflect.DeepEqual(want, got) {
+			t.Errorf("indexed mismatch %q: %v != %v", english, want, got)
+		}
 	}
 }

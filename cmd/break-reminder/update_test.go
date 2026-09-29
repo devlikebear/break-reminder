@@ -49,6 +49,7 @@ func TestUpdateCommandRejectsNonHomebrewInstall(t *testing.T) {
 }
 
 func TestUpdateCommandReportsCurrentFormulaWithoutRestart(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	restoreUpdateDependencies(t)
 	updateExecutablePath = func() (string, error) { return "/opt/homebrew/bin/break-reminder", nil }
 	updateDetectHomebrew = func(string) (autoupdate.HomebrewInstall, bool) {
@@ -105,6 +106,7 @@ func TestAutomaticUpdateStaysQuietWhenFormulaIsCurrent(t *testing.T) {
 }
 
 func TestUpdateCommandRestartsRuntimeAfterUpgrade(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	restoreUpdateDependencies(t)
 	updateExecutablePath = func() (string, error) { return "/opt/homebrew/bin/break-reminder", nil }
 	updateDetectHomebrew = func(string) (autoupdate.HomebrewInstall, bool) {
