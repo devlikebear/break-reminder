@@ -167,12 +167,12 @@ class MenuBarController: NSObject {
         menu.addItem(.separator())
         pomodoroStatusItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         menu.addItem(pomodoroStatusItem)
-        pomodoroItem = NSMenuItem(title: "포모도로 시작", action: #selector(startPomodoro), keyEquivalent: "")
+        pomodoroItem = NSMenuItem(title: L10n.text("Start Pomodoro"), action: #selector(startPomodoro), keyEquivalent: "")
         pomodoroItem.target = self; menu.addItem(pomodoroItem)
-        classicItem = NSMenuItem(title: "기본 주기로 전환", action: #selector(selectClassic), keyEquivalent: "")
+        classicItem = NSMenuItem(title: L10n.text("Switch to classic cycle"), action: #selector(selectClassic), keyEquivalent: "")
         classicItem.target = self; menu.addItem(classicItem)
 
-        toolsMenuItem = NSMenuItem(title: "일반 타이머", action: nil, keyEquivalent: "")
+        toolsMenuItem = NSMenuItem(title: L10n.text("Countdown"), action: nil, keyEquivalent: "")
         menu.addItem(toolsMenuItem)
 
         // 6. Open Config
@@ -188,7 +188,7 @@ class MenuBarController: NSObject {
         menu.addItem(.separator())
 
         // 8. Quit
-        let quitItem = NSMenuItem(title: "메뉴바 종료 (타이머는 계속 실행)", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: L10n.text("Quit menu bar (timers keep running)"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
 
         statusItem.menu = menu
@@ -208,7 +208,7 @@ class MenuBarController: NSObject {
         updateMascotImage()
         statusMenuItem.title = presentation.statusLine
         statsMenuItem.title = presentation.statsLine
-        pomodoroStatusItem.title = pomodoroStatus(state: state, config: config) + " · 활동 감지 기준"
+        pomodoroStatusItem.title = pomodoroStatus(state: state, config: config) + L10n.text(" · activity-based")
         pomodoroItem.isEnabled = !pomodoroBusy && !pomodoroStartCommands(state: state, config: config).isEmpty
         classicItem.isEnabled = !pomodoroBusy && config.pomodoroEnabled && !state.paused && state.mode == "work"
         pomodoroItem.state = config.pomodoroEnabled ? .on : .off
@@ -315,44 +315,44 @@ class MenuBarController: NSObject {
             let status = NSMenuItem(title: "", action: nil, keyEquivalent: ""); status.isEnabled = false
             toolsStatusItem = status; menu.addItem(status)
             if let readError {
-                let errorItem = NSMenuItem(title: "읽기 실패: " + readError, action: nil, keyEquivalent: "")
+                let errorItem = NSMenuItem(title: L10n.text("Read failed: ") + readError, action: nil, keyEquivalent: "")
                 errorItem.isEnabled = false; menu.addItem(errorItem)
             }
             if !running {
-                let setup = NSMenuItem(title: "시간 도구 설정 / 복구…", action: #selector(setupTimeTools), keyEquivalent: "")
+                let setup = NSMenuItem(title: L10n.text("Set up / repair time tools…"), action: #selector(setupTimeTools), keyEquivalent: "")
                 setup.target = self; setup.isEnabled = !toolsBusy; menu.addItem(setup)
             } else if !runtime.notificationAvailable {
-                let warning = NSMenuItem(title: "시스템 알림 없음 · 완료는 앱에서 확인", action: nil, keyEquivalent: "")
+                let warning = NSMenuItem(title: L10n.text("Notifications unavailable · check completion in the app"), action: nil, keyEquivalent: "")
                 warning.isEnabled = false; menu.addItem(warning)
             }
             if let c = toolsSnapshot.countdown {
                 if c.isActive {
-                    menu.addItem(toolItem(c.phase == "running" ? "일시정지" : "재개", command: ["timer", c.phase == "running" ? "pause" : "resume", "--id", c.id], enabled: c.phase == "running" || running))
-                    menu.addItem(toolItem("타이머 취소…", command: ["timer", "cancel", "--id", c.id]))
+                    menu.addItem(toolItem(c.phase == "running" ? L10n.text("Pause") : L10n.text("Resume"), command: ["timer", c.phase == "running" ? "pause" : "resume", "--id", c.id], enabled: c.phase == "running" || running))
+                    menu.addItem(toolItem(L10n.text("Cancel timer…"), command: ["timer", "cancel", "--id", c.id]))
                 } else {
-                    menu.addItem(toolItem("다시 시작", command: ["timer", "restart", "--id", c.id], enabled: running))
+                    menu.addItem(toolItem(L10n.text("Restart"), command: ["timer", "restart", "--id", c.id], enabled: running))
                 }
             }
             for event in toolsSnapshot.unread.reversed() {
-                menu.addItem(toolItem("완료 확인: " + String(event.label.prefix(32)), command: ["acknowledge", "--event-id", event.id]))
+                menu.addItem(toolItem(L10n.text("Acknowledge: ") + String(event.displayLabel.prefix(32)), command: ["acknowledge", "--event-id", event.id]))
                 if event.deliveryState == "failed" || event.deliveryState == "unknown" {
-                    menu.addItem(toolItem("알림 다시 보내기", command: ["notify-again", "--event-id", event.id], enabled: running))
+                    menu.addItem(toolItem(L10n.text("Retry notification"), command: ["notify-again", "--event-id", event.id], enabled: running))
                 }
             }
             menu.addItem(.separator())
             for minutes in [5, 10, 15, 30] {
                 var args = ["timer", "start", "--duration", "\(minutes)m"]
                 if let c = toolsSnapshot.countdown, c.isActive { args += ["--replace-id", c.id] }
-                menu.addItem(toolItem("\(minutes)분 시작", command: args, enabled: running))
+                menu.addItem(toolItem(L10n.text("Start {0} min", minutes), command: args, enabled: running))
             }
-            let custom = NSMenuItem(title: "직접 설정…", action: #selector(openTimerDashboard), keyEquivalent: "")
+            let custom = NSMenuItem(title: L10n.text("Custom timer…"), action: #selector(openTimerDashboard), keyEquivalent: "")
             custom.target = self; menu.addItem(custom)
             if readError != nil { for item in menu.items where item.action == #selector(timeToolsAction(_:)) { item.isEnabled = false } }
             toolsMenuItem.submenu = menu
         }
         if let c = toolsSnapshot.countdown {
-            toolsStatusItem?.title = String(c.label.prefix(32)) + " · " + c.timeText(nowMS: nowMS) + (c.phase == "paused" ? " · 일시정지" : c.phase == "completed" ? " · 완료" : "")
-        } else { toolsStatusItem?.title = running ? "실행 중인 타이머 없음" : "백그라운드 타이머가 중지됐습니다" }
+            toolsStatusItem?.title = String(c.displayLabel.prefix(32)) + " · " + c.timeText(nowMS: nowMS) + (c.phase == "paused" ? L10n.text(" · paused") : c.phase == "completed" ? L10n.text(" · completed") : "")
+        } else { toolsStatusItem?.title = running ? L10n.text("No active timer") : L10n.text("Background timers are stopped") }
     }
 
     private func toolItem(_ title: String, command: [String], enabled: Bool = true) -> NSMenuItem {
@@ -365,18 +365,18 @@ class MenuBarController: NSObject {
     @objc private func timeToolsAction(_ sender: NSMenuItem) {
         guard let command = sender.representedObject as? [String], !toolsBusy else { return }
         if command.contains("--replace-id") || command.prefix(2) == ["timer", "cancel"] {
-            let alert = NSAlert(); alert.messageText = "현재 타이머를 취소할까요?"
-            alert.informativeText = command.contains("--replace-id") ? "취소 후 새 타이머를 시작합니다." : "완료 알림 없이 취소합니다."
-            alert.addButton(withTitle: "계속"); alert.addButton(withTitle: "돌아가기")
+            let alert = NSAlert(); alert.messageText = L10n.text("Cancel the current timer?")
+            alert.informativeText = command.contains("--replace-id") ? L10n.text("Cancel this timer and start a new one.") : L10n.text("Cancel without a completion notification.")
+            alert.addButton(withTitle: L10n.text("Continue")); alert.addButton(withTitle: L10n.text("Go back"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         runTimeToolsCLI(toolsFiles.arguments(command))
     }
 
     @objc private func setupTimeTools() {
-        let alert = NSAlert(); alert.messageText = "시간 도구 백그라운드 서비스를 설정할까요?"
-        alert.informativeText = "업무 알림·메뉴바·타이머 서비스를 설치하고 시작합니다."
-        alert.addButton(withTitle: "설정"); alert.addButton(withTitle: "취소")
+        let alert = NSAlert(); alert.messageText = L10n.text("Set up the background time-tools service?")
+        alert.informativeText = L10n.text("Install and start work reminders, the menu bar, and timers.")
+        alert.addButton(withTitle: L10n.text("Set up")); alert.addButton(withTitle: L10n.text("Cancel"))
         if alert.runModal() == .alertFirstButtonReturn { runTimeToolsCLI(["service", "install"]) }
     }
 
@@ -386,14 +386,14 @@ class MenuBarController: NSObject {
         Task { @MainActor in
             let result = await CLICommandClient(executablePath: findHelper("break-reminder")).run(arguments: args)
             self.toolsBusy = false; self.refresh()
-            if !result.succeeded { self.showAlert(message: "시간 도구 명령 실패", info: result.errorMessage) }
+            if !result.succeeded { self.showAlert(message: L10n.text("Time-tools command failed"), info: result.errorMessage) }
         }
     }
 
     @objc private func openTimerDashboard() {
         guard let path = findHelper("break-dashboard") else { return }
         let task = Process(); task.executableURL = URL(fileURLWithPath: path); task.arguments = ["--time-tools"]
-        do { try task.run() } catch { showAlert(message: "대시보드를 열지 못했습니다", info: error.localizedDescription) }
+        do { try task.run() } catch { showAlert(message: L10n.text("Could not open dashboard"), info: error.localizedDescription) }
     }
 
     @objc private func startPomodoro() {
@@ -406,9 +406,9 @@ class MenuBarController: NSObject {
         guard !pomodoroBusy, !commands.isEmpty else { return }
         if currentState.isSessionActive {
             let alert = NSAlert()
-            alert.messageText = "현재 작업 구간을 초기화하고 모드를 전환할까요?"
-            alert.informativeText = "오늘 작업 누계는 유지됩니다."
-            alert.addButton(withTitle: "전환"); alert.addButton(withTitle: "취소")
+            alert.messageText = L10n.text("Reset the current work interval and switch modes?")
+            alert.informativeText = L10n.text("Today's work totals will be kept.")
+            alert.addButton(withTitle: L10n.text("Switch")); alert.addButton(withTitle: L10n.text("Cancel"))
             guard alert.runModal() == .alertFirstButtonReturn else { return }
         }
         pomodoroBusy = true; refresh()
@@ -416,7 +416,7 @@ class MenuBarController: NSObject {
             let actions = PomodoroActions()
             await actions.perform(commands: commands, client: CLICommandClient(executablePath: findHelper("break-reminder")))
             self.pomodoroBusy = false; self.refresh()
-            if let message = actions.message { self.showAlert(message: "포모도로 명령 실패", info: message) }
+            if let message = actions.message { self.showAlert(message: L10n.text("Pomodoro command failed"), info: message) }
         }
     }
 

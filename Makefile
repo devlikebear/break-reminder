@@ -37,6 +37,7 @@ uninstall:
 	@echo "Uninstalled"
 
 test:
+	python3 scripts/generate-localizations.py --check
 	go test ./...
 	cd helpers && swift test
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/devlikebear/break-reminder/internal/i18n"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -26,7 +27,7 @@ func (s *Store) Load() (Snapshot, error) {
 	}
 	var snapshot Snapshot
 	if err = json.Unmarshal(data, &snapshot); err != nil {
-		return snapshot, fail("store_corrupt", "시간 도구 파일을 읽을 수 없습니다. 원본을 보존하고 복구해 주세요")
+		return snapshot, fail("store_corrupt", i18n.Text("Cannot read time-tools data. Preserve the original file and repair it"))
 	}
 	return snapshot, snapshot.Validate()
 }
@@ -48,7 +49,7 @@ func (s *Store) Update(revision *uint64, fn func(Snapshot) (Snapshot, error)) (S
 		return previous, err
 	}
 	if revision != nil && *revision != previous.Revision {
-		return previous, fail("conflict", "다른 창에서 상태가 변경되었습니다. 새로고침해 주세요")
+		return previous, fail("conflict", i18n.Text("Another window changed the state. Refresh and try again"))
 	}
 	next, err := fn(previous.clone())
 	if err != nil {

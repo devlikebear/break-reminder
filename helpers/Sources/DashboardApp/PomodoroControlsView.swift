@@ -17,21 +17,21 @@ struct PomodoroControlsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(pomodoroStatus(state: vm.state, config: vm.config)).font(.headline)
-            Text("활동 감지 기준 · 오래 자리를 비우면 집중 구간이 초기화됩니다.")
+            Text(L10n.text("Activity-based · a long absence resets the focus interval."))
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
-                Button(vm.config.pomodoroEnabled && vm.state.isSessionActive ? "포모도로 실행 중" : "포모도로 시작") {
+                Button(vm.config.pomodoroEnabled && vm.state.isSessionActive ? L10n.text("Pomodoro running") : L10n.text("Start Pomodoro")) {
                     request(pomodoroStartCommands(state: vm.state, config: vm.config))
                 }
                 .disabled(!canSwitch || (vm.config.pomodoroEnabled && vm.state.isSessionActive))
                 if vm.config.pomodoroEnabled {
-                    Button("기본 주기로") { request([["pomodoro", "off"]]) }.disabled(!canSwitch)
+                    Button(L10n.text("Classic cycle")) { request([["pomodoro", "off"]]) }.disabled(!canSwitch)
                 }
             }
             if vm.state.paused || vm.state.mode == "break" {
-                Text("현재 휴식을 마치거나 일시정지를 해제한 뒤 모드를 전환하세요.").font(.caption)
+                Text(L10n.text("Finish your break or resume before switching modes.")).font(.caption)
             }
-            Button("포모도로 시간 설정") {
+            Button(L10n.text("Pomodoro durations")) {
                 work = vm.config.pomodoroWorkMin; shortBreak = vm.config.pomodoroBreakMin
                 longBreak = vm.config.pomodoroLongBreakMin; every = vm.config.pomodoroLongBreakEvery
                 editing = true
@@ -39,19 +39,19 @@ struct PomodoroControlsView: View {
             .disabled(vm.isSessionRunning || !canSwitch)
             if let message = actions.message { Text(message).font(.caption).foregroundStyle(.red).textSelection(.enabled) }
         }
-        .confirmationDialog("현재 작업 구간을 초기화하고 모드를 전환할까요? 오늘 누계는 유지됩니다.", isPresented: $confirmSwitch) {
-            Button("전환") { execute(pendingCommands) }
+        .confirmationDialog(L10n.text("Reset the current work interval and switch modes? Today's totals will be kept."), isPresented: $confirmSwitch) {
+            Button(L10n.text("Switch")) { execute(pendingCommands) }
         }
         .sheet(isPresented: $editing) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("포모도로 시간").font(.headline)
-                Stepper("집중 \(work)분", value: $work, in: 1...180)
-                Stepper("짧은 휴식 \(shortBreak)분", value: $shortBreak, in: 1...60)
-                Stepper("긴 휴식 \(longBreak)분", value: $longBreak, in: 1...120)
-                Stepper("\(every)회마다 긴 휴식", value: $every, in: 1...12)
+                Text(L10n.text("Pomodoro durations")).font(.headline)
+                Stepper(L10n.text("Focus: {0} min", work), value: $work, in: 1...180)
+                Stepper(L10n.text("Short break: {0} min", shortBreak), value: $shortBreak, in: 1...60)
+                Stepper(L10n.text("Long break: {0} min", longBreak), value: $longBreak, in: 1...120)
+                Stepper(L10n.text("Long break every {0} cycles", every), value: $every, in: 1...12)
                 HStack {
-                    Button("취소") { editing = false }
-                    Button("저장") {
+                    Button(L10n.text("Cancel")) { editing = false }
+                    Button(L10n.text("Save")) {
                         execute([["config", "set", "pomodoro_work_min=\(work)", "pomodoro_break_min=\(shortBreak)", "pomodoro_long_break_min=\(longBreak)", "pomodoro_long_break_every=\(every)"]])
                         editing = false
                     }.disabled(vm.isSessionRunning || !canSwitch)

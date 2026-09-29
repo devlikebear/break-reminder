@@ -10,11 +10,11 @@ public func pomodoroStartCommands(state: AppState, config: AppConfig) -> [[Strin
 }
 
 public func pomodoroStatus(state: AppState, config: AppConfig) -> String {
-    guard config.pomodoroEnabled else { return "기본 주기 \(config.workDurationMin)/\(config.breakDurationMin)분" }
+    guard config.pomodoroEnabled else { return L10n.text("Classic cycle {0}/{1} min", config.workDurationMin, config.breakDurationMin) }
     let every = max(1, config.pomodoroLongBreakEvery)
     let isLongBreak = state.mode == "break" && state.pomodoroCount > 0 && state.pomodoroCount % every == 0
-    let phase = state.mode == "break" ? (isLongBreak ? "긴 휴식" : "짧은 휴식") : "집중 \(state.pomodoroCount % every + 1)/\(every)"
-    return "\(phase) · 오늘 완료 \(state.todayPomodoros)회"
+    let phase = state.mode == "break" ? (isLongBreak ? L10n.text("Long break") : L10n.text("Short break")) : L10n.text("Focus {0}/{1}", state.pomodoroCount % every + 1, every)
+    return L10n.text("{0} · completed today: {1}", phase, state.todayPomodoros)
 }
 
 @MainActor
@@ -31,7 +31,7 @@ public final class PomodoroActions: ObservableObject {
         for args in commands {
             let result = await client.run(arguments: args)
             guard result.succeeded else {
-                message = (modeSaved ? "포모도로 설정은 저장됐지만 작업 시작에 실패했습니다. " : "") + result.errorMessage
+                message = (modeSaved ? L10n.text("Pomodoro settings were saved, but starting work failed. ") : "") + result.errorMessage
                 return
             }
             if args == ["pomodoro", "on"] { modeSaved = true }

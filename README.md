@@ -39,6 +39,24 @@ or use **시간 도구 설정 / 복구** in the UI. Direct `brew upgrade` does n
 reload LaunchAgents. Future updates through `break-reminder update` preserve
 which services were stopped and migrate installed runtime agents automatically.
 
+### Time-tools language
+
+Pomodoro and countdown controls, completion messages, and time-tools errors support
+English and Korean. Native helpers use the macOS preferred language; unsupported
+languages fall back to English. Restart the app and service after changing the
+system language. CLI messages honor `BREAK_REMINDER_LANGUAGE`, then
+`LC_ALL`/`LC_MESSAGES`/`LANG`; the background worker falls back to macOS preferences
+when these are unset. Helpers pass their selected language to CLI commands.
+
+For an explicit CLI override, use `BREAK_REMINDER_LANGUAGE=en break-reminder time-tools status`.
+User-entered names and names already saved by older versions are preserved. New
+unnamed timers display their default name in the current language.
+
+Translations live in `internal/i18n/catalog.json`. After editing, run
+`python3 scripts/generate-localizations.py`; `make test` and CI check that the
+compiled Swift catalog matches. Legacy screens outside time tools are not fully
+localized yet.
+
 ### Countdown timers
 
 Open the dashboard's timer page and select **일반 타이머**, or use the menu bar's

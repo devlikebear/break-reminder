@@ -6,7 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
+	"github.com/devlikebear/break-reminder/internal/i18n"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -128,50 +128,47 @@ func labelValue(label string) (string, error) {
 	// Reject embedded newlines before trimming so whitespace cannot hide them.
 	for _, r := range label {
 		if unicode.IsControl(r) {
-			return "", fail("invalid_input", "이름에 줄바꿈이나 제어 문자를 사용할 수 없습니다")
+			return "", fail("invalid_input", i18n.Text("Names cannot contain line breaks or control characters"))
 		}
 	}
 	label = strings.TrimSpace(label)
 	if !utf8.ValidString(label) || utf8.RuneCountInString(label) > 80 {
-		return "", fail("invalid_input", "이름은 80자 이하여야 합니다")
-	}
-	if label == "" {
-		label = "타이머"
+		return "", fail("invalid_input", i18n.Text("Names must be 80 characters or fewer"))
 	}
 	return label, nil
 }
 func (s Snapshot) Validate() error {
 	if s.SchemaVersion != SchemaVersion {
-		return fail("unsupported_schema", fmt.Sprintf("지원하지 않는 시간 도구 버전: %d", s.SchemaVersion))
+		return fail("unsupported_schema", i18n.Text("Unsupported time-tools version: {0}", s.SchemaVersion))
 	}
 	if c := s.Countdown; c != nil {
 		if c.ID == "" || c.DurationMS < 1000 || c.DurationMS > MaxDurationMS {
-			return fail("store_corrupt", "타이머 데이터가 올바르지 않습니다")
+			return fail("store_corrupt", i18n.Text("Invalid timer data"))
 		}
 		switch c.Phase {
 		case "running":
 			if c.Deadline == nil {
-				return fail("store_corrupt", "타이머 완료 시각이 없습니다")
+				return fail("store_corrupt", i18n.Text("Timer deadline is missing"))
 			}
 		case "paused":
 			if c.RemainingMS == nil || *c.RemainingMS <= 0 || *c.RemainingMS > MaxDurationMS {
-				return fail("store_corrupt", "남은 시간이 올바르지 않습니다")
+				return fail("store_corrupt", i18n.Text("Invalid remaining time"))
 			}
 		case "completed", "canceled":
 		default:
-			return fail("store_corrupt", "알 수 없는 타이머 상태입니다")
+			return fail("store_corrupt", i18n.Text("Unknown timer state"))
 		}
 	}
 	seen := map[string]bool{}
 	for _, e := range s.Events {
 		if e.ID == "" || seen[e.ID] {
-			return fail("store_corrupt", "완료 기록 ID가 올바르지 않습니다")
+			return fail("store_corrupt", i18n.Text("Invalid completion event ID"))
 		}
 		seen[e.ID] = true
 		switch e.DeliveryState {
 		case "pending", "claimed", "sent", "failed", "unknown", "silent":
 		default:
-			return fail("store_corrupt", "알 수 없는 알림 상태입니다")
+			return fail("store_corrupt", i18n.Text("Unknown notification state"))
 		}
 	}
 	return nil

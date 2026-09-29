@@ -3,10 +3,10 @@ import SwiftUI
 import HelperCore
 
 enum DashboardTab: String, CaseIterable, Identifiable {
-    case timer = "타이머"
-    case stats = "통계"
-    case insights = "인사이트"
-    case settings = "설정"
+    case timer = "Timer"
+    case stats = "Statistics"
+    case insights = "Insights"
+    case settings = "Settings"
 
     var id: String { rawValue }
 }
@@ -24,7 +24,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var config: AppConfig = AppConfig()
     @Published var idleSeconds: Int = 0
     @Published var launchdStatusText: String = "Unknown"
-    @Published var selectedTimeTool = ProcessInfo.processInfo.arguments.contains("--time-tools") ? "타이머" : "집중"
+    @Published var selectedTimeTool = ProcessInfo.processInfo.arguments.contains("--time-tools") ? "countdown" : "focus"
     @Published var selectedTab: DashboardTab = .timer
     @Published var history: [HistoryEntry] = []
     @Published var insights: InsightsReport?

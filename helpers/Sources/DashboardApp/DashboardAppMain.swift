@@ -70,14 +70,14 @@ struct DashboardContentView: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                if vm.selectedTab == .timer && vm.selectedTimeTool == "타이머" {
+                if vm.selectedTab == .timer && vm.selectedTimeTool == "countdown" {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("업무·휴식").font(.caption).foregroundStyle(.secondary)
+                            Text(L10n.text("Work and breaks")).font(.caption).foregroundStyle(.secondary)
                             Text(vm.statusText).font(.caption.weight(.semibold))
                         }
                         Spacer()
-                        Button("집중 보기") { vm.selectedTimeTool = "집중" }
+                        Button(L10n.text("Show focus")) { vm.selectedTimeTool = "focus" }
                     }.padding(16)
                 } else {
                     StatusHeaderView(vm: vm)
@@ -157,7 +157,7 @@ struct DashboardContentView: View {
                 return event
             }
 
-            if (event.keyCode == 15 || event.keyCode == 11) && (vm.selectedTab != .timer || vm.selectedTimeTool != "집중") { return event }
+            if (event.keyCode == 15 || event.keyCode == 11) && (vm.selectedTab != .timer || vm.selectedTimeTool != "focus") { return event }
 
             switch event.keyCode {
             case 12:  // Q (physical key)
