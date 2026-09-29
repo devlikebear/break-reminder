@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-09-29
+
 ### Added
 - Native dashboard and menu bar Pomodoro controls, including explicit work-session start, cycle status, duration settings, and activity-detection guidance.
 - Independent countdown timer with custom names, presets, pause/resume, explicit replacement, restart, and persistent completion cards. Timer data is separate from work/break state and uses locked atomic writes with ID/revision conflict checks.
