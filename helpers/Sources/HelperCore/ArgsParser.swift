@@ -47,7 +47,7 @@ public func formatMinutes(_ min: Int) -> String {
     if min >= 60 {
         let h = min / 60
         let m = min % 60
-        return m > 0 ? "\(h)h \(m)m" : "\(h)h"
+        return m > 0 ? L10n.text("{0}h {1}m", h, m) : L10n.text("{0}h", h)
     }
-    return "\(min)m"
+    return L10n.text("{0}m", min)
 }

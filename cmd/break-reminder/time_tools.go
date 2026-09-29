@@ -22,11 +22,11 @@ type timeToolsResponse struct {
 }
 
 func newTimeToolsCmd() *cobra.Command {
-	parent := &cobra.Command{Use: "time-tools", Short: "Independent countdown timers"}
+	parent := &cobra.Command{Use: "time-tools", Short: i18n.Text("Independent countdown timers")}
 	var directory string
 	var jsonOutput bool
-	parent.PersistentFlags().StringVar(&directory, "data-dir", timetools.DefaultDirectory(), "Directory for time tools only (isolated testing)")
-	parent.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Print machine-readable result")
+	parent.PersistentFlags().StringVar(&directory, "data-dir", timetools.DefaultDirectory(), i18n.Text("Directory for time tools only (isolated testing)"))
+	parent.PersistentFlags().BoolVar(&jsonOutput, "json", false, i18n.Text("Print machine-readable result"))
 	report := func(cmd *cobra.Command, s timetools.Snapshot, err error) error {
 		if err != nil {
 			if jsonOutput {
@@ -38,21 +38,21 @@ func newTimeToolsCmd() *cobra.Command {
 		if jsonOutput {
 			return json.NewEncoder(cmd.OutOrStdout()).Encode(timeToolsResponse{1, s, r})
 		}
-		fmt.Fprintf(cmd.OutOrStdout(), "Time tools worker: %t\n", r.Running(time.Now().UnixMilli()))
+		fmt.Fprintf(cmd.OutOrStdout(), i18n.Text("Time tools worker: %t\n"), r.Running(time.Now().UnixMilli()))
 		if c := s.Countdown; c != nil {
-			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s (%s)\n", timeToolDisplayLabel(c.Label), c.Phase, c.ID)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s (%s)\n", timeToolDisplayLabel(c.Label), i18n.Text(c.Phase), c.ID)
 		} else {
-			fmt.Fprintln(cmd.OutOrStdout(), "No countdown timer")
+			fmt.Fprintln(cmd.OutOrStdout(), i18n.Text("No countdown timer"))
 		}
 		return nil
 	}
-	status := &cobra.Command{Use: "status", Short: "Read time tool state", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+	status := &cobra.Command{Use: "status", Short: i18n.Text("Read time tool state"), Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		s, err := timetools.NewStore(directory).Load()
 		return report(cmd, s, err)
 	}}
 	allowInvalidConfig(status)
 	parent.AddCommand(status)
-	run := &cobra.Command{Use: "run", Short: "Run the background time tools worker", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+	run := &cobra.Command{Use: "run", Short: i18n.Text("Run the background time tools worker"), Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer cancel()
 		worker := timetools.Worker{Store: timetools.NewStore(directory), NotificationAvailable: notify.Available, Send: func(ctx context.Context, e timetools.Event) error {
@@ -62,13 +62,13 @@ func newTimeToolsCmd() *cobra.Command {
 	}}
 	allowInvalidConfig(run)
 	parent.AddCommand(run)
-	timerCmd := &cobra.Command{Use: "timer", Short: "Start or control a countdown"}
+	timerCmd := &cobra.Command{Use: "timer", Short: i18n.Text("Start or control a countdown")}
 	parent.AddCommand(timerCmd)
 	for _, kind := range []string{"start", "pause", "resume", "cancel", "restart", "acknowledge", "notify-again"} {
 		kind := kind
 		var id, label, duration, replaceID string
 		var revision uint64
-		cmd := &cobra.Command{Use: kind, Short: kind + " a time tool", Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
+		cmd := &cobra.Command{Use: kind, Short: i18n.Text(map[string]string{"pause": "Pause a time tool", "resume": "Resume a time tool", "cancel": "Cancel a time tool", "acknowledge": "Dismiss a time tool", "start": "Start a time tool", "restart": "Restart a time tool", "notify-again": "Repeat a time tool notification"}[kind]), Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 			store := timetools.NewStore(directory)
 			command := timetools.Command{Kind: kind, ID: id, Label: label, ReplaceID: replaceID}
 			bad := func(code, message string) error {
@@ -108,15 +108,15 @@ func newTimeToolsCmd() *cobra.Command {
 			})
 			return report(cmd, s, err)
 		}}
-		cmd.Flags().Uint64Var(&revision, "if-revision", 0, "Reject stale state revision")
+		cmd.Flags().Uint64Var(&revision, "if-revision", 0, i18n.Text("Reject stale state revision"))
 		if kind == "start" {
-			cmd.Flags().StringVar(&duration, "duration", "", "Duration such as 5m or 10s")
-			cmd.Flags().StringVar(&label, "label", "", "Optional timer name")
-			cmd.Flags().StringVar(&replaceID, "replace-id", "", "Explicitly replace this timer ID")
+			cmd.Flags().StringVar(&duration, "duration", "", i18n.Text("Duration such as 5m or 10s"))
+			cmd.Flags().StringVar(&label, "label", "", i18n.Text("Optional timer name"))
+			cmd.Flags().StringVar(&replaceID, "replace-id", "", i18n.Text("Explicitly replace this timer ID"))
 		} else if kind == "acknowledge" || kind == "notify-again" {
-			cmd.Flags().StringVar(&id, "event-id", "", "Completion event ID")
+			cmd.Flags().StringVar(&id, "event-id", "", i18n.Text("Completion event ID"))
 		} else {
-			cmd.Flags().StringVar(&id, "id", "", "Target timer ID")
+			cmd.Flags().StringVar(&id, "id", "", i18n.Text("Target timer ID"))
 		}
 		allowInvalidConfig(cmd)
 		if kind == "acknowledge" || kind == "notify-again" {

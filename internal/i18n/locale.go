@@ -1,4 +1,4 @@
-// Package i18n localizes time-tools messages. English is the fallback language.
+// Package i18n localizes application messages. English is the fallback language.
 package i18n
 
 import (
@@ -65,4 +65,12 @@ func For(language, key string, args ...any) string {
 		replacements = append(replacements, fmt.Sprintf("{%d}", i), fmt.Sprint(arg))
 	}
 	return strings.NewReplacer(replacements...).Replace(template)
+}
+
+// ResponseLanguage is prompt metadata, not localized user content.
+func ResponseLanguage() string {
+	if Current() == "ko" {
+		return "Korean"
+	}
+	return "English"
 }

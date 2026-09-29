@@ -1,6 +1,8 @@
 package state
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"bufio"
 	"errors"
 	"fmt"
@@ -13,9 +15,9 @@ import (
 )
 
 var (
-	ErrBreakNotActive = errors.New("snooze requires an active break")
-	ErrStatePaused    = errors.New("cannot snooze while paused")
-	ErrInvalidSnooze  = errors.New("snooze duration must be greater than zero")
+	ErrBreakNotActive = errors.New(i18n.Text("snooze requires an active break"))
+	ErrStatePaused    = errors.New(i18n.Text("cannot snooze while paused"))
+	ErrInvalidSnooze  = errors.New(i18n.Text("snooze duration must be greater than zero"))
 )
 
 // Pause mode identifiers. Empty string means not paused or unknown.

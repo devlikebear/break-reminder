@@ -10,6 +10,7 @@ import (
 )
 
 func TestPomodoroReportsPartialSaveFailure(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	path := setupSessionTest(t, config.Default(), time.Unix(1700000000, 0))
 	if err := os.Mkdir(path, 0700); err != nil {
 		t.Fatal(err)

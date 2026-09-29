@@ -9,6 +9,11 @@ on:
 jobs:
   test:
     runs-on: macos-latest
+    strategy:
+      matrix:
+        language: [en, ko]
+    env:
+      BREAK_REMINDER_LANGUAGE: ${{ matrix.language }}
     steps:
       - uses: actions/checkout@v4
 

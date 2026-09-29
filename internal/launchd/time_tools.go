@@ -1,6 +1,8 @@
 package launchd
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,7 +78,7 @@ func MigrateRuntime(binary, menu string, prior RuntimeInstallation) error {
 	}
 	if prior.MenuBar.Installed {
 		if menu == "" {
-			errs = append(errs, fmt.Errorf("installed menu bar helper is missing"))
+			errs = append(errs, fmt.Errorf("%s", i18n.Text("installed menu bar helper is missing")))
 		} else if err := writePlist(MenuBarPlistPath(), generateMenuBarPlist(menu)); err != nil {
 			errs = append(errs, err)
 		} else if prior.MenuBar.Loaded {

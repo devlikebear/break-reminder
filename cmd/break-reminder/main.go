@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"time"
@@ -51,8 +53,8 @@ func commandAllowsInvalidConfig(cmd *cobra.Command) bool {
 func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "break-reminder",
-		Short: "Smart work/break cycle enforcer for macOS",
-		Long:  "Break Reminder - Work 50 minutes, rest 10 minutes, repeat!",
+		Short: i18n.Text("Smart work/break cycle enforcer for macOS"),
+		Long:  i18n.Text("Break Reminder - Work 50 minutes, rest 10 minutes, repeat!"),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if commandAllowsInvalidConfig(cmd) {
 				return nil
@@ -88,6 +90,7 @@ func newRootCmd() *cobra.Command {
 		newVersionCmd(),
 	)
 
+	localizeCommandHelp(root)
 	return root
 }
 
@@ -97,7 +100,7 @@ func main() {
 
 	root := newRootCmd()
 	if err := root.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(os.Stderr, localizeCommandError(err))
 		os.Exit(1)
 	}
 }
@@ -105,7 +108,7 @@ func main() {
 func newVersionCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "version",
-		Short: "Print version",
+		Short: i18n.Text("Print version"),
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println("break-reminder", version)
 		},

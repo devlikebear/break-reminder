@@ -1,6 +1,8 @@
 package tts
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"os/exec"
@@ -70,27 +72,27 @@ func InstallKittenTTS(cfg config.Config, opts InstallOptions) (config.Config, In
 	if !needsInstall {
 		ok, err := kittenModuleInstalled(venvPython)
 		if err != nil {
-			return cfg, result, fmt.Errorf("check existing kittentts install: %w", err)
+			return cfg, result, fmt.Errorf(i18n.Text("check existing kittentts install: %w"), err)
 		}
 		needsInstall = !ok
 	}
 
 	if needsInstall {
 		if err := runInstallCommand(exec.Command(venvPython, "-m", "pip", "install", "--upgrade", "pip")); err != nil {
-			return cfg, result, fmt.Errorf("upgrade pip: %w", err)
+			return cfg, result, fmt.Errorf(i18n.Text("upgrade pip: %w"), err)
 		}
 		if err := runInstallCommand(exec.Command(venvPython, "-m", "pip", "install", "--upgrade", defaultKittenPackageSpec)); err != nil {
-			return cfg, result, fmt.Errorf("install kittentts: %w", err)
+			return cfg, result, fmt.Errorf(i18n.Text("install kittentts: %w"), err)
 		}
 		result.Installed = true
 	}
 
 	ok, err := kittenModuleInstalled(venvPython)
 	if err != nil {
-		return cfg, result, fmt.Errorf("verify kittentts install: %w", err)
+		return cfg, result, fmt.Errorf(i18n.Text("verify kittentts install: %w"), err)
 	}
 	if !ok {
-		return cfg, result, fmt.Errorf("kittentts installation verification failed")
+		return cfg, result, fmt.Errorf("%s", i18n.Text("kittentts installation verification failed"))
 	}
 
 	updated := applyKittenConfig(cfg, opts.Voice, opts.Model, venvPython)
@@ -124,27 +126,27 @@ func InstallSupertonic(cfg config.Config, opts InstallOptions) (config.Config, I
 	if !needsInstall {
 		ok, err := supertonicModuleInstalled(venvPython)
 		if err != nil {
-			return cfg, result, fmt.Errorf("check existing supertonic install: %w", err)
+			return cfg, result, fmt.Errorf(i18n.Text("check existing supertonic install: %w"), err)
 		}
 		needsInstall = !ok
 	}
 
 	if needsInstall {
 		if err := runInstallCommand(exec.Command(venvPython, "-m", "pip", "install", "--upgrade", "pip")); err != nil {
-			return cfg, result, fmt.Errorf("upgrade pip: %w", err)
+			return cfg, result, fmt.Errorf(i18n.Text("upgrade pip: %w"), err)
 		}
 		if err := runInstallCommand(exec.Command(venvPython, "-m", "pip", "install", "--upgrade", defaultSupertonicPackageSpec)); err != nil {
-			return cfg, result, fmt.Errorf("install supertonic: %w", err)
+			return cfg, result, fmt.Errorf(i18n.Text("install supertonic: %w"), err)
 		}
 		result.Installed = true
 	}
 
 	ok, err := supertonicModuleInstalled(venvPython)
 	if err != nil {
-		return cfg, result, fmt.Errorf("verify supertonic install: %w", err)
+		return cfg, result, fmt.Errorf(i18n.Text("verify supertonic install: %w"), err)
 	}
 	if !ok {
-		return cfg, result, fmt.Errorf("supertonic installation verification failed")
+		return cfg, result, fmt.Errorf("%s", i18n.Text("supertonic installation verification failed"))
 	}
 
 	updated := applySupertonicConfig(cfg, opts.Voice, opts.Model, venvPython)
@@ -160,7 +162,7 @@ func UninstallKittenTTS(cfg config.Config) (config.Config, UninstallResult, erro
 
 	if _, err := os.Stat(venvDir); err == nil {
 		if err := os.RemoveAll(venvDir); err != nil {
-			return cfg, result, fmt.Errorf("remove managed KittenTTS environment %s: %w", venvDir, err)
+			return cfg, result, fmt.Errorf(i18n.Text("remove managed KittenTTS environment %s: %w"), venvDir, err)
 		}
 		result.Removed = true
 	} else if !os.IsNotExist(err) {
@@ -183,7 +185,7 @@ func UninstallSupertonic(cfg config.Config) (config.Config, UninstallResult, err
 
 	if _, err := os.Stat(venvDir); err == nil {
 		if err := os.RemoveAll(venvDir); err != nil {
-			return cfg, result, fmt.Errorf("remove managed Supertonic environment %s: %w", venvDir, err)
+			return cfg, result, fmt.Errorf(i18n.Text("remove managed Supertonic environment %s: %w"), venvDir, err)
 		}
 		result.Removed = true
 	} else if !os.IsNotExist(err) {
@@ -222,7 +224,7 @@ func ensureManagedVenv(bootstrapPython pythonCandidate, venvDir, venvPython stri
 			return nil
 		}
 		if err := os.RemoveAll(venvDir); err != nil {
-			return fmt.Errorf("reset incompatible virtualenv %s: %w", venvDir, err)
+			return fmt.Errorf(i18n.Text("reset incompatible virtualenv %s: %w"), venvDir, err)
 		}
 	} else if !os.IsNotExist(err) {
 		return err
@@ -234,7 +236,7 @@ func ensureManagedVenv(bootstrapPython pythonCandidate, venvDir, venvPython stri
 
 	cmd := exec.Command(bootstrapPython.command, "-m", "venv", venvDir)
 	if err := runInstallCommand(cmd); err != nil {
-		return fmt.Errorf("create virtualenv %s: %w", venvDir, err)
+		return fmt.Errorf(i18n.Text("create virtualenv %s: %w"), venvDir, err)
 	}
 	return nil
 }
@@ -370,11 +372,11 @@ func resolveBootstrapPython(requested string, explicit bool) (pythonCandidate, e
 	if explicit {
 		candidate, err := inspectPythonCandidate(requested)
 		if err != nil {
-			return pythonCandidate{}, fmt.Errorf("bootstrap python %q not found", requested)
+			return pythonCandidate{}, fmt.Errorf(i18n.Text("bootstrap python %q not found"), requested)
 		}
 		if !supportsManagedPythonVersion(candidate.version) {
 			return pythonCandidate{}, fmt.Errorf(
-				"bootstrap python %q uses Python %s; managed Python TTS engines currently need Python 3.8-3.12-compatible dependencies",
+				i18n.Text("bootstrap python %q uses Python %s; managed Python TTS engines currently need Python 3.8-3.12-compatible dependencies"),
 				candidate.command,
 				candidate.version,
 			)
@@ -394,15 +396,15 @@ func resolveBootstrapPython(requested string, explicit bool) (pythonCandidate, e
 		return candidate, nil
 	}
 	if len(candidates) == 0 {
-		return pythonCandidate{}, fmt.Errorf("no Python interpreter found; install Python 3.8-3.12 or pass --bootstrap-python")
+		return pythonCandidate{}, fmt.Errorf("%s", i18n.Text("no Python interpreter found; install Python 3.8-3.12 or pass --bootstrap-python"))
 	}
 
 	var found []string
 	for _, candidate := range candidates {
-		found = append(found, fmt.Sprintf("%s (Python %s)", candidate.command, candidate.version))
+		found = append(found, fmt.Sprintf(i18n.Text("%s (Python %s)"), candidate.command, candidate.version))
 	}
 	return pythonCandidate{}, fmt.Errorf(
-		"no compatible Python interpreter found for managed Python TTS engines; found %s, need Python 3.8-3.12",
+		i18n.Text("no compatible Python interpreter found for managed Python TTS engines; found %s, need Python 3.8-3.12"),
 		strings.Join(found, ", "),
 	)
 }
@@ -436,7 +438,7 @@ func pythonVersionOf(command string) (pythonVersion, error) {
 
 	parts := strings.Split(strings.TrimSpace(string(out)), ".")
 	if len(parts) != 2 {
-		return pythonVersion{}, fmt.Errorf("unexpected python version output %q", strings.TrimSpace(string(out)))
+		return pythonVersion{}, fmt.Errorf(i18n.Text("unexpected python version output %q"), strings.TrimSpace(string(out)))
 	}
 
 	major, err := strconv.Atoi(parts[0])

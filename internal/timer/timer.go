@@ -1,6 +1,8 @@
 package timer
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"time"
 
 	"github.com/devlikebear/break-reminder/internal/config"
@@ -70,7 +72,7 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 			result.State.SessionStart = 0
 			result.State.SessionEnd = 0
 		}
-		result.LogMsg = "New day detected! Resetting daily stats."
+		result.LogMsg = i18n.Text("New day detected! Resetting daily stats.")
 	} else if s.LastUpdateDate == "" {
 		result.State.LastUpdateDate = today
 	}
@@ -79,7 +81,7 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 		if s.PauseUntil > 0 && unix >= s.PauseUntil {
 			reason := s.PauseReason
 			result.State = result.State.Resume(unix)
-			result.LogMsg = "Auto-resumed from " + reason + " pause"
+			result.LogMsg = i18n.Text("Auto-resumed from ") + reason + i18n.Text(" pause")
 			s = result.State
 		} else {
 			return result
@@ -104,7 +106,7 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 		result.State.Mode = "work"
 		result.State.SnoozeUntil = 0
 		result.State.LastCheck = unix
-		result.LogMsg = "Long gap detected, resetting..."
+		result.LogMsg = i18n.Text("Long gap detected, resetting...")
 		return result
 	}
 
@@ -116,7 +118,7 @@ func Tick(cfg config.Config, s state.State, now time.Time, idleSec int) TickResu
 	}
 	if elapsed > maxExpectedElapsed {
 		result.State.LastCheck = unix
-		result.LogMsg = "Gap detected (" + itoa(elapsed) + "s), skipping as idle"
+		result.LogMsg = i18n.Text("Gap detected (") + itoa(elapsed) + i18n.Text("s), skipping as idle")
 		return result
 	}
 
@@ -151,14 +153,14 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 
 		workMin := r.State.WorkSeconds / 60
 		remainMin := (workDur - r.State.WorkSeconds) / 60
-		r.LogMsg = "Working... " + itoa(workMin) + "min elapsed (" + itoa(remainMin) + "min remaining)"
+		r.LogMsg = i18n.Text("Working... ") + itoa(workMin) + i18n.Text("min elapsed (") + itoa(remainMin) + i18n.Text("min remaining)")
 
 		snoozePending := r.State.SnoozeUntil > 0
 		snoozeActive := snoozePending && r.State.SnoozeUntil > unix
 		snoozeDue := snoozePending && r.State.SnoozeUntil <= unix
 
 		if snoozeDue {
-			r.LogMsg = "Snoozed break is due"
+			r.LogMsg = i18n.Text("Snoozed break is due")
 			if idleSec < cfg.IdleThresholdSec {
 				return startBreak(cfg, r, unix)
 			}
@@ -166,7 +168,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 
 		// Break time!
 		if !snoozePending && r.State.WorkSeconds >= workDur {
-			r.LogMsg = "Break time triggered!"
+			r.LogMsg = i18n.Text("Break time triggered!")
 			return startBreak(cfg, r, unix)
 		}
 
@@ -179,7 +181,7 @@ func tickWork(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64)
 	} else {
 		// User is idle
 		if idleSec > cfg.NaturalBreakSec {
-			r.LogMsg = "Natural break detected (idle " + itoa(idleSec) + "s), resetting work time"
+			r.LogMsg = i18n.Text("Natural break detected (idle ") + itoa(idleSec) + i18n.Text("s), resetting work time")
 			r.State.WorkSeconds = 0
 			r.State.SnoozeUntil = 0
 		}
@@ -210,7 +212,7 @@ func tickBreak(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64
 	breakElapsed := int(unix - r.State.BreakStart)
 	breakRemaining := (breakDur - breakElapsed) / 60
 
-	r.LogMsg = "Break mode... " + itoa(breakRemaining) + "min remaining"
+	r.LogMsg = i18n.Text("Break mode... ") + itoa(breakRemaining) + i18n.Text("min remaining")
 
 	// Warn if the user is still active during break, but avoid warning immediately
 	// after the break begins. Use a fixed grace period so short configured breaks
@@ -225,7 +227,7 @@ func tickBreak(cfg config.Config, r TickResult, elapsed, idleSec int, unix int64
 
 	// Break is over
 	if breakElapsed >= breakDur {
-		r.LogMsg = "Break finished, back to work mode"
+		r.LogMsg = i18n.Text("Break finished, back to work mode")
 		r.Actions = append(r.Actions, ActionNotifyBreakOver)
 		if cfg.TTSEnabled {
 			r.Actions = append(r.Actions, ActionSpeakBreakOver)

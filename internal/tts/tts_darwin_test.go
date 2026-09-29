@@ -19,6 +19,7 @@ func TestDarwinSpeakerValidateGeminiNoAPIKey(t *testing.T) {
 }
 
 func TestDarwinSpeakerValidateGeminiUnknownVoice(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	s := NewSpeaker(engineGemini, "", "", "fake-key").(*DarwinSpeaker)
 	err := s.validate("Yuna")
 	if err == nil {

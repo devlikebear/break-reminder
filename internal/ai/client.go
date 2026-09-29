@@ -1,6 +1,8 @@
 package ai
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"errors"
 	"fmt"
@@ -41,7 +43,7 @@ func (c *Client) Query(ctx context.Context, prompt string) (string, error) {
 	case "codex":
 		cmd = exec.CommandContext(ctx, "codex", "-q", prompt)
 	default:
-		return "", fmt.Errorf("unsupported AI CLI: %s", c.CLIName)
+		return "", fmt.Errorf(i18n.Text("unsupported AI CLI: %s"), c.CLIName)
 	}
 
 	out, err := cmd.Output()
@@ -62,10 +64,10 @@ func (c *Client) Query(ctx context.Context, prompt string) (string, error) {
 // instead of looking like an empty result.
 func formatQueryError(ctx context.Context, cliName string, commandErr error, stderr, stdout []byte) error {
 	if errors.Is(ctx.Err(), context.DeadlineExceeded) {
-		return fmt.Errorf("AI CLI %q timed out", cliName)
+		return fmt.Errorf(i18n.Text("AI CLI %q timed out"), cliName)
 	}
 	if errors.Is(ctx.Err(), context.Canceled) {
-		return fmt.Errorf("AI CLI %q was canceled", cliName)
+		return fmt.Errorf(i18n.Text("AI CLI %q was canceled"), cliName)
 	}
 
 	detail := strings.TrimSpace(string(stderr))
@@ -73,7 +75,7 @@ func formatQueryError(ctx context.Context, cliName string, commandErr error, std
 		detail = strings.TrimSpace(string(stdout))
 	}
 	if detail != "" {
-		return fmt.Errorf("AI CLI %q error: %s: %w", cliName, detail, commandErr)
+		return fmt.Errorf(i18n.Text("AI CLI %q error: %s: %w"), cliName, detail, commandErr)
 	}
-	return fmt.Errorf("AI CLI %q error: %w", cliName, commandErr)
+	return fmt.Errorf(i18n.Text("AI CLI %q error: %w"), cliName, commandErr)
 }

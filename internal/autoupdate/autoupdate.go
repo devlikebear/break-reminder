@@ -1,6 +1,8 @@
 package autoupdate
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"bytes"
 	"context"
 	"errors"
@@ -60,20 +62,20 @@ func ExecuteCommand(ctx context.Context, path string, args ...string) (string, e
 // CheckAndUpgrade refreshes Homebrew metadata and upgrades an outdated formula.
 func CheckAndUpgrade(ctx context.Context, install HomebrewInstall, run RunCommand) (Result, error) {
 	if _, err := run(ctx, install.BrewPath, "update"); err != nil {
-		return Result{}, fmt.Errorf("brew update: %w", err)
+		return Result{}, fmt.Errorf(i18n.Text("brew update: %w"), err)
 	}
 	outdated, err := run(ctx, install.BrewPath, "outdated", "--formula", "--quiet", Formula)
 	if err != nil && !isOutdatedExit(outdated, err) {
-		return Result{}, fmt.Errorf("brew outdated: %w", err)
+		return Result{}, fmt.Errorf(i18n.Text("brew outdated: %w"), err)
 	}
 	if strings.TrimSpace(outdated) == "" {
 		return Result{}, nil
 	}
 	if !listsFormula(outdated) {
-		return Result{}, fmt.Errorf("brew outdated: unexpected output: %q", strings.TrimSpace(outdated))
+		return Result{}, fmt.Errorf(i18n.Text("brew outdated: unexpected output: %q"), strings.TrimSpace(outdated))
 	}
 	if _, err := run(ctx, install.BrewPath, "upgrade", Formula); err != nil {
-		return Result{}, fmt.Errorf("brew upgrade: %w", err)
+		return Result{}, fmt.Errorf(i18n.Text("brew upgrade: %w"), err)
 	}
 	return Result{Updated: true}, nil
 }

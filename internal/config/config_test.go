@@ -302,6 +302,7 @@ func TestLoadLegacyScheduleWithoutMinuteFields(t *testing.T) {
 }
 
 func TestLoadRejectsInvalidWorkSchedule(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	tests := []struct {
 		name    string
 		yaml    string
@@ -366,6 +367,7 @@ func TestLoadRejectsInvalidWorkSchedule(t *testing.T) {
 }
 
 func TestLoadReturnsMergedConfigWhenScheduleInvalid(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origDir := configDir
 	defer func() { configDir = origDir }()
 
@@ -396,6 +398,7 @@ func TestLoadReturnsMergedConfigWhenScheduleInvalid(t *testing.T) {
 }
 
 func TestApplyYAMLChangesRejectsInvalidScheduleAndPreservesInput(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	base := Default()
 	base.Voice = "Samantha"
 	base.NotificationsEnabled = false
@@ -436,6 +439,7 @@ func TestApplyYAMLChangesMergesValidChanges(t *testing.T) {
 }
 
 func TestApplyYAMLChangesRejectsUnknownKeys(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	base := Default()
 
 	updated, err := ApplyYAMLChanges(base, []byte("changes:\n  work_start_minute: 30\n"))
@@ -467,6 +471,7 @@ func TestApplyYAMLChangesRejectsNullScheduleFields(t *testing.T) {
 }
 
 func TestApplyYAMLChangesRejectsEmptyChanges(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	base := Default()
 
 	updated, err := ApplyYAMLChanges(base, []byte("# nothing to apply\n"))

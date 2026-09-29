@@ -12,6 +12,7 @@ import (
 )
 
 func TestStatusShowsPausedBreakState(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origNowFunc := nowFunc
 	origCfg := cfg
 	defer func() {
@@ -59,6 +60,7 @@ func TestStatusShowsPausedBreakState(t *testing.T) {
 }
 
 func TestStatusShowsVersion(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origVersion := version
 	origCfg := cfg
 	defer func() {

@@ -105,7 +105,7 @@ func (w *Worker) DeliverNext(ctx context.Context) error {
 	if !skip {
 		sendCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		if w.Send == nil {
-			sendErr = fmt.Errorf("notification backend unavailable")
+			sendErr = fmt.Errorf("%s", i18n.Text("notification backend unavailable"))
 		} else {
 			sendErr = w.Send(sendCtx, *claimed)
 		}

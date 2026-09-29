@@ -54,13 +54,13 @@ final class ArgsParserTests: XCTestCase {
     }
 
     func testFormatMinutesUnderHour() {
-        XCTAssertEqual(formatMinutes(0), "0m")
-        XCTAssertEqual(formatMinutes(45), "45m")
+        XCTAssertEqual(formatMinutes(0), AppLanguage.current == .korean ? "0분" : "0m")
+        XCTAssertEqual(formatMinutes(45), AppLanguage.current == .korean ? "45분" : "45m")
     }
 
     func testFormatMinutesOverHour() {
-        XCTAssertEqual(formatMinutes(60), "1h")
-        XCTAssertEqual(formatMinutes(125), "2h 5m")
-        XCTAssertEqual(formatMinutes(180), "3h")
+        XCTAssertEqual(formatMinutes(60), AppLanguage.current == .korean ? "1시간" : "1h")
+        XCTAssertEqual(formatMinutes(125), AppLanguage.current == .korean ? "2시간 5분" : "2h 5m")
+        XCTAssertEqual(formatMinutes(180), AppLanguage.current == .korean ? "3시간" : "3h")
     }
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,14 +20,14 @@ import (
 func newAICmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ai",
-		Short: "AI-powered features",
+		Short: i18n.Text("AI-powered features"),
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Load config explicitly (child PersistentPreRunE overrides parent's in Cobra)
 			if err := setAppConfig(); err != nil {
 				return err
 			}
 			if !cfg.AIEnabled {
-				return fmt.Errorf("AI features are disabled. Enable with: break-reminder config edit (set ai_enabled: true)")
+				return fmt.Errorf("%s", i18n.Text("AI features are disabled. Enable with: break-reminder config edit (set ai_enabled: true)"))
 			}
 			return nil
 		},
@@ -43,20 +45,20 @@ func newAICmd() *cobra.Command {
 func newAISuggestCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "suggest",
-		Short: "AI-powered optimal break timing analysis",
+		Short: i18n.Text("AI-powered optimal break timing analysis"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := ai.NewClient(cfg.AICLI)
 			if !client.Available() {
-				return fmt.Errorf("%s CLI not found in PATH", cfg.AICLI)
+				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
 			}
 
 			history, err := ai.LoadHistory()
 			if err != nil {
-				return fmt.Errorf("load history: %w", err)
+				return fmt.Errorf(i18n.Text("load history: %w"), err)
 			}
 
 			if len(history) == 0 {
-				fmt.Println("Not enough history data yet. Use break-reminder for a few days first.")
+				fmt.Println(i18n.Text("Not enough history data yet. Use break-reminder for a few days first."))
 				return nil
 			}
 
@@ -72,8 +74,8 @@ Provide:
 
 Keep response concise (under 200 words).`, cfg.WorkDurationMin, cfg.BreakDurationMin, string(historyJSON))
 
-			fmt.Println("Analyzing your patterns...")
-			resp, err := client.Query(context.Background(), prompt)
+			fmt.Println(i18n.Text("Analyzing your patterns..."))
+			resp, err := client.Query(context.Background(), prompt+"\nWrite explanatory prose in "+i18n.ResponseLanguage()+". Preserve code and configuration keys.")
 			if err != nil {
 				return err
 			}
@@ -88,16 +90,16 @@ func newAISummaryCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "summary",
-		Short: "AI-powered productivity report",
+		Short: i18n.Text("AI-powered productivity report"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := ai.NewClient(cfg.AICLI)
 			if !client.Available() {
-				return fmt.Errorf("%s CLI not found in PATH", cfg.AICLI)
+				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
 			}
 
 			history, err := ai.LoadHistory()
 			if err != nil {
-				return fmt.Errorf("load history: %w", err)
+				return fmt.Errorf(i18n.Text("load history: %w"), err)
 			}
 
 			// Include today's live data from state file
@@ -128,7 +130,7 @@ func newAISummaryCmd() *cobra.Command {
 			}
 
 			if len(history) == 0 {
-				fmt.Println("Not enough history data yet.")
+				fmt.Println(i18n.Text("Not enough history data yet."))
 				return nil
 			}
 
@@ -153,10 +155,10 @@ Include:
 3. Patterns observed
 4. One actionable suggestion
 
-Keep it concise and encouraging. Respond in the same language as the user's system locale (Korean if applicable).`, label, string(historyJSON))
+Keep it concise and encouraging. Respond in %s.`, label, string(historyJSON), i18n.ResponseLanguage())
 
-			fmt.Printf("Generating %s report...\n", label)
-			resp, err := client.Query(context.Background(), prompt)
+			fmt.Printf(i18n.Text("Generating %s report...\n"), i18n.Text(label))
+			resp, err := client.Query(context.Background(), prompt+"\nWrite explanatory prose in "+i18n.ResponseLanguage()+". Preserve code and configuration keys.")
 			if err != nil {
 				return err
 			}
@@ -165,19 +167,19 @@ Keep it concise and encouraging. Respond in the same language as the user's syst
 		},
 	}
 
-	cmd.Flags().BoolVar(&weekly, "weekly", false, "Generate weekly report instead of daily")
+	cmd.Flags().BoolVar(&weekly, "weekly", false, i18n.Text("Generate weekly report instead of daily"))
 	return cmd
 }
 
 func newAIConfigureCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "configure [description]",
-		Short: "Configure settings using natural language",
+		Short: i18n.Text("Configure settings using natural language"),
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			client := ai.NewClient(cfg.AICLI)
 			if !client.Available() {
-				return fmt.Errorf("%s CLI not found in PATH", cfg.AICLI)
+				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
 			}
 
 			description := strings.Join(args, " ")
@@ -199,27 +201,27 @@ No explanation, just the YAML fields to change.`, string(currentYAML), descripti
 				return err
 			}
 
-			fmt.Println("Proposed changes:")
+			fmt.Println(i18n.Text("Proposed changes:"))
 			fmt.Println(resp)
-			fmt.Print("\nApply these changes? (y/N): ")
+			fmt.Print(i18n.Text("\nApply these changes? (y/N): "))
 
 			var answer string
 			fmt.Scanln(&answer)
 			if answer != "y" && answer != "Y" {
-				fmt.Println("Cancelled.")
+				fmt.Println(i18n.Text("Cancelled."))
 				return nil
 			}
 
 			updatedCfg, err := config.ApplyYAMLChanges(cfg, []byte(resp))
 			if err != nil {
-				return fmt.Errorf("invalid configuration changes: %w", err)
+				return fmt.Errorf(i18n.Text("invalid configuration changes: %w"), err)
 			}
 			if err := config.Save(updatedCfg); err != nil {
 				return err
 			}
 
 			cfg = updatedCfg
-			fmt.Println("Configuration updated!")
+			fmt.Println(i18n.Text("Configuration updated!"))
 			return nil
 		},
 	}

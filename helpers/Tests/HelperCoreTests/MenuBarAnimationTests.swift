@@ -74,7 +74,7 @@ final class MenuBarAnimationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: 1_000)
 
-        XCTAssertEqual(presentation.title, "2% · 49m left")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "2% · 49분 남음" : "2% · 49m left")
         XCTAssertFalse(presentation.title.contains("🐹"))
     }
 }

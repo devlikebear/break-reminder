@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"io"
 	"time"
@@ -18,7 +20,7 @@ import (
 func sessionConfig(errOut io.Writer) config.Config {
 	loaded, err := loadAppConfig()
 	if err != nil {
-		fmt.Fprintf(errOut, "Warning: config is invalid, using defaults (%v)\n", err)
+		fmt.Fprintf(errOut, i18n.Text("Warning: config is invalid, using defaults (%v)\n"), err)
 		return config.Default()
 	}
 	return loaded
@@ -28,10 +30,10 @@ func newStartCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "start",
 		Aliases: []string{"clock-in"},
-		Short:   "Start a work session now (manual clock-in)",
-		Long: "Starts the work/break cycle immediately — even outside working hours or on a day off — " +
-			"and clears any pause. The session runs until `break-reminder stop`, until you are away for " +
-			"session_idle_end_min, or until the day rolls over.",
+		Short:   i18n.Text("Start a work session now (manual clock-in)"),
+		Long: i18n.Text("Starts the work/break cycle immediately — even outside working hours or on a day off — ") +
+			i18n.Text("and clears any pause. The session runs until `break-reminder stop`, until you are away for ") +
+			i18n.Text("session_idle_end_min, or until the day rolls over."),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			appCfg := sessionConfig(cmd.ErrOrStderr())
 			now := nowFunc()
@@ -53,12 +55,12 @@ func newStartCmd() *cobra.Command {
 
 			out := cmd.OutOrStdout()
 			if alreadyRunning {
-				fmt.Fprintf(out, "Work session is already running (started at %s).\n", formatClock(startedAt))
+				fmt.Fprintf(out, i18n.Text("Work session is already running (started at %s).\n"), formatClock(startedAt))
 				return nil
 			}
 
-			logging.Log(logging.DefaultLogPath(), "Work session started (manual)")
-			fmt.Fprintf(out, "Work session started at %s. First break in %d minutes.\n",
+			logging.Log(logging.DefaultLogPath(), i18n.Text("Work session started (manual)"))
+			fmt.Fprintf(out, i18n.Text("Work session started at %s. First break in %d minutes.\n"),
 				formatClock(startedAt), appCfg.EffectiveWorkMin())
 			return nil
 		},
@@ -71,10 +73,10 @@ func newStopCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "stop",
 		Aliases: []string{"clock-out"},
-		Short:   "Stop the work session and hold reminders until the next start",
-		Long: "Ends the current work session and turns reminders off. Automatic detection stays off " +
-			"until the next day or until `break-reminder start`. Use `service stop` to unload the " +
-			"background agent entirely.",
+		Short:   i18n.Text("Stop the work session and hold reminders until the next start"),
+		Long: i18n.Text("Ends the current work session and turns reminders off. Automatic detection stays off ") +
+			i18n.Text("until the next day or until `break-reminder start`. Use `service stop` to unload the ") +
+			i18n.Text("background agent entirely."),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			sessionConfig(cmd.ErrOrStderr())
 			now := nowFunc()
@@ -92,17 +94,17 @@ func newStopCmd() *cobra.Command {
 
 			out := cmd.OutOrStdout()
 			if wasRunning {
-				logging.Log(logging.DefaultLogPath(), "Work session stopped (manual)")
-				fmt.Fprintf(out, "Work session stopped at %s.\n", formatClock(now.Unix()))
+				logging.Log(logging.DefaultLogPath(), i18n.Text("Work session stopped (manual)"))
+				fmt.Fprintf(out, i18n.Text("Work session stopped at %s.\n"), formatClock(now.Unix()))
 				if d := summary.Duration(); d > 0 {
-					fmt.Fprintf(out, "Session length: %s\n", fmtMin(d/60))
+					fmt.Fprintf(out, i18n.Text("Session length: %s\n"), fmtMin(d/60))
 				}
 			} else {
-				logging.Log(logging.DefaultLogPath(), "Reminders stopped (manual, no active session)")
-				fmt.Fprintln(out, "No work session was running. Reminders are off until the next start.")
+				logging.Log(logging.DefaultLogPath(), i18n.Text("Reminders stopped (manual, no active session)"))
+				fmt.Fprintln(out, i18n.Text("No work session was running. Reminders are off until the next start."))
 			}
 			fmt.Fprintln(out, sessionEndMessage(&summary))
-			fmt.Fprintln(out, "Reminders stay off until tomorrow or `break-reminder start`.")
+			fmt.Fprintln(out, i18n.Text("Reminders stay off until tomorrow or `break-reminder start`."))
 			return nil
 		},
 	}

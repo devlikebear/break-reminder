@@ -37,9 +37,9 @@ struct InsightsTabView: View {
                     ProgressView()
                         .controlSize(.small)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("AI 분석을 실행 중입니다")
+                        Text(L10n.text("Running AI analysis"))
                             .font(.system(size: 11, weight: .medium))
-                        Text("최대 2분 정도 걸릴 수 있습니다.")
+                        Text(L10n.text("This may take up to 2 minutes."))
                             .font(.system(size: 10))
                             .foregroundColor(.secondary)
                     }
@@ -48,20 +48,20 @@ struct InsightsTabView: View {
             }
         case .succeeded:
             refreshStatusCard(color: theme.accent) {
-                Label("AI 분석이 완료되었습니다", systemImage: "checkmark.circle.fill")
+                Label(L10n.text("AI analysis complete"), systemImage: "checkmark.circle.fill")
                     .font(.system(size: 11, weight: .medium))
             }
         case .failed(let message):
             refreshStatusCard(color: .red) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("AI 분석 실패", systemImage: "exclamationmark.triangle.fill")
+                    Label(L10n.text("AI analysis failed"), systemImage: "exclamationmark.triangle.fill")
                         .font(.system(size: 11, weight: .semibold))
                     Text(message)
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)
                         .textSelection(.enabled)
-                    Text("오류 내용을 확인하고 설정 또는 CLI를 수정한 뒤 다시 시도하세요.")
+                    Text(L10n.text("Review the error, fix the settings or CLI, and try again."))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -87,10 +87,10 @@ struct InsightsTabView: View {
             Image(systemName: "sparkles")
                 .font(.system(size: 40))
                 .foregroundColor(.gray)
-            Text("아직 인사이트가 없습니다")
+            Text(L10n.text("No insights yet"))
                 .font(.system(size: 13))
                 .foregroundColor(.primary)
-            Text("AI CLI(claude 또는 codex)가 설치되어 있다면\n아래 버튼을 눌러 생성하세요.")
+            Text(L10n.text("Install an AI CLI (claude or codex),\nthen use the button below to generate insights."))
                 .font(.system(size: 11))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -99,7 +99,7 @@ struct InsightsTabView: View {
                     if vm.isRefreshingInsights {
                         ProgressView().controlSize(.small)
                     }
-                    Text(vm.isRefreshingInsights ? "분석 중…" : "AI 분석 생성")
+                    Text(vm.isRefreshingInsights ? L10n.text("Analyzing…") : L10n.text("Generate AI analysis"))
                 }
             }
             .buttonStyle(DashboardButtonStyle())
@@ -113,7 +113,7 @@ struct InsightsTabView: View {
     private func dailyReportCard(_ report: InsightsReport) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("✨ 오늘의 리포트")
+                Text(L10n.text("✨ Today's report"))
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(.primary)
                 Spacer()
@@ -140,7 +140,7 @@ struct InsightsTabView: View {
 
     private func patternsSection(_ report: InsightsReport) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("🔍 패턴 인사이트")
+            Text(L10n.text("🔍 Pattern insights"))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(.primary)
 
@@ -186,14 +186,14 @@ struct InsightsTabView: View {
                     } else {
                         Text("🔄")
                     }
-                    Text(vm.isRefreshingInsights ? "분석 중…" : "새로고침")
+                    Text(vm.isRefreshingInsights ? L10n.text("Analyzing…") : L10n.text("Refresh"))
                 }
             }
             .buttonStyle(DashboardButtonStyle())
             .disabled(vm.isRefreshingInsights)
 
             Button(action: { copyReport(report) }) {
-                Text("📋 리포트 복사")
+                Text(L10n.text("📋 Copy report"))
             }
             .buttonStyle(DashboardButtonStyle())
         }
@@ -212,7 +212,7 @@ struct InsightsTabView: View {
         guard let date = formatter.date(from: iso) else { return iso }
         let display = DateFormatter()
         display.dateFormat = "HH:mm"
-        return "\(display.string(from: date)) 생성"
+        return L10n.text("Generated at {0}", display.string(from: date))
     }
 
     private func copyReport(_ report: InsightsReport) {

@@ -14,6 +14,7 @@ import (
 )
 
 func TestRunSnoozeEndsBreakAndPostponesNextBreak(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	tmpHome := t.TempDir()
 	t.Setenv("HOME", tmpHome)
 	statePath := filepath.Join(tmpHome, ".break-reminder-state")
@@ -66,6 +67,7 @@ func TestRunSnoozeEndsBreakAndPostponesNextBreak(t *testing.T) {
 }
 
 func TestRunSnoozeRejectsNonBreakStates(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	tests := []struct {
 		name string
 		mode string
@@ -92,6 +94,7 @@ func TestRunSnoozeRejectsNonBreakStates(t *testing.T) {
 }
 
 func TestRunSnoozeRejectsPausedBreakState(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	statePath := filepath.Join(t.TempDir(), "state")
 	now := time.Unix(1_700_000_000, 0)
 	if err := state.Save(statePath, state.State{Mode: "break", Paused: true, PausedAt: now.Unix(), LastUpdateDate: now.Format("2006-01-02")}); err != nil {

@@ -109,6 +109,7 @@ func TestSetAPIKeyTrimsWhitespace(t *testing.T) {
 }
 
 func TestSetAPIKeyRejectsEmpty(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	withTempConfigDir(t)
 	origCfg := cfg
 	origTerm := stdinIsTerminal
@@ -129,6 +130,7 @@ func TestSetAPIKeyRejectsEmpty(t *testing.T) {
 }
 
 func TestSetAPIKeyRejectsNewlineInArg(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	withTempConfigDir(t)
 	origCfg := cfg
 	origTerm := stdinIsTerminal
@@ -149,6 +151,7 @@ func TestSetAPIKeyRejectsNewlineInArg(t *testing.T) {
 }
 
 func TestSetAPIKeyRefusesTTYWithoutArg(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	withTempConfigDir(t)
 	origCfg := cfg
 	origTerm := stdinIsTerminal
@@ -206,6 +209,7 @@ func TestConfigPathResolvesUnderTempHome(t *testing.T) {
 }
 
 func TestTTSInstallRejectsGemini(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	origCfg := cfg
 	defer func() { cfg = origCfg }()
 	cfg = config.Default()

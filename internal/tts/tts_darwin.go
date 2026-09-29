@@ -3,6 +3,8 @@
 package tts
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"context"
 	"fmt"
 	"os"
@@ -103,60 +105,60 @@ func (s *DarwinSpeaker) Available(voice string) bool {
 func (s *DarwinSpeaker) validate(voice string) error {
 	voice = strings.TrimSpace(voice)
 	if voice == "" {
-		return fmt.Errorf("voice is required")
+		return fmt.Errorf("%s", i18n.Text("voice is required"))
 	}
 
 	switch s.engine {
 	case engineSay:
 		if !sayVoiceAvailable(voice) {
-			return fmt.Errorf("voice %q not found for macOS say", voice)
+			return fmt.Errorf(i18n.Text("voice %q not found for macOS say"), voice)
 		}
 	case engineKittenTTS:
 		if !kittenVoiceAvailable(voice) {
-			return fmt.Errorf("voice %q not supported by KittenTTS", voice)
+			return fmt.Errorf(i18n.Text("voice %q not supported by KittenTTS"), voice)
 		}
 		if _, err := exec.LookPath(s.pythonCmd); err != nil {
-			return fmt.Errorf("python command %q not found", s.pythonCmd)
+			return fmt.Errorf(i18n.Text("python command %q not found"), s.pythonCmd)
 		}
 		if _, err := exec.LookPath("afplay"); err != nil {
-			return fmt.Errorf("afplay command not found")
+			return fmt.Errorf("%s", i18n.Text("afplay command not found"))
 		}
 		ok, err := kittenModuleInstalled(s.pythonCmd)
 		if err != nil {
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("kittentts is not installed for %s", s.pythonCmd)
+			return fmt.Errorf(i18n.Text("kittentts is not installed for %s"), s.pythonCmd)
 		}
 	case engineSupertonic:
 		if !supertonicVoiceAvailable(voice) {
-			return fmt.Errorf("voice %q not supported by Supertonic", voice)
+			return fmt.Errorf(i18n.Text("voice %q not supported by Supertonic"), voice)
 		}
 		if _, err := exec.LookPath(s.pythonCmd); err != nil {
-			return fmt.Errorf("python command %q not found", s.pythonCmd)
+			return fmt.Errorf(i18n.Text("python command %q not found"), s.pythonCmd)
 		}
 		if _, err := exec.LookPath("afplay"); err != nil {
-			return fmt.Errorf("afplay command not found")
+			return fmt.Errorf("%s", i18n.Text("afplay command not found"))
 		}
 		ok, err := supertonicModuleInstalled(s.pythonCmd)
 		if err != nil {
 			return err
 		}
 		if !ok {
-			return fmt.Errorf("supertonic is not installed for %s", s.pythonCmd)
+			return fmt.Errorf(i18n.Text("supertonic is not installed for %s"), s.pythonCmd)
 		}
 	case engineGemini:
 		if !geminiVoiceAvailable(voice) {
-			return fmt.Errorf("voice %q not supported by Gemini TTS", voice)
+			return fmt.Errorf(i18n.Text("voice %q not supported by Gemini TTS"), voice)
 		}
 		if s.apiKey == "" {
-			return fmt.Errorf("GEMINI_API_KEY is not set; export env or set tts_api_key in config")
+			return fmt.Errorf("%s", i18n.Text("GEMINI_API_KEY is not set; export env or set tts_api_key in config"))
 		}
 		if _, err := exec.LookPath("afplay"); err != nil {
-			return fmt.Errorf("afplay command not found")
+			return fmt.Errorf("%s", i18n.Text("afplay command not found"))
 		}
 	default:
-		return fmt.Errorf("unsupported TTS engine %q", s.engine)
+		return fmt.Errorf(i18n.Text("unsupported TTS engine %q"), s.engine)
 	}
 
 	return nil

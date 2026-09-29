@@ -1,6 +1,8 @@
 package config
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"path/filepath"
@@ -139,11 +141,11 @@ func ApplyYAMLChanges(base Config, changes []byte) (Config, error) {
 		return base, err
 	}
 	if len(raw) == 0 {
-		return base, fmt.Errorf("no config changes found")
+		return base, fmt.Errorf("%s", i18n.Text("no config changes found"))
 	}
 	for key := range raw {
 		if _, ok := validConfigKeys[key]; !ok {
-			return base, fmt.Errorf("unknown config key %q", key)
+			return base, fmt.Errorf(i18n.Text("unknown config key %q"), key)
 		}
 	}
 
@@ -162,22 +164,22 @@ func ApplyYAMLChanges(base Config, changes []byte) (Config, error) {
 
 func validateSchedule(cfg Config) error {
 	if cfg.WorkStartHour < 0 || cfg.WorkStartHour > 23 {
-		return fmt.Errorf("work_start_hour must be between 0 and 23")
+		return fmt.Errorf("%s", i18n.Text("work_start_hour must be between 0 and 23"))
 	}
 	if cfg.WorkEndHour < 0 || cfg.WorkEndHour > 23 {
-		return fmt.Errorf("work_end_hour must be between 0 and 23")
+		return fmt.Errorf("%s", i18n.Text("work_end_hour must be between 0 and 23"))
 	}
 	if cfg.WorkStartMinute < 0 || cfg.WorkStartMinute > 59 {
-		return fmt.Errorf("work_start_minute must be between 0 and 59")
+		return fmt.Errorf("%s", i18n.Text("work_start_minute must be between 0 and 59"))
 	}
 	if cfg.WorkEndMinute < 0 || cfg.WorkEndMinute > 59 {
-		return fmt.Errorf("work_end_minute must be between 0 and 59")
+		return fmt.Errorf("%s", i18n.Text("work_end_minute must be between 0 and 59"))
 	}
 
 	workStartMinute := cfg.WorkStartHour*60 + cfg.WorkStartMinute
 	workEndMinute := cfg.WorkEndHour*60 + cfg.WorkEndMinute
 	if workEndMinute <= workStartMinute {
-		return fmt.Errorf("work schedule must end after it starts")
+		return fmt.Errorf("%s", i18n.Text("work schedule must end after it starts"))
 	}
 
 	return nil
@@ -196,16 +198,16 @@ func validate(cfg Config) error {
 
 func validateSession(cfg Config) error {
 	if cfg.SessionDetectStartHour < 0 || cfg.SessionDetectStartHour > 23 {
-		return fmt.Errorf("session_detect_start_hour must be between 0 and 23")
+		return fmt.Errorf("%s", i18n.Text("session_detect_start_hour must be between 0 and 23"))
 	}
 	if cfg.SessionDetectEndHour < 1 || cfg.SessionDetectEndHour > 24 {
-		return fmt.Errorf("session_detect_end_hour must be between 1 and 24")
+		return fmt.Errorf("%s", i18n.Text("session_detect_end_hour must be between 1 and 24"))
 	}
 	if cfg.SessionDetectEndHour <= cfg.SessionDetectStartHour {
-		return fmt.Errorf("session_detect_end_hour must be later than session_detect_start_hour")
+		return fmt.Errorf("%s", i18n.Text("session_detect_end_hour must be later than session_detect_start_hour"))
 	}
 	if cfg.SessionIdleEndMin < 1 {
-		return fmt.Errorf("session_idle_end_min must be at least 1")
+		return fmt.Errorf("%s", i18n.Text("session_idle_end_min must be at least 1"))
 	}
 	return nil
 }
@@ -214,19 +216,19 @@ func validateTimerMode(cfg Config) error {
 	switch cfg.TimerMode {
 	case TimerModeClassic, TimerModePomodoro:
 	default:
-		return fmt.Errorf("timer_mode must be %q or %q", TimerModeClassic, TimerModePomodoro)
+		return fmt.Errorf(i18n.Text("timer_mode must be %q or %q"), TimerModeClassic, TimerModePomodoro)
 	}
 	if cfg.PomodoroWorkMin < 1 {
-		return fmt.Errorf("pomodoro_work_min must be at least 1")
+		return fmt.Errorf("%s", i18n.Text("pomodoro_work_min must be at least 1"))
 	}
 	if cfg.PomodoroBreakMin < 1 {
-		return fmt.Errorf("pomodoro_break_min must be at least 1")
+		return fmt.Errorf("%s", i18n.Text("pomodoro_break_min must be at least 1"))
 	}
 	if cfg.PomodoroLongBreakMin < 1 {
-		return fmt.Errorf("pomodoro_long_break_min must be at least 1")
+		return fmt.Errorf("%s", i18n.Text("pomodoro_long_break_min must be at least 1"))
 	}
 	if cfg.PomodoroLongBreakEvery < 1 {
-		return fmt.Errorf("pomodoro_long_break_every must be at least 1")
+		return fmt.Errorf("%s", i18n.Text("pomodoro_long_break_every must be at least 1"))
 	}
 	return nil
 }

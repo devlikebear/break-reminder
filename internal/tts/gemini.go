@@ -1,6 +1,8 @@
 package tts
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -88,14 +90,14 @@ type geminiResponse struct {
 func synthesizeGemini(ctx context.Context, apiKey, model, voice, message string) (string, error) {
 	apiKey = strings.TrimSpace(apiKey)
 	if apiKey == "" {
-		return "", fmt.Errorf("gemini: api key is empty")
+		return "", fmt.Errorf("%s", i18n.Text("gemini: api key is empty"))
 	}
 	canonicalVoice := strings.TrimSpace(voice)
 	if canonical, ok := canonicalGeminiVoice(voice); ok {
 		canonicalVoice = canonical
 	}
 	if canonicalVoice == "" {
-		return "", fmt.Errorf("gemini: voice is empty")
+		return "", fmt.Errorf("%s", i18n.Text("gemini: voice is empty"))
 	}
 
 	reqBody := geminiRequest{
@@ -111,7 +113,7 @@ func synthesizeGemini(ctx context.Context, apiKey, model, voice, message string)
 	}
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
-		return "", fmt.Errorf("gemini: marshal request: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: marshal request: %w"), err)
 	}
 
 	url := fmt.Sprintf(geminiEndpoint, normalizeGeminiModel(model))
@@ -120,7 +122,7 @@ func synthesizeGemini(ctx context.Context, apiKey, model, voice, message string)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 	if err != nil {
-		return "", fmt.Errorf("gemini: build request: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: build request: %w"), err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("x-goog-api-key", apiKey)
@@ -128,56 +130,56 @@ func synthesizeGemini(ctx context.Context, apiKey, model, voice, message string)
 	client := &http.Client{Timeout: geminiHTTPTimeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("gemini: http call: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: http call: %w"), err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("gemini: read response: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: read response: %w"), err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("gemini: http %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return "", fmt.Errorf(i18n.Text("gemini: http %d: %s"), resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var parsed geminiResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
-		return "", fmt.Errorf("gemini: decode response: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: decode response: %w"), err)
 	}
 	if parsed.Error != nil {
-		return "", fmt.Errorf("gemini: api error %s: %s", parsed.Error.Status, parsed.Error.Message)
+		return "", fmt.Errorf(i18n.Text("gemini: api error %s: %s"), parsed.Error.Status, parsed.Error.Message)
 	}
 	if len(parsed.Candidates) == 0 || len(parsed.Candidates[0].Content.Parts) == 0 {
-		return "", fmt.Errorf("gemini: empty candidates")
+		return "", fmt.Errorf("%s", i18n.Text("gemini: empty candidates"))
 	}
 	inline := parsed.Candidates[0].Content.Parts[0].InlineData
 	if inline == nil || strings.TrimSpace(inline.Data) == "" {
-		return "", fmt.Errorf("gemini: missing inline audio data")
+		return "", fmt.Errorf("%s", i18n.Text("gemini: missing inline audio data"))
 	}
 
 	pcm, err := base64.StdEncoding.DecodeString(inline.Data)
 	if err != nil {
-		return "", fmt.Errorf("gemini: decode base64 audio: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: decode base64 audio: %w"), err)
 	}
 	if len(pcm) == 0 {
-		return "", fmt.Errorf("gemini: decoded audio is empty")
+		return "", fmt.Errorf("%s", i18n.Text("gemini: decoded audio is empty"))
 	}
 
 	wav := wrapPCMAsWAV(pcm, geminiSampleRate, geminiChannels, geminiBitsPerSample)
 
 	tmp, err := os.CreateTemp("", "gemini-tts-*.wav")
 	if err != nil {
-		return "", fmt.Errorf("gemini: create temp wav: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: create temp wav: %w"), err)
 	}
 	if _, err := tmp.Write(wav); err != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
-		return "", fmt.Errorf("gemini: write wav: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: write wav: %w"), err)
 	}
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmp.Name())
-		return "", fmt.Errorf("gemini: close wav: %w", err)
+		return "", fmt.Errorf(i18n.Text("gemini: close wav: %w"), err)
 	}
 	return tmp.Name(), nil
 }

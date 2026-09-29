@@ -3,6 +3,8 @@
 package breakscreen
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"os"
 	"os/exec"
 	"strconv"
@@ -16,7 +18,7 @@ import (
 func showOverlay(workMin, breakDurSec int, breakStartUnix int64, todayWorkMin, todayBreakMin int) {
 	helperPath := FindHelper("break-screen")
 	if helperPath == "" {
-		log.Warn().Msg("break-screen helper not found, falling back to notification")
+		log.Warn().Msg(i18n.Text("break-screen helper not found, falling back to notification"))
 		sendNotification(workMin, breakDurSec/60)
 		return
 	}
@@ -37,9 +39,9 @@ func showOverlay(workMin, breakDurSec int, breakStartUnix int64, todayWorkMin, t
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Info().Str("helper", helperPath).Int("remaining_sec", remaining).Msg("Launching break screen overlay")
+	log.Info().Str("helper", helperPath).Int("remaining_sec", remaining).Msg(i18n.Text("Launching break screen overlay"))
 
 	if err := cmd.Run(); err != nil {
-		log.Warn().Err(err).Msg("Break screen helper exited with error")
+		log.Warn().Err(err).Msg(i18n.Text("Break screen helper exited with error"))
 	}
 }

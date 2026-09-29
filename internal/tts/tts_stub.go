@@ -2,6 +2,8 @@
 
 package tts
 
+import "github.com/devlikebear/break-reminder/internal/i18n"
+
 import "fmt"
 
 type StubSpeaker struct {
@@ -13,7 +15,7 @@ func NewSpeaker(engine, model, pythonCmd, apiKey string) Speaker {
 }
 
 func (s *StubSpeaker) Speak(voice, message string) error {
-	fmt.Printf("[tts:%s] %s: %s\n", s.engine, voice, message)
+	fmt.Printf(i18n.Text("[tts:%s] %s: %s\n"), s.engine, voice, message)
 	return nil
 }
 

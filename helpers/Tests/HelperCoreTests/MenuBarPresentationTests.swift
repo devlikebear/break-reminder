@@ -43,9 +43,9 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
 
-        XCTAssertEqual(presentation.title, "31% · 34m left")
-        XCTAssertEqual(presentation.statusLine, "Working · 15m elapsed · 34m until break")
-        XCTAssertEqual(presentation.statsLine, "Today · Work 1h · Break 20m")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "31% · 34분 남음" : "31% · 34m left")
+        XCTAssertEqual(presentation.statusLine, AppLanguage.current == .korean ? "업무 중 · 15분 경과 · 휴식까지 34분" : "Working · 15m elapsed · 34m until break")
+        XCTAssertEqual(presentation.statsLine, AppLanguage.current == .korean ? "오늘: 작업 1시간 · 휴식 20분" : "Today · Work 1h · Break 20m")
     }
 
     func testInterpolatedTodayTotalsIncludeInProgressBreakSinceLastCheck() {
@@ -90,9 +90,9 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
 
-        XCTAssertEqual(presentation.title, "25% · 7m left")
-        XCTAssertEqual(presentation.statusLine, "On break · 2m elapsed · 7m until work")
-        XCTAssertEqual(presentation.statsLine, "Today · Work 2h · Break 10m")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "25% · 7분 남음" : "25% · 7m left")
+        XCTAssertEqual(presentation.statusLine, AppLanguage.current == .korean ? "휴식 중 · 2분 경과 · 업무까지 7분" : "On break · 2m elapsed · 7m until work")
+        XCTAssertEqual(presentation.statsLine, AppLanguage.current == .korean ? "오늘: 작업 2시간 · 휴식 10분" : "Today · Work 2h · Break 10m")
     }
 
     func testMenuBarPresentationForPausedWorkMode() {
@@ -116,9 +116,9 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
 
-        XCTAssertEqual(presentation.title, "PAUSED (WORK) · 35m left")
-        XCTAssertEqual(presentation.statusLine, "PAUSED (WORK) · 15m elapsed · 35m until break")
-        XCTAssertEqual(presentation.statsLine, "Today · Work 1h · Break 20m")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "일시정지 (업무) · 35분 남음" : "PAUSED (WORK) · 35m left")
+        XCTAssertEqual(presentation.statusLine, AppLanguage.current == .korean ? "일시정지 (업무) · 15분 경과 · 휴식까지 35분" : "PAUSED (WORK) · 15m elapsed · 35m until break")
+        XCTAssertEqual(presentation.statsLine, AppLanguage.current == .korean ? "오늘: 작업 1시간 · 휴식 20분" : "Today · Work 1h · Break 20m")
     }
 
     func testMenuBarPresentationForPausedBreakMode() {
@@ -143,9 +143,9 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
 
-        XCTAssertEqual(presentation.title, "PAUSED (BREAK) · 8m left")
-        XCTAssertEqual(presentation.statusLine, "PAUSED (BREAK) · 2m elapsed · 8m until work")
-        XCTAssertEqual(presentation.statsLine, "Today · Work 2h · Break 10m")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "일시정지 (휴식) · 8분 남음" : "PAUSED (BREAK) · 8m left")
+        XCTAssertEqual(presentation.statusLine, AppLanguage.current == .korean ? "일시정지 (휴식) · 2분 경과 · 업무까지 8분" : "PAUSED (BREAK) · 2m elapsed · 8m until work")
+        XCTAssertEqual(presentation.statsLine, AppLanguage.current == .korean ? "오늘: 작업 2시간 · 휴식 10분" : "Today · Work 2h · Break 10m")
     }
 
     func testMenuBarPresentationForStoppedSession() {
@@ -163,16 +163,16 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: AppConfig(), now: now)
 
-        XCTAssertEqual(presentation.title, "Off")
-        XCTAssertEqual(presentation.statusLine, "Stopped by hand · start a session to resume")
-        XCTAssertEqual(presentation.statsLine, "Today · Work 1h · Break 20m")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "꺼짐" : "Off")
+        XCTAssertEqual(presentation.statusLine, AppLanguage.current == .korean ? "수동 종료됨 · 세션을 시작하면 재개됩니다" : "Stopped by hand · start a session to resume")
+        XCTAssertEqual(presentation.statsLine, AppLanguage.current == .korean ? "오늘: 작업 1시간 · 휴식 20분" : "Today · Work 1h · Break 20m")
     }
 
     func testMenuBarPresentationBeforeFirstSessionOfTheDay() {
         let presentation = menuBarPresentation(state: AppState(), config: AppConfig(), now: 1_030)
 
-        XCTAssertEqual(presentation.title, "Idle")
-        XCTAssertEqual(presentation.statusLine, "Waiting · starts on your first activity")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "대기" : "Idle")
+        XCTAssertEqual(presentation.statusLine, AppLanguage.current == .korean ? "대기 중 · 첫 활동 시 시작됩니다" : "Waiting · starts on your first activity")
     }
 
     func testMenuBarPresentationPomodoroUsesPomodoroDurations() {
@@ -192,7 +192,7 @@ final class MenuBarPresentationTests: XCTestCase {
 
         let presentation = menuBarPresentation(state: state, config: config, now: now)
 
-        XCTAssertEqual(presentation.title, "20% · 20m left")
+        XCTAssertEqual(presentation.title, AppLanguage.current == .korean ? "20% · 20분 남음" : "20% · 20m left")
     }
 
     func testTodayTotalsResetsStalePreviousDayTotals() {

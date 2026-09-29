@@ -31,9 +31,9 @@ func queryLaunchdStatus() -> String {
     do {
         try task.run()
         task.waitUntilExit()
-        return task.terminationStatus == 0 ? "Running (launchd)" : "Not loaded"
+        return task.terminationStatus == 0 ? L10n.text("Running (launchd)") : L10n.text("Not loaded")
     } catch {
-        return "Unknown"
+        return L10n.text("Unknown")
     }
 }
 
@@ -129,6 +129,7 @@ func helperProcessEnvironment() -> [String: String] {
         paths.append(path)
     }
     environment["PATH"] = paths.joined(separator: ":")
+    environment["BREAK_REMINDER_LANGUAGE"] = AppLanguage.current.rawValue
     return environment
 }
 

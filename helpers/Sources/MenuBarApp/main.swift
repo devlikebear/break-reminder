@@ -134,33 +134,33 @@ class MenuBarController: NSObject {
         menu.autoenablesItems = false
 
         // 1. Current status line — updated every tick, never enabled
-        statusMenuItem = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
+        statusMenuItem = NSMenuItem(title: L10n.text("Loading…"), action: nil, keyEquivalent: "")
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
 
-        statsMenuItem = NSMenuItem(title: "Loading stats…", action: nil, keyEquivalent: "")
+        statsMenuItem = NSMenuItem(title: L10n.text("Loading stats…"), action: nil, keyEquivalent: "")
         statsMenuItem.isEnabled = false
         menu.addItem(statsMenuItem)
 
         menu.addItem(.separator())
 
         // 2. Open Dashboard
-        let dashItem = NSMenuItem(title: "Open Dashboard", action: #selector(openDashboard), keyEquivalent: "d")
+        let dashItem = NSMenuItem(title: L10n.text("Open Dashboard"), action: #selector(openDashboard), keyEquivalent: "d")
         dashItem.target = self
         menu.addItem(dashItem)
 
         // 3. Start / Stop Work Session
-        sessionMenuItem = NSMenuItem(title: "Start Work Session", action: #selector(toggleSession), keyEquivalent: "s")
+        sessionMenuItem = NSMenuItem(title: L10n.text("Start Work Session"), action: #selector(toggleSession), keyEquivalent: "s")
         sessionMenuItem.target = self
         menu.addItem(sessionMenuItem)
 
         // 4. Reset Timer
-        let resetItem = NSMenuItem(title: "Reset Timer", action: #selector(resetTimer), keyEquivalent: "r")
+        let resetItem = NSMenuItem(title: L10n.text("Reset Timer"), action: #selector(resetTimer), keyEquivalent: "r")
         resetItem.target = self
         menu.addItem(resetItem)
 
         // 5. Force Break
-        let breakItem = NSMenuItem(title: "Force Break", action: #selector(forceBreak), keyEquivalent: "b")
+        let breakItem = NSMenuItem(title: L10n.text("Force Break"), action: #selector(forceBreak), keyEquivalent: "b")
         breakItem.target = self
         menu.addItem(breakItem)
 
@@ -176,12 +176,12 @@ class MenuBarController: NSObject {
         menu.addItem(toolsMenuItem)
 
         // 6. Open Config
-        let configItem = NSMenuItem(title: "Open Config", action: #selector(openConfig), keyEquivalent: ",")
+        let configItem = NSMenuItem(title: L10n.text("Open Config"), action: #selector(openConfig), keyEquivalent: ",")
         configItem.target = self
         menu.addItem(configItem)
 
         // 7. About
-        let aboutItem = NSMenuItem(title: "About \(AboutInfo.appName)", action: #selector(showAbout), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: L10n.text("About {0}", AboutInfo.appName), action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
@@ -212,7 +212,7 @@ class MenuBarController: NSObject {
         pomodoroItem.isEnabled = !pomodoroBusy && !pomodoroStartCommands(state: state, config: config).isEmpty
         classicItem.isEnabled = !pomodoroBusy && config.pomodoroEnabled && !state.paused && state.mode == "work"
         pomodoroItem.state = config.pomodoroEnabled ? .on : .off
-        sessionMenuItem.title = state.isSessionActive ? "Stop Work Session" : "Start Work Session"
+        sessionMenuItem.title = state.isSessionActive ? L10n.text("Stop Work Session") : L10n.text("Start Work Session")
         refreshTimeTools(nowMS: now * 1000)
     }
 
@@ -230,8 +230,8 @@ class MenuBarController: NSObject {
 
     @objc private func openDashboard() {
         guard let helperPath = findHelper("break-dashboard") else {
-            showAlert(message: "break-dashboard helper not found.",
-                      info: "Run 'make build' or 'make install' so helpers are placed next to the break-reminder binary.")
+            showAlert(message: L10n.text("break-dashboard helper not found."),
+                      info: L10n.text("Run 'make build' or 'make install' so helpers are placed next to the break-reminder binary."))
             return
         }
         let task = Process()
@@ -290,12 +290,13 @@ class MenuBarController: NSObject {
 
     @objc private func toggleSession() {
         guard let helperPath = findHelper("break-reminder") else {
-            showAlert(message: "break-reminder binary not found.",
-                      info: "Run 'make install' so the CLI is placed next to the menu bar helper.")
+            showAlert(message: L10n.text("break-reminder binary not found."),
+                      info: L10n.text("Run 'make install' so the CLI is placed next to the menu bar helper."))
             return
         }
         let task = Process()
         task.executableURL = URL(fileURLWithPath: helperPath)
+        task.environment = ProcessInfo.processInfo.environment.merging(["BREAK_REMINDER_LANGUAGE": AppLanguage.current.rawValue]) { _, new in new }
         task.arguments = [currentState.isSessionActive ? "stop" : "start"]
         try? task.run()
         task.waitUntilExit()
@@ -341,7 +342,7 @@ class MenuBarController: NSObject {
             }
             menu.addItem(.separator())
             for minutes in [5, 10, 15, 30] {
-                var args = ["timer", "start", "--duration", "\(minutes)m"]
+                var args = ["timer", "start", "--duration", L10n.text("{0}m", minutes)]
                 if let c = toolsSnapshot.countdown, c.isActive { args += ["--replace-id", c.id] }
                 menu.addItem(toolItem(L10n.text("Start {0} min", minutes), command: args, enabled: running))
             }
@@ -392,7 +393,8 @@ class MenuBarController: NSObject {
 
     @objc private func openTimerDashboard() {
         guard let path = findHelper("break-dashboard") else { return }
-        let task = Process(); task.executableURL = URL(fileURLWithPath: path); task.arguments = ["--time-tools"]
+        let task = Process(); task.executableURL = URL(fileURLWithPath: path); task.environment = ProcessInfo.processInfo.environment.merging(["BREAK_REMINDER_LANGUAGE": AppLanguage.current.rawValue]) { _, new in new }
+        task.arguments = ["--time-tools"]
         do { try task.run() } catch { showAlert(message: L10n.text("Could not open dashboard"), info: error.localizedDescription) }
     }
 
@@ -427,10 +429,10 @@ class MenuBarController: NSObject {
 
         let alert = NSAlert()
         alert.messageText = AboutInfo.appName
-        alert.informativeText = "Version \(installedVersion)"
+        alert.informativeText = L10n.text("Version {0}", installedVersion == AboutInfo.unknownVersion ? L10n.text("unknown") : installedVersion)
         alert.alertStyle = .informational
         alert.addButton(withTitle: "GitHub")
-        alert.addButton(withTitle: "Close")
+        alert.addButton(withTitle: L10n.text("Close"))
 
         if alert.runModal() == .alertFirstButtonReturn,
            let url = URL(string: AboutInfo.repositoryURL) {

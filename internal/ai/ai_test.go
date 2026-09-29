@@ -29,6 +29,7 @@ func TestNewClientCodex(t *testing.T) {
 }
 
 func TestFormatQueryErrorIncludesCLIOutput(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	err := formatQueryError(context.Background(), "claude", errors.New("exit status 1"), []byte("rate limit exceeded"), nil)
 
 	if got := err.Error(); got != `AI CLI "claude" error: rate limit exceeded: exit status 1` {
@@ -37,6 +38,7 @@ func TestFormatQueryErrorIncludesCLIOutput(t *testing.T) {
 }
 
 func TestFormatQueryErrorFallsBackToStdout(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	err := formatQueryError(context.Background(), "codex", errors.New("exit status 2"), nil, []byte("authentication required"))
 
 	if got := err.Error(); got != `AI CLI "codex" error: authentication required: exit status 2` {
@@ -45,6 +47,7 @@ func TestFormatQueryErrorFallsBackToStdout(t *testing.T) {
 }
 
 func TestFormatQueryErrorReportsTimeout(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-time.Second))
 	defer cancel()
 

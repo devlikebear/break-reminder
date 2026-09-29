@@ -16,8 +16,13 @@ else:
     path.write_text(source)
 
 # Detect a new call site that forgot to add its translation.
-for base, glob, pattern in [('helpers/Sources', '*.swift', r'L10n\.text\("([^"\n]+)"'), ('internal', '*.go', r'i18n\.Text\("([^"\n]+)"'), ('cmd', '*.go', r'i18n\.Text\("([^"\n]+)"')]:
+for base, glob, pattern in [('helpers/Sources', '*.swift', r'L10n\.text\("((?:[^"\\\n]|\\.)*)"'), ('internal', '*.go', r'i18n\.Text\("((?:[^"\\\n]|\\.)*)"'), ('cmd', '*.go', r'i18n\.Text\("((?:[^"\\\n]|\\.)*)"')]:
     for source_file in (root / base).rglob(glob):
         for key in re.findall(pattern, source_file.read_text()):
+            key = json.loads('"' + key + '"')
             if key not in catalog:
                 sys.exit(f'Missing translation in {source_file}: {key}')
+
+# Also reject direct UI literals, the source of mixed-language menus.
+import subprocess
+subprocess.run([sys.executable, str(root / "scripts/check-ui-localization.py")], check=True)

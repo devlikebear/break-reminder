@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"os/exec"
@@ -16,12 +18,12 @@ import (
 func newConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
-		Short: "Manage configuration",
+		Short: i18n.Text("Manage configuration"),
 	}
 
 	showCmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show current configuration",
+		Short: i18n.Text("Show current configuration"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := yaml.Marshal(&cfg)
 			if err != nil {
@@ -33,10 +35,10 @@ func newConfigCmd() *cobra.Command {
 	}
 	editCmd := &cobra.Command{
 		Use:   "edit",
-		Short: "Open config in $EDITOR",
+		Short: i18n.Text("Open config in $EDITOR"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := config.EnsureConfigFile(); err != nil {
-				return fmt.Errorf("ensure config: %w", err)
+				return fmt.Errorf(i18n.Text("ensure config: %w"), err)
 			}
 
 			editor := os.Getenv("EDITOR")
@@ -54,7 +56,7 @@ func newConfigCmd() *cobra.Command {
 	allowInvalidConfig(editCmd)
 	pathCmd := &cobra.Command{
 		Use:   "path",
-		Short: "Show config file path",
+		Short: i18n.Text("Show config file path"),
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(config.ConfigPath())
 		},
@@ -63,18 +65,18 @@ func newConfigCmd() *cobra.Command {
 
 	setCmd := &cobra.Command{
 		Use:   "set <key=value> [<key=value> ...]",
-		Short: "Set one or more configuration values (validated, atomic write)",
+		Short: i18n.Text("Set one or more configuration values (validated, atomic write)"),
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			changes := map[string]any{}
 			for _, arg := range args {
 				k, v, ok := strings.Cut(arg, "=")
 				if !ok || strings.TrimSpace(k) == "" {
-					return fmt.Errorf("invalid argument %q (expected key=value)", arg)
+					return fmt.Errorf(i18n.Text("invalid argument %q (expected key=value)"), arg)
 				}
 				parsed, err := parseConfigValue(strings.TrimSpace(v))
 				if err != nil {
-					return fmt.Errorf("invalid value for %s: %w", k, err)
+					return fmt.Errorf(i18n.Text("invalid value for %s: %w"), k, err)
 				}
 				changes[strings.TrimSpace(k)] = parsed
 			}
@@ -86,21 +88,21 @@ func newConfigCmd() *cobra.Command {
 
 			updated, err := config.ApplyYAMLChanges(cfg, data)
 			if err != nil {
-				return fmt.Errorf("invalid config change: %w", err)
+				return fmt.Errorf(i18n.Text("invalid config change: %w"), err)
 			}
 
 			if err := config.Save(updated); err != nil {
-				return fmt.Errorf("save config: %w", err)
+				return fmt.Errorf(i18n.Text("save config: %w"), err)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Configuration updated (%d key%s).\n", len(changes), pluralS(len(changes)))
+			fmt.Fprintf(cmd.OutOrStdout(), i18n.Text("Configuration updated (%d key%s).\n"), len(changes), pluralS(len(changes)))
 			return nil
 		},
 	}
 
 	getCmd := &cobra.Command{
 		Use:   "get <key>",
-		Short: "Print a single config value",
+		Short: i18n.Text("Print a single config value"),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			data, err := yaml.Marshal(&cfg)
@@ -113,7 +115,7 @@ func newConfigCmd() *cobra.Command {
 			}
 			val, ok := raw[args[0]]
 			if !ok {
-				return fmt.Errorf("unknown config key %q", args[0])
+				return fmt.Errorf(i18n.Text("unknown config key %q"), args[0])
 			}
 			fmt.Fprintln(cmd.OutOrStdout(), val)
 			return nil
@@ -126,7 +128,7 @@ func newConfigCmd() *cobra.Command {
 }
 
 func pluralS(n int) string {
-	if n == 1 {
+	if n == 1 || i18n.Current() == "ko" {
 		return ""
 	}
 	return "s"
@@ -150,7 +152,7 @@ func parseConfigValue(v string) (any, error) {
 	if strings.HasPrefix(v, "[") {
 		var arr []any
 		if err := yaml.Unmarshal([]byte(v), &arr); err != nil {
-			return nil, fmt.Errorf("malformed list: %w", err)
+			return nil, fmt.Errorf(i18n.Text("malformed list: %w"), err)
 		}
 		return arr, nil
 	}

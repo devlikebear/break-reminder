@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -13,16 +15,16 @@ import (
 func newPomodoroCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pomodoro",
-		Short: "Switch between the classic and pomodoro timer",
-		Long: "The pomodoro timer replaces the single long work block with short focus blocks " +
-			"and a longer break after every few of them.",
+		Short: i18n.Text("Switch between the classic and pomodoro timer"),
+		Long: i18n.Text("The pomodoro timer replaces the single long work block with short focus blocks ") +
+			i18n.Text("and a longer break after every few of them."),
 	}
 
 	var workMin, breakMin, longBreakMin, longBreakEvery int
 
 	onCmd := &cobra.Command{
 		Use:   "on",
-		Short: "Enable pomodoro mode",
+		Short: i18n.Text("Enable pomodoro mode"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			changes := map[string]any{"timer_mode": config.TimerModePomodoro}
 			if cmd.Flags().Changed("work") {
@@ -43,32 +45,32 @@ func newPomodoroCmd() *cobra.Command {
 				return err
 			}
 			if err := resetCurrentCycle(); err != nil {
-				return fmt.Errorf("configuration saved, but cycle reset failed: %w", err)
+				return fmt.Errorf(i18n.Text("configuration saved, but cycle reset failed: %w"), err)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Pomodoro mode on: %d min work / %d min break, %d min long break every %d pomodoros.\n",
+			fmt.Fprintf(cmd.OutOrStdout(), i18n.Text("Pomodoro mode on: %d min work / %d min break, %d min long break every %d pomodoros.\n"),
 				updated.PomodoroWorkMin, updated.PomodoroBreakMin, updated.PomodoroLongBreakMin, updated.PomodoroLongBreakEvery)
 			return nil
 		},
 	}
-	onCmd.Flags().IntVar(&workMin, "work", 0, "Focus block length in minutes")
-	onCmd.Flags().IntVar(&breakMin, "break", 0, "Short break length in minutes")
-	onCmd.Flags().IntVar(&longBreakMin, "long-break", 0, "Long break length in minutes")
-	onCmd.Flags().IntVar(&longBreakEvery, "every", 0, "Number of pomodoros before a long break")
+	onCmd.Flags().IntVar(&workMin, "work", 0, i18n.Text("Focus block length in minutes"))
+	onCmd.Flags().IntVar(&breakMin, "break", 0, i18n.Text("Short break length in minutes"))
+	onCmd.Flags().IntVar(&longBreakMin, "long-break", 0, i18n.Text("Long break length in minutes"))
+	onCmd.Flags().IntVar(&longBreakEvery, "every", 0, i18n.Text("Number of pomodoros before a long break"))
 
 	offCmd := &cobra.Command{
 		Use:   "off",
-		Short: "Return to the classic timer",
+		Short: i18n.Text("Return to the classic timer"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			updated, err := applyConfigChanges(map[string]any{"timer_mode": config.TimerModeClassic})
 			if err != nil {
 				return err
 			}
 			if err := resetCurrentCycle(); err != nil {
-				return fmt.Errorf("configuration saved, but cycle reset failed: %w", err)
+				return fmt.Errorf(i18n.Text("configuration saved, but cycle reset failed: %w"), err)
 			}
 
-			fmt.Fprintf(cmd.OutOrStdout(), "Classic mode on: %d min work / %d min break.\n",
+			fmt.Fprintf(cmd.OutOrStdout(), i18n.Text("Classic mode on: %d min work / %d min break.\n"),
 				updated.WorkDurationMin, updated.BreakDurationMin)
 			return nil
 		},
@@ -76,15 +78,15 @@ func newPomodoroCmd() *cobra.Command {
 
 	statusCmd := &cobra.Command{
 		Use:   "status",
-		Short: "Show the current timer mode and today's pomodoro count",
+		Short: i18n.Text("Show the current timer mode and today's pomodoro count"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			s, _ := state.Load(state.DefaultStatePath())
 			out := cmd.OutOrStdout()
-			fmt.Fprintln(out, "Timer mode:", timerModeSummary(cfg))
+			fmt.Fprintln(out, i18n.Text("Timer mode:"), timerModeSummary(cfg))
 			if cfg.PomodoroEnabled() {
-				fmt.Fprintf(out, "Cycle: %d / %d\n", s.PomodoroCount, cfg.PomodoroLongBreakEvery)
-				fmt.Fprintf(out, "Completed today: %d\n", s.TodayPomodoros)
-				fmt.Fprintf(out, "Next break: %d min\n", cfg.EffectiveBreakMin(s.PomodoroCount+1))
+				fmt.Fprintf(out, i18n.Text("Cycle: %d / %d\n"), s.PomodoroCount, cfg.PomodoroLongBreakEvery)
+				fmt.Fprintf(out, i18n.Text("Completed today: %d\n"), s.TodayPomodoros)
+				fmt.Fprintf(out, i18n.Text("Next break: %d min\n"), cfg.EffectiveBreakMin(s.PomodoroCount+1))
 			}
 			return nil
 		},
@@ -102,10 +104,10 @@ func applyConfigChanges(changes map[string]any) (config.Config, error) {
 	}
 	updated, err := config.ApplyYAMLChanges(cfg, data)
 	if err != nil {
-		return cfg, fmt.Errorf("invalid config change: %w", err)
+		return cfg, fmt.Errorf(i18n.Text("invalid config change: %w"), err)
 	}
 	if err := config.Save(updated); err != nil {
-		return cfg, fmt.Errorf("save config: %w", err)
+		return cfg, fmt.Errorf(i18n.Text("save config: %w"), err)
 	}
 	cfg = updated
 	return updated, nil
@@ -128,8 +130,8 @@ func resetCurrentCycle() error {
 // timerModeSummary describes the active timer mode in one line.
 func timerModeSummary(c config.Config) string {
 	if c.PomodoroEnabled() {
-		return fmt.Sprintf("pomodoro (%d/%d min, %d min long break every %d)",
+		return fmt.Sprintf(i18n.Text("pomodoro (%d/%d min, %d min long break every %d)"),
 			c.PomodoroWorkMin, c.PomodoroBreakMin, c.PomodoroLongBreakMin, c.PomodoroLongBreakEvery)
 	}
-	return fmt.Sprintf("classic (%d/%d min)", c.WorkDurationMin, c.BreakDurationMin)
+	return fmt.Sprintf(i18n.Text("classic (%d/%d min)"), c.WorkDurationMin, c.BreakDurationMin)
 }

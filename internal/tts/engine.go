@@ -1,6 +1,8 @@
 package tts
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os/exec"
 	"strings"
@@ -249,6 +251,6 @@ func buildSpeakCommand(engine, model, pythonCmd, voice, message string) (*exec.C
 			message,
 		), nil
 	default:
-		return nil, fmt.Errorf("unsupported TTS engine %q", strings.TrimSpace(engine))
+		return nil, fmt.Errorf(i18n.Text("unsupported TTS engine %q"), strings.TrimSpace(engine))
 	}
 }

@@ -138,6 +138,7 @@ func TestDarwinNotifierUsesTerminalNotifier(t *testing.T) {
 }
 
 func TestDarwinNotifierWrapsCommandError(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "en") // This test asserts the English diagnostic contract.
 	oldResolve := terminalNotifierPath
 	oldRun := runCommand
 	t.Cleanup(func() {

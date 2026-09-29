@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+
 	"fmt"
 	"os"
 	"os/exec"
@@ -14,7 +16,7 @@ import (
 func newMenuBarCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "menubar",
-		Short: "Launch the native macOS menu bar app",
+		Short: i18n.Text("Launch the native macOS menu bar app"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runMenuBarApp()
 		},
@@ -27,7 +29,7 @@ func runMenuBarApp() error {
 		return helperNotFoundError("break-menubar")
 	}
 
-	log.Info().Str("helper", helperPath).Msg("Launching menu bar app")
+	log.Info().Str("helper", helperPath).Msg(i18n.Text("Launching menu bar app"))
 
 	cmd := exec.Command(helperPath)
 	cmd.Stdout = os.Stdout
@@ -36,5 +38,5 @@ func runMenuBarApp() error {
 }
 
 func helperNotFoundError(name string) error {
-	return fmt.Errorf("%s helper not found. If you installed via Homebrew, run 'brew reinstall break-reminder'. Otherwise run 'make build' or 'make install' so helpers are placed next to the break-reminder binary", name)
+	return fmt.Errorf(i18n.Text("%s helper not found. If you installed via Homebrew, run 'brew reinstall break-reminder'. Otherwise run 'make build' or 'make install' so helpers are placed next to the break-reminder binary"), name)
 }
