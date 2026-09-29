@@ -11,8 +11,8 @@ public struct CommandResult: Sendable {
         self.exitCode = exitCode; self.stdout = stdout; self.stderr = stderr; self.timedOut = timedOut
     }
     public var errorMessage: String {
-        if timedOut { return "명령 응답 시간이 초과되었습니다. 상태를 다시 확인해 주세요." }
-        return stderr.isEmpty ? "명령 실행 실패 (\(exitCode))" : stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+        if timedOut { return L10n.text("The command timed out. Check the current state again.") }
+        return stderr.isEmpty ? L10n.text("Command failed ({0})", exitCode) : stderr.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -35,11 +35,14 @@ public struct CLICommandClient: CLICommandRunning, Sendable {
     }
     private func execute(arguments: [String]) -> CommandResult {
         guard let path = executablePath else {
-            return CommandResult(exitCode: -1, stderr: "break-reminder CLI를 찾을 수 없습니다. 설치를 확인해 주세요.")
+            return CommandResult(exitCode: -1, stderr: L10n.text("Cannot find the break-reminder CLI. Check your installation."))
         }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
         process.arguments = arguments
+        var environment = ProcessInfo.processInfo.environment
+        environment["BREAK_REMINDER_LANGUAGE"] = AppLanguage.current.rawValue
+        process.environment = environment
         let output = Pipe(), errors = Pipe()
         process.standardOutput = output; process.standardError = errors
         let done = DispatchSemaphore(value: 0)

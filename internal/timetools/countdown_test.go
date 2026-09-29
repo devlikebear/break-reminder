@@ -83,3 +83,14 @@ func TestRecentAndRestartPreserveCompletion(t *testing.T) {
 		t.Fatal(s, err)
 	}
 }
+
+func TestUnnamedTimerDoesNotPersistDisplayLanguage(t *testing.T) {
+	t.Setenv("BREAK_REMINDER_LANGUAGE", "ko")
+	s, err := Apply(NewSnapshot(), Command{Kind: "start", ID: "unnamed", DurationMS: 1000}, 100000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s.Countdown.Label != "" {
+		t.Fatalf("persisted a translated default: %q", s.Countdown.Label)
+	}
+}

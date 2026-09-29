@@ -1,6 +1,9 @@
 package timetools
 
-import "math"
+import (
+	"github.com/devlikebear/break-reminder/internal/i18n"
+	"math"
+)
 
 type Command struct {
 	Kind       string
@@ -54,7 +57,7 @@ func Apply(original Snapshot, cmd Command, now int64) (Snapshot, error) {
 				}
 			} else {
 				if e.AcknowledgedAt != nil || (e.DeliveryState != "failed" && e.DeliveryState != "unknown") {
-					return original, fail("conflict", "이 알림은 다시 보낼 수 없습니다")
+					return original, fail("conflict", i18n.Text("This notification cannot be retried"))
 				}
 				e.DeliveryState = "pending"
 				e.AttemptedAt = ptr(now)
@@ -62,14 +65,14 @@ func Apply(original Snapshot, cmd Command, now int64) (Snapshot, error) {
 			}
 			return prune(s), nil
 		}
-		return original, fail("not_found", "완료 기록을 찾을 수 없습니다")
+		return original, fail("not_found", i18n.Text("Completion event not found"))
 	}
 	if cmd.Kind == "start" {
 		return start(s, cmd, now)
 	}
 	c := s.Countdown
 	if c == nil || cmd.ID == "" || cmd.ID != c.ID {
-		return original, fail("not_found", "이 타이머는 더 이상 현재 타이머가 아닙니다. 새로고침해 주세요")
+		return original, fail("not_found", i18n.Text("This is no longer the current timer. Refresh and try again"))
 	}
 	switch cmd.Kind {
 	case "pause":
@@ -81,7 +84,7 @@ func Apply(original Snapshot, cmd Command, now int64) (Snapshot, error) {
 	case "resume":
 		if c.Phase == "paused" {
 			if now > math.MaxInt64-*c.RemainingMS {
-				return original, fail("invalid_input", "시각 범위를 초과했습니다")
+				return original, fail("invalid_input", i18n.Text("Time is out of range"))
 			}
 			c.Deadline = ptr(now + *c.RemainingMS)
 			c.RemainingMS = nil
@@ -95,17 +98,17 @@ func Apply(original Snapshot, cmd Command, now int64) (Snapshot, error) {
 		}
 	case "restart":
 		if c.Phase != "completed" && c.Phase != "canceled" {
-			return original, fail("conflict", "진행 중인 타이머는 먼저 취소해 주세요")
+			return original, fail("conflict", i18n.Text("Cancel the active timer first"))
 		}
 		return start(s, Command{Kind: "start", ID: cmd.NewID, Label: c.Label, DurationMS: c.DurationMS}, now)
 	default:
-		return original, fail("invalid_input", "알 수 없는 명령입니다")
+		return original, fail("invalid_input", i18n.Text("Unknown command"))
 	}
 	return s, nil
 }
 func start(s Snapshot, cmd Command, now int64) (Snapshot, error) {
 	if cmd.DurationMS < 1000 || cmd.DurationMS > MaxDurationMS || cmd.DurationMS%1000 != 0 || cmd.ID == "" || now > math.MaxInt64-cmd.DurationMS {
-		return s, fail("invalid_input", "시간은 1초부터 24시간까지 초 단위로 입력해 주세요")
+		return s, fail("invalid_input", i18n.Text("Enter a duration from 1 second to 24 hours in whole seconds"))
 	}
 	label, err := labelValue(cmd.Label)
 	if err != nil {
@@ -113,16 +116,16 @@ func start(s Snapshot, cmd Command, now int64) (Snapshot, error) {
 	}
 	if c := s.Countdown; c != nil {
 		if cmd.ReplaceID != "" && cmd.ReplaceID != c.ID {
-			return s, fail("conflict", "교체 대상 타이머가 변경되었습니다")
+			return s, fail("conflict", i18n.Text("The timer to replace has changed"))
 		}
 		if cmd.ID == c.ID {
-			return s, fail("conflict", "새 실행에는 새 ID가 필요합니다")
+			return s, fail("conflict", i18n.Text("A new run requires a new ID"))
 		}
 		if (c.Phase == "running" || c.Phase == "paused") && cmd.ReplaceID != c.ID {
-			return s, fail("conflict", "실행 중인 타이머가 있습니다. 교체를 확인해 주세요")
+			return s, fail("conflict", i18n.Text("A timer is active. Confirm replacement first"))
 		}
 	} else if cmd.ReplaceID != "" {
-		return s, fail("not_found", "교체할 타이머가 없습니다")
+		return s, fail("not_found", i18n.Text("No timer to replace"))
 	}
 	unread := 0
 	for _, e := range s.Events {
@@ -131,7 +134,7 @@ func start(s Snapshot, cmd Command, now int64) (Snapshot, error) {
 		}
 	}
 	if unread >= 100 {
-		return s, fail("conflict", "완료 알림을 확인한 뒤 새 타이머를 시작해 주세요")
+		return s, fail("conflict", i18n.Text("Acknowledge completed timers before starting another"))
 	}
 	s.Countdown = &Countdown{ID: cmd.ID, Label: label, DurationMS: cmd.DurationMS, Phase: "running", Deadline: ptr(now + cmd.DurationMS), CreatedAt: now}
 	recent := []Recent{{Label: label, DurationMS: cmd.DurationMS}}

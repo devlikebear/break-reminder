@@ -20,7 +20,7 @@ final class TimeToolsTests: XCTestCase {
     func testUnreadCompletionOverridesCountdown() throws {
         let json = fixture.replacingOccurrences(of: "\"events\":[]", with: "\"events\":[{\"id\":\"old:completed\",\"source_id\":\"old\",\"kind\":\"countdown\",\"label\":\"차\",\"due_at\":90000,\"delivery_state\":\"failed\",\"attempted_at\":91000,\"acknowledged_at\":null}]")
         let snapshot = try TimeToolsSnapshot.decode(Data(json.utf8))
-        XCTAssertEqual(timeToolsMenuTitle(snapshot: snapshot, nowMS: 104001), "완료 1")
+        XCTAssertEqual(timeToolsMenuTitle(snapshot: snapshot, nowMS: 104001), L10n.text("Done {0}", 1))
         XCTAssertTrue(timeToolsOverlayText(snapshot: snapshot).contains("차"))
     }
     func testMissingFileAndInvalidFileDiffer() throws {

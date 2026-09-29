@@ -14,9 +14,9 @@ final class PomodoroControlsTests: XCTestCase {
     func testRoundAndLongBreakAreUnambiguous() {
         var cfg = AppConfig(); cfg.timerMode = "pomodoro"
         var state = AppState(); state.pomodoroCount = 3; state.todayPomodoros = 7
-        XCTAssertEqual(pomodoroStatus(state: state, config: cfg), "집중 4/4 · 오늘 완료 7회")
+        XCTAssertEqual(pomodoroStatus(state: state, config: cfg), L10n.text("{0} · completed today: {1}", L10n.text("Focus {0}/{1}", 4, 4), 7))
         state.mode = "break"; state.pomodoroCount = 4
-        XCTAssertTrue(pomodoroStatus(state: state, config: cfg).hasPrefix("긴 휴식"))
+        XCTAssertTrue(pomodoroStatus(state: state, config: cfg).hasPrefix(L10n.text("Long break")))
     }
     func testEditingDoesNotTriggerAppShortcuts() {
         XCTAssertFalse(shouldHandlePlainShortcut(isEditing: true, hasModifiers: false))
@@ -45,7 +45,7 @@ extension PomodoroControlsTests {
         await actions.perform(commands: [["pomodoro", "on"], ["start"], ["unexpected"]], client: client)
         let calls = await client.recorded()
         XCTAssertEqual(calls, [["pomodoro", "on"], ["start"]])
-        XCTAssertTrue(actions.message?.contains("설정은 저장됐지만") == true)
+        XCTAssertTrue(actions.message?.contains(L10n.text("Pomodoro settings were saved, but starting work failed. ")) == true)
         XCTAssertFalse(actions.isBusy)
     }
     @MainActor

@@ -4,6 +4,7 @@ import Darwin
 public struct CountdownSnapshot: Codable, Identifiable, Equatable {
     public var id: String
     public var label: String
+    public var displayLabel: String { label.isEmpty ? L10n.text("Timer") : label }
     public var durationMS: Int64
     public var phase: String
     public var deadline: Int64?
@@ -23,6 +24,7 @@ public struct CountdownSnapshot: Codable, Identifiable, Equatable {
 }
 public struct RecentCountdown: Codable, Equatable {
     public var label: String
+    public var displayLabel: String { label.isEmpty ? L10n.text("Timer") : label }
     public var durationMS: Int64
     enum CodingKeys: String, CodingKey { case label; case durationMS = "duration_ms" }
 }
@@ -31,6 +33,7 @@ public struct TimeToolsEvent: Codable, Identifiable, Equatable {
     public var sourceID: String
     public var kind: String
     public var label: String
+    public var displayLabel: String { label.isEmpty ? L10n.text("Timer") : label }
     public var dueAt: Int64
     public var deliveryState: String
     public var attemptedAt: Int64?
@@ -61,7 +64,7 @@ public struct TimeToolsSnapshot: Codable, Equatable {
 }
 public enum TimeToolsReadError: LocalizedError {
     case unsupported
-    public var errorDescription: String? { "시간 도구 데이터 버전을 지원하지 않습니다. 앱을 업데이트하세요." }
+    public var errorDescription: String? { L10n.text("Unsupported time-tools data version. Update the app.") }
 }
 public struct TimeToolsRuntime: Codable {
     public var schemaVersion: Int = 1

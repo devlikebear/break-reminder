@@ -8,11 +8,11 @@ struct TimerTabView: View {
     var body: some View {
         ScrollView {
         VStack(alignment: .leading, spacing: 16) {
-            Picker("시간 도구", selection: $vm.selectedTimeTool) {
-                Text("집중").tag("집중")
-                Text("타이머").tag("타이머")
+            Picker(L10n.text("Time tools"), selection: $vm.selectedTimeTool) {
+                Text(L10n.text("Focus")).tag("focus")
+                Text(L10n.text("Timer")).tag("countdown")
             }.pickerStyle(.segmented)
-            if vm.selectedTimeTool == "타이머" {
+            if vm.selectedTimeTool == "countdown" {
                 CountdownView()
             } else {
             PomodoroControlsView(vm: vm)

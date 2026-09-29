@@ -26,7 +26,7 @@ final class TimeToolsViewModel: ObservableObject {
         nowMS = Int64(Date().timeIntervalSince1970 * 1000)
         runtime = files.loadRuntime()
         do { snapshot = try files.loadSnapshot(); readError = nil }
-        catch { readError = "시간 도구 파일을 읽지 못했습니다: \(error.localizedDescription)" }
+        catch { readError = L10n.text("Could not read time-tools data: {0}", error.localizedDescription) }
     }
     func send(_ command: [String]) {
         guard !isBusy, readError == nil else { return }

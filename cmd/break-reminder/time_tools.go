@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/devlikebear/break-reminder/internal/i18n"
 	"os"
 	"os/signal"
 	"syscall"
@@ -39,7 +40,7 @@ func newTimeToolsCmd() *cobra.Command {
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "Time tools worker: %t\n", r.Running(time.Now().UnixMilli()))
 		if c := s.Countdown; c != nil {
-			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s (%s)\n", c.Label, c.Phase, c.ID)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s (%s)\n", timeToolDisplayLabel(c.Label), c.Phase, c.ID)
 		} else {
 			fmt.Fprintln(cmd.OutOrStdout(), "No countdown timer")
 		}
@@ -55,7 +56,7 @@ func newTimeToolsCmd() *cobra.Command {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer cancel()
 		worker := timetools.Worker{Store: timetools.NewStore(directory), NotificationAvailable: notify.Available, Send: func(ctx context.Context, e timetools.Event) error {
-			return notify.SendEvent(ctx, "타이머 완료", e.Label+" 타이머가 끝났어요", e.ID)
+			return notify.SendEvent(ctx, i18n.Text("Timer complete"), i18n.Text("Timer complete: {0}", timeToolDisplayLabel(e.Label)), e.ID)
 		}}
 		return worker.Run(ctx)
 	}}
@@ -76,7 +77,7 @@ func newTimeToolsCmd() *cobra.Command {
 			if kind == "start" {
 				d, err := time.ParseDuration(duration)
 				if err != nil || d < time.Second || d > 24*time.Hour || d%time.Second != 0 {
-					return bad("invalid_input", "시간은 1초부터 24시간까지 초 단위로 입력해 주세요")
+					return bad("invalid_input", i18n.Text("Enter a duration from 1 second to 24 hours in whole seconds"))
 				}
 				command.DurationMS = d.Milliseconds()
 				command.ID, err = timetools.NewID()
@@ -84,7 +85,7 @@ func newTimeToolsCmd() *cobra.Command {
 					return report(cmd, timetools.Snapshot{}, err)
 				}
 			} else if id == "" {
-				return bad("invalid_input", "--id 또는 --event-id가 필요합니다")
+				return bad("invalid_input", i18n.Text("--id or --event-id is required"))
 			}
 			if kind == "restart" {
 				var err error
@@ -95,7 +96,7 @@ func newTimeToolsCmd() *cobra.Command {
 			}
 			if kind == "start" || kind == "restart" || kind == "resume" || kind == "notify-again" {
 				if !timetools.ReadRuntime(store).Running(time.Now().UnixMilli()) {
-					return bad("worker_unavailable", "시간 도구 worker가 실행 중이 아닙니다. 'break-reminder service install' 또는 'service start'로 복구해 주세요")
+					return bad("worker_unavailable", i18n.Text("The time-tools worker is stopped. Run 'break-reminder service install' or 'service start' to recover"))
 				}
 			}
 			var expected *uint64
@@ -125,4 +126,11 @@ func newTimeToolsCmd() *cobra.Command {
 		}
 	}
 	return parent
+}
+
+func timeToolDisplayLabel(label string) string {
+	if label == "" {
+		return i18n.Text("Timer")
+	}
+	return label
 }

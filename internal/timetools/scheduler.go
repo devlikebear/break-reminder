@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/devlikebear/break-reminder/internal/i18n"
 	"os"
 	"path/filepath"
 	"sync"
@@ -141,7 +142,7 @@ func (w *Worker) Run(ctx context.Context) error {
 	}
 	defer lock.Close()
 	if err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		return fail("conflict", "시간 도구 worker가 이미 실행 중입니다")
+		return fail("conflict", i18n.Text("The time-tools worker is already running"))
 	}
 	defer syscall.Flock(int(lock.Fd()), syscall.LOCK_UN)
 	recoveryErr := w.RecoverClaims()

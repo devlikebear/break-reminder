@@ -1,4 +1,5 @@
 import SwiftUI
+import HelperCore
 
 struct TabBarView: View {
     @Binding var selectedTab: DashboardTab
@@ -10,7 +11,7 @@ struct TabBarView: View {
             ForEach(DashboardTab.allCases) { tab in
                 Button(action: { selectedTab = tab }) {
                     VStack(spacing: 6) {
-                        Text(tab.rawValue)
+                        Text(L10n.text(tab.rawValue))
                             .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
                             .foregroundColor(selectedTab == tab ? accentColor : theme.textSecondary)
                         Rectangle()
