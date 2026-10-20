@@ -59,7 +59,11 @@ func newRootCmd() *cobra.Command {
 			if commandAllowsInvalidConfig(cmd) {
 				return nil
 			}
-			return setAppConfig()
+			if err := setAppConfig(); err != nil {
+				return err
+			}
+			migrateLegacySecrets()
+			return nil
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -72,6 +76,7 @@ func newRootCmd() *cobra.Command {
 		newDashboardCmd(),
 		newMenuBarCmd(),
 		newDaemonCmd(),
+		newEngineCmd(),
 		newResetCmd(),
 		newPauseCmd(),
 		newResumeCmd(),

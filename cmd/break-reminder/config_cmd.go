@@ -2,6 +2,8 @@ package main
 
 import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/reminder"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 
 	"fmt"
 	"os"
@@ -25,11 +27,12 @@ func newConfigCmd() *cobra.Command {
 		Use:   "show",
 		Short: i18n.Text("Show current configuration"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := yaml.Marshal(&cfg)
+			shown := config.Redact(cfg)
+			data, err := yaml.Marshal(&shown)
 			if err != nil {
 				return err
 			}
-			fmt.Print(string(data))
+			fmt.Fprint(cmd.OutOrStdout(), string(data))
 			return nil
 		},
 	}
@@ -81,21 +84,45 @@ func newConfigCmd() *cobra.Command {
 				changes[strings.TrimSpace(k)] = parsed
 			}
 
-			data, err := yaml.Marshal(changes)
-			if err != nil {
-				return err
+			// Secrets go to the keychain, never into config.yaml. Validate the
+			// rest first so a rejected change stores nothing.
+			count := len(changes)
+			secretValues := map[string]string{}
+			for key, value := range changes {
+				if config.IsSecretKey(key) {
+					secretValues[key] = strings.TrimSpace(fmt.Sprint(value))
+					delete(changes, key)
+				}
 			}
 
-			updated, err := config.ApplyYAMLChanges(cfg, data)
-			if err != nil {
-				return fmt.Errorf(i18n.Text("invalid config change: %w"), err)
+			updated := cfg
+			if len(changes) > 0 {
+				data, err := yaml.Marshal(changes)
+				if err != nil {
+					return err
+				}
+				updated, err = config.ApplyYAMLChanges(cfg, data)
+				if err != nil {
+					return fmt.Errorf(i18n.Text("invalid config change: %w"), err)
+				}
+			}
+			for key, value := range secretValues {
+				if err := secrets.Default.Set(key, value); err != nil {
+					return fmt.Errorf(i18n.Text("save api key to keychain: %w"), err)
+				}
+			}
+			movedSecret := len(secretValues) > 0
+			if movedSecret {
+				updated.TTSAPIKey = ""
+			}
+			if len(changes) > 0 || cfg.TTSAPIKey != updated.TTSAPIKey {
+				if err := config.Save(updated); err != nil {
+					return fmt.Errorf(i18n.Text("save config: %w"), err)
+				}
 			}
 
-			if err := config.Save(updated); err != nil {
-				return fmt.Errorf(i18n.Text("save config: %w"), err)
-			}
-
-			fmt.Fprintf(cmd.OutOrStdout(), i18n.Text("Configuration updated (%d key%s).\n"), len(changes), pluralS(len(changes)))
+			cfg = updated
+			fmt.Fprintf(cmd.OutOrStdout(), i18n.Text("Configuration updated (%d key%s).\n"), count, pluralS(count))
 			return nil
 		},
 	}
@@ -105,7 +132,8 @@ func newConfigCmd() *cobra.Command {
 		Short: i18n.Text("Print a single config value"),
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			data, err := yaml.Marshal(&cfg)
+			shown := config.Redact(cfg)
+			data, err := yaml.Marshal(&shown)
 			if err != nil {
 				return err
 			}
@@ -127,12 +155,7 @@ func newConfigCmd() *cobra.Command {
 	return cmd
 }
 
-func pluralS(n int) string {
-	if n == 1 || i18n.Current() == "ko" {
-		return ""
-	}
-	return "s"
-}
+func pluralS(n int) string { return reminder.PluralS(n) }
 
 // parseConfigValue converts a CLI-supplied raw string into a typed value
 // suitable for YAML marshalling and subsequent config merge.

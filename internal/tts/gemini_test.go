@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/devlikebear/break-reminder/internal/config"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 )
 
 func TestResolveAPIKey(t *testing.T) {
@@ -319,5 +320,26 @@ func TestSynthesizeGeminiMissingInline(t *testing.T) {
 	_, err := synthesizeGemini(context.Background(), "k", "", "Zephyr", "x")
 	if err == nil || !strings.Contains(err.Error(), "inline") {
 		t.Fatalf("err = %v, want missing inline audio", err)
+	}
+}
+
+func TestResolveAPIKeyReadsSecretStore(t *testing.T) {
+	t.Setenv("GEMINI_API_KEY", "env-key")
+	orig := secrets.Default
+	defer func() { secrets.Default = orig }()
+	store := secrets.NewMemory()
+	secrets.Default = store
+
+	cfg := config.Default()
+	if got := ResolveAPIKey(cfg); got != "env-key" {
+		t.Fatalf("no stored key -> %q, want env fallback", got)
+	}
+	_ = store.Set(secrets.TTSAPIKey, "keychain-key")
+	if got := ResolveAPIKey(cfg); got != "keychain-key" {
+		t.Fatalf("stored key -> %q, want keychain-key", got)
+	}
+	cfg.TTSAPIKey = "legacy-config-key"
+	if got := ResolveAPIKey(cfg); got != "legacy-config-key" {
+		t.Fatalf("unmigrated config key should still win, got %q", got)
 	}
 }

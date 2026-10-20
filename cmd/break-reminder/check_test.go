@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/devlikebear/break-reminder/internal/config"
+	"github.com/devlikebear/break-reminder/internal/enginelock"
 	"github.com/devlikebear/break-reminder/internal/state"
 )
 
@@ -178,5 +179,37 @@ func TestTimerNeedsTick(t *testing.T) {
 				t.Errorf("timerNeedsTick() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestRunCheckStandsAsideWhileEngineHoldsLock(t *testing.T) {
+	origNow, origCfg := nowFunc, cfg
+	defer func() { nowFunc, cfg = origNow, origCfg }()
+	cfg = config.Default()
+	cfg.AutoSessionDetect = false
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.Local) // Wednesday, working hours
+	nowFunc = func() time.Time { return now }
+
+	root := t.TempDir()
+	t.Setenv("BREAK_REMINDER_HOME", root)
+	statePath := filepath.Join(root, "state")
+	original := state.State{Mode: "work", WorkSeconds: 600, LastCheck: now.Unix() - 60, LastUpdateDate: "2025-01-15"}
+	if err := state.Save(statePath, original); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(statePath)
+
+	lock, err := enginelock.Acquire(filepath.Join(root, "engine.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lock.Release()
+
+	if err := runCheck(); err != nil {
+		t.Fatalf("runCheck() error = %v", err)
+	}
+	after, _ := os.ReadFile(statePath)
+	if string(before) != string(after) {
+		t.Fatalf("state changed while engine lock held:\n%s\n---\n%s", before, after)
 	}
 }

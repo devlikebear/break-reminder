@@ -3,7 +3,8 @@ package ai
 import (
 	"encoding/json"
 	"os"
-	"path/filepath"
+
+	"github.com/devlikebear/break-reminder/internal/paths"
 )
 
 // DailySummary represents one day's usage statistics.
@@ -19,13 +20,12 @@ type DailySummary struct {
 // historyPathOverride allows tests to redirect the history file.
 var historyPathOverride string
 
-// HistoryPath returns ~/.break-reminder-history.json
+// HistoryPath returns the AI history file (see paths.HistoryFile).
 func HistoryPath() string {
 	if historyPathOverride != "" {
 		return historyPathOverride
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".break-reminder-history.json")
+	return paths.HistoryFile()
 }
 
 // LoadHistory reads the history file.
