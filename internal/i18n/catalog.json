@@ -613,8 +613,6 @@
   "Successfully installed and loaded break-reminder agent!": "break-reminder 서비스를 설치하고 시작했습니다!",
   "Successfully uninstalled break-reminder agent.": "break-reminder 서비스를 제거했습니다.",
   "Switch between the classic and pomodoro timer": "기본·포모도로 타이머 전환",
-  "TTS speak failed (break over)": "음성 재생 실패 (휴식 종료)",
-  "TTS speak failed (break time)": "음성 재생 실패 (휴식 시작)",
   "Timer manually reset": "타이머 수동 초기화",
   "Timer paused (reason=%s, duration=%ds)": "타이머 일시정지 (사유=%s, 시간=%d초)",
   "Timer resumed": "타이머 재개",
@@ -852,5 +850,7 @@
   "positive": "긍정",
   "Unknown command {0} for {1}": "{1}의 알 수 없는 명령: {0}",
   "Expected at least {0} arguments, received {1}": "인수가 최소 {0}개 필요하지만 {1}개를 받았습니다",
-  "Expected at most {0} arguments, received {1}": "인수는 최대 {0}개이지만 {1}개를 받았습니다"
+  "Expected at most {0} arguments, received {1}": "인수는 최대 {0}개이지만 {1}개를 받았습니다",
+  "TTS speak failed": "음성 재생 실패",
+  "Another break-reminder engine is already running": "다른 break-reminder 엔진이 이미 실행 중입니다"
 }

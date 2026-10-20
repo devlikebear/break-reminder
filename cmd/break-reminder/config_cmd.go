@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/reminder"
 
 	"fmt"
 	"os"
@@ -127,12 +128,7 @@ func newConfigCmd() *cobra.Command {
 	return cmd
 }
 
-func pluralS(n int) string {
-	if n == 1 || i18n.Current() == "ko" {
-		return ""
-	}
-	return "s"
-}
+func pluralS(n int) string { return reminder.PluralS(n) }
 
 // parseConfigValue converts a CLI-supplied raw string into a typed value
 // suitable for YAML marshalling and subsequent config merge.

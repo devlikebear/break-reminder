@@ -127,3 +127,27 @@ func endSession(r TickResult, at int64, reason string) TickResult {
 	r.LogMsg = i18n.Text("Work session ended (") + reason + ")"
 	return r
 }
+
+// NeedsTick reports whether a full tick is worth running right now. A
+// running session or an active pause always ticks — the session may need to be
+// closed and the pause may be due to auto-resume — otherwise the tick only
+// matters inside the session detection window (or the fixed working hours when
+// automatic detection is off).
+func NeedsTick(cfg config.Config, s state.State, now time.Time) bool {
+	if s.IsSessionActive() || s.Paused {
+		return true
+	}
+	// A stop made today holds until an explicit start; a stop made earlier still
+	// needs a tick so the daily reset can release it.
+	if s.SessionState == state.SessionStateEnded && s.SessionManual &&
+		s.LastUpdateDate == now.Format("2006-01-02") {
+		return false
+	}
+	if !schedule.IsWorkDay(cfg, now) {
+		return false
+	}
+	if cfg.AutoSessionDetect {
+		return schedule.InDetectWindow(cfg, now)
+	}
+	return schedule.IsWorkingTime(cfg, now)
+}
