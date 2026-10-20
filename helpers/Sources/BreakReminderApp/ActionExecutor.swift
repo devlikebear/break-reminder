@@ -57,6 +57,25 @@ final class ActionExecutor {
 
     private func speak(_ text: String, voiceName: String) {
         guard !text.isEmpty else { return }
+        let sandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+        if speechRoute(ttsEngine: model.status?.ttsEngine, sandboxed: sandboxed) == .engineCLI,
+           let engine = BundledTool.engine {
+            let process = Process()
+            process.executableURL = engine
+            process.arguments = ["tts", "test", text]
+            process.environment = engineEnvironment()
+            process.standardOutput = FileHandle.nullDevice
+            process.standardError = FileHandle.nullDevice
+            process.terminationHandler = { finished in
+                guard finished.terminationStatus != 0 else { return }
+                Task { @MainActor in self.speakWithSystemVoice(text, voiceName: voiceName) }
+            }
+            if (try? process.run()) != nil { return }
+        }
+        speakWithSystemVoice(text, voiceName: voiceName)
+    }
+
+    private func speakWithSystemVoice(_ text: String, voiceName: String) {
         let utterance = AVSpeechUtterance(string: text)
         let voices = AVSpeechSynthesisVoice.speechVoices().map {
             SpeechVoiceInfo(identifier: $0.identifier, name: $0.name, language: $0.language)

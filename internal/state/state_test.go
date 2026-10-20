@@ -741,3 +741,29 @@ func TestDefaultStatePathHonorsBreakReminderHome(t *testing.T) {
 		t.Fatalf("DefaultStatePath() = %q, want %q", got, want)
 	}
 }
+
+func TestCalendarPauseFieldsRoundTripAndResumeClearsSource(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "state")
+	s := New().Pause(1000, PauseReasonMeeting, 600)
+	s.PauseSource = PauseSourceCalendar
+	s.PauseMeetingID = "evt-1"
+	s.MeetingOverrideID = "evt-0"
+	s.MeetingNoticeID = "evt-2"
+	if err := Save(path, s); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.PauseSource != PauseSourceCalendar || loaded.PauseMeetingID != "evt-1" || loaded.MeetingOverrideID != "evt-0" || loaded.MeetingNoticeID != "evt-2" {
+		t.Fatalf("loaded = %+v", loaded)
+	}
+	resumed := loaded.Resume(1300)
+	if resumed.PauseSource != "" || resumed.PauseMeetingID != "" {
+		t.Fatalf("Resume kept the pause source: %+v", resumed)
+	}
+	if resumed.MeetingOverrideID != "evt-0" || resumed.MeetingNoticeID != "evt-2" {
+		t.Fatal("Resume must keep meeting memory")
+	}
+}

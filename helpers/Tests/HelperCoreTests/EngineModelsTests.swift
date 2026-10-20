@@ -103,3 +103,13 @@ final class EngineModelsTests: XCTestCase {
         XCTAssertNil(matchSpeechVoice(named: "Nope", in: voices, fallbackLanguage: "fr"))
     }
 }
+
+final class SpeechRouteTests: XCTestCase {
+    func testConfiguredEngineKeepsItsVoiceOutsideTheSandbox() {
+        XCTAssertEqual(speechRoute(ttsEngine: "gemini", sandboxed: false), .engineCLI)
+        XCTAssertEqual(speechRoute(ttsEngine: "kittentts", sandboxed: false), .engineCLI)
+        XCTAssertEqual(speechRoute(ttsEngine: "say", sandboxed: false), .system)
+        XCTAssertEqual(speechRoute(ttsEngine: nil, sandboxed: false), .system)
+        XCTAssertEqual(speechRoute(ttsEngine: "gemini", sandboxed: true), .system)
+    }
+}

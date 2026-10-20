@@ -64,13 +64,15 @@ func newTestEngine(t *testing.T, cfg config.Config) (*Engine, *clock, *recorder,
 	c := &clock{t: time.Date(2026, 10, 20, 10, 0, 0, 0, time.Local)}
 	r := &recorder{}
 	e := New(Options{
-		Now:          c.Now,
-		LoadConfig:   func() (config.Config, error) { return cfg, nil },
-		StatePath:    filepath.Join(dir, "state"),
-		LogPath:      filepath.Join(dir, "log"),
-		TimeToolsDir: dir,
-		Emit:         r.emit,
-		Status:       r.status,
+		Now:               c.Now,
+		LoadConfig:        func() (config.Config, error) { return cfg, nil },
+		StatePath:         filepath.Join(dir, "state"),
+		LogPath:           filepath.Join(dir, "log"),
+		TimeToolsDir:      dir,
+		CalendarCachePath: filepath.Join(dir, "calendar-cache.json"),
+		AppUsageDir:       filepath.Join(dir, "app-usage"),
+		Emit:              r.emit,
+		Status:            r.status,
 	})
 	return e, c, r, dir
 }
@@ -227,5 +229,28 @@ func TestTickWaitsForFirstIdleReport(t *testing.T) {
 	e.ReportIdle(0)
 	if got := r.types(); !contains(got, reminder.TypeSessionStart) {
 		t.Fatalf("first idle report should tick, got %v", got)
+	}
+}
+
+func TestDayEndHookRunsAfterHistorySave(t *testing.T) {
+	e, c, _, _ := newTestEngine(t, testConfig())
+	done := make(chan string, 1)
+	e.opts.AppendHistory = func(string, int, int, [24]int) error { return nil }
+	e.opts.OnDayEnd = func(date string) { done <- date }
+	s := state.New()
+	s.LastUpdateDate = "2026-10-19"
+	s.TodayWorkSeconds = 600
+	s.LastCheck = c.Now().Unix() - 60
+	if err := state.Save(e.opts.StatePath, s); err != nil {
+		t.Fatal(err)
+	}
+	e.ReportIdle(0)
+	select {
+	case d := <-done:
+		if d != "2026-10-19" {
+			t.Fatalf("date = %q", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnDayEnd not called")
 	}
 }

@@ -15,6 +15,14 @@ func loadConfigFromDisk() -> AppConfig {
     return parseConfig(from: content)
 }
 
+/// Where the engine keeps per-day app usage (`internal/paths.AppUsageDir`).
+func appUsageDirectory() -> URL {
+    if let home = ProcessInfo.processInfo.environment["BREAK_REMINDER_HOME"], home.hasPrefix("/") {
+        return URL(fileURLWithPath: home).appendingPathComponent("app-usage")
+    }
+    return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".config/break-reminder/app-usage")
+}
+
 func writeStateToDisk(_ s: AppState) {
     let home = FileManager.default.homeDirectoryForCurrentUser
     let path = home.appendingPathComponent(".break-reminder-state")

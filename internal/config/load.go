@@ -156,6 +156,10 @@ var validConfigKeys = map[string]struct{}{
 	"tts_enabled":               {},
 	"break_activities_enabled":  {},
 	"ai_enabled":                {},
+	"calendar_aware_breaks":     {},
+	"meeting_rule":              {},
+	"calendar_excluded_ids":     {},
+	"app_usage_enabled":         {},
 }
 
 // ApplyYAMLChanges merges YAML changes into an existing config and validates the result.
@@ -217,7 +221,15 @@ func validate(cfg Config) error {
 	if err := validateSession(cfg); err != nil {
 		return err
 	}
-	return validateTimerMode(cfg)
+	if err := validateTimerMode(cfg); err != nil {
+		return err
+	}
+	switch cfg.MeetingRule {
+	case MeetingRuleAttendees, MeetingRuleBusy:
+	default:
+		return fmt.Errorf(i18n.Text("meeting_rule must be %q or %q"), MeetingRuleAttendees, MeetingRuleBusy)
+	}
+	return nil
 }
 
 func validateSession(cfg Config) error {
@@ -364,5 +376,17 @@ func merge(dst, src *Config, raw map[string]any) {
 	}
 	if _, ok := raw["ai_enabled"]; ok {
 		dst.AIEnabled = src.AIEnabled
+	}
+	if _, ok := raw["calendar_aware_breaks"]; ok {
+		dst.CalendarAwareBreaks = src.CalendarAwareBreaks
+	}
+	if _, ok := raw["app_usage_enabled"]; ok {
+		dst.AppUsageEnabled = src.AppUsageEnabled
+	}
+	if src.MeetingRule != "" {
+		dst.MeetingRule = src.MeetingRule
+	}
+	if _, ok := raw["calendar_excluded_ids"]; ok {
+		dst.CalendarExcludedIDs = src.CalendarExcludedIDs
 	}
 }

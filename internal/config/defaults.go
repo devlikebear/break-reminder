@@ -35,5 +35,8 @@ func Default() Config {
 		MaxLogLines:            1000,
 		CheckIntervalSec:       60,
 		Theme:                  "auto",
+		CalendarAwareBreaks:    false,
+		MeetingRule:            MeetingRuleAttendees,
+		AppUsageEnabled:        true,
 	}
 }

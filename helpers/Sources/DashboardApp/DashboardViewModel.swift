@@ -27,6 +27,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var selectedTimeTool = ProcessInfo.processInfo.arguments.contains("--time-tools") ? "countdown" : "focus"
     @Published var selectedTab: DashboardTab = .timer
     @Published var history: [HistoryEntry] = []
+    @Published var appUsageToday: [AppUsageItem] = []
     @Published var insights: InsightsReport?
     @Published private(set) var insightsRefreshStatus: InsightsRefreshStatus = .idle
     @Published var showConfetti = false
@@ -141,6 +142,7 @@ final class DashboardViewModel: ObservableObject {
         launchdStatusText = queryLaunchdStatus()
         loadHistory()
         loadInsights()
+        appUsageToday = loadAppUsageTop(directory: appUsageDirectory(), day: Date(), limit: 5)
         checkGoalAchievement()
     }
 

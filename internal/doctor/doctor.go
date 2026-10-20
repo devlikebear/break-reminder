@@ -141,6 +141,8 @@ func Run(cfg config.Config) Report {
 		r.add("info", "Working hours", i18n.Text("outside working hours - inactive"))
 	}
 
+	r.Checks = append(r.Checks, workContextChecks(cfg, now)...)
+
 	// Timer mode
 	if cfg.PomodoroEnabled() {
 		r.add("ok", i18n.Text("Timer mode"), fmt.Sprintf(i18n.Text("pomodoro (%d/%d min, %d min long break every %d)"),

@@ -67,3 +67,9 @@ func LogFile() string { return pick("break-reminder.log", ".break-reminder.log")
 // EngineLockFile is held by a running engine so that launchd `check` and the
 // time-tools worker stay out of its way.
 func EngineLockFile() string { return filepath.Join(ConfigDir(), "engine.lock") }
+
+// CalendarCacheFile keeps the last calendar snapshot sent by the app.
+func CalendarCacheFile() string { return filepath.Join(ConfigDir(), "calendar-cache.json") }
+
+// AppUsageDir holds one JSON file of per-app foreground time per day.
+func AppUsageDir() string { return filepath.Join(ConfigDir(), "app-usage") }

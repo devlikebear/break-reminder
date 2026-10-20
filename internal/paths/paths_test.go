@@ -21,6 +21,8 @@ func TestLegacyLayoutWithoutOverride(t *testing.T) {
 		"insights":   {InsightsFile(), filepath.Join(home, ".break-reminder-insights.json")},
 		"log":        {LogFile(), filepath.Join(home, ".break-reminder.log")},
 		"lock":       {EngineLockFile(), filepath.Join(home, ".config", "break-reminder", "engine.lock")},
+		"calendar":   {CalendarCacheFile(), filepath.Join(home, ".config", "break-reminder", "calendar-cache.json")},
+		"app usage":  {AppUsageDir(), filepath.Join(home, ".config", "break-reminder", "app-usage")},
 	}
 	for name, c := range cases {
 		if c[0] != c[1] {
@@ -44,6 +46,8 @@ func TestOverrideRootsEverything(t *testing.T) {
 		"insights":   {InsightsFile(), filepath.Join(root, "insights.json")},
 		"log":        {LogFile(), filepath.Join(root, "break-reminder.log")},
 		"lock":       {EngineLockFile(), filepath.Join(root, "engine.lock")},
+		"calendar":   {CalendarCacheFile(), filepath.Join(root, "calendar-cache.json")},
+		"app usage":  {AppUsageDir(), filepath.Join(root, "app-usage")},
 	}
 	for name, c := range cases {
 		if c[0] != c[1] {
