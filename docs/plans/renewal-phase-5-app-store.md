@@ -9,7 +9,7 @@ _작성일: 2026-10-20 · 로드맵: [renewal-roadmap.md](renewal-roadmap.md) ·
 ## 진행 조건 (go/no-go)
 
 - [ ] 직접 배포판을 2주 이상 사용, 데이터 유실·알림 누락 같은 미해결 문제 없음
-- [ ] P0 스파이크의 FAIL 항목이 모두 대안으로 해결됨
+- [ ] P0 스파이크의 FAIL 항목이 모두 대안으로 해결됨 (프로세스별 진단 → P3에서 직접판 전용 처리)
 - [ ] 사용자가 진행 결정
 
 ## 작업 체크리스트
@@ -20,7 +20,7 @@ _작성일: 2026-10-20 · 로드맵: [renewal-roadmap.md](renewal-roadmap.md) ·
   - 참조: linetta `docs/superpowers/specs/2026-06-17-macos-app-sandbox-mas-design.md`
 - [ ] **T5.A.2** — 직접판 전용 기능이 UI에서 숨겨지는지 확인 (claude-code-cli, CLI, Claude Code 훅, Python TTS)
 - [ ] **T5.A.3** — Codex(ChatGPT) 로그인 지원 여부 결정, 지원 시 linetta `internal/codexauth` 이식(또는 tars 공개 패키지로 추출 제안)
-- [ ] **T5.A.4** — 직접판 → 앱스토어판 데이터 가져오기: 사용자가 내보내기 파일을 선택해 가져오기
+- [ ] **T5.A.4** — 직접판 → 앱스토어판 데이터 가져오기: 자동 이전은 하지 않음(샌드박스가 `~/.config/break-reminder`·`~/.break-reminder-state` 읽기와 LaunchAgents 정리를 막음). 사용자가 P4 T4.C.4 내보내기 파일을 `NSOpenPanel`로 선택해 가져오고, 기존 launchd 서비스 정리는 직접판 `<cli> service uninstall` 안내로 대신함
 
 ### B. 제출
 

@@ -26,13 +26,14 @@ _작성일: 2026-10-20 (rev.2) · 로드맵: [renewal-roadmap.md](renewal-roadma
 
 ### C. 마이그레이션
 
-- [ ] **T4.C.1** — 첫 실행 시 `~/.config/break-reminder/*`, `~/.break-reminder-state`를 새 경로로 복사(원본 보존), 기존 LaunchAgent 언로드·제거. 기존 `service migrate-runtime`의 "중지한 기능은 중지 상태 유지" 규칙 계승
+- [ ] **T4.C.1** — (직접판 전용) 첫 실행 시 `~/.config/break-reminder/*`, `~/.break-reminder-state`를 새 경로로 복사(원본 보존), 기존 LaunchAgent 언로드·제거. 기존 `service migrate-runtime`의 "중지한 기능은 중지 상태 유지" 규칙 계승. 앱스토어판은 컨테이너 밖 읽기·`~/Library/LaunchAgents` 쓰기가 막혀 있으므로([스파이크](renewal-spike-sandbox.md)) 이 자동 이전을 하지 않는다
+- [ ] **T4.C.4** — 내보내기 파일: `<cli> export --out <file>`(설정·통계·time-tools·AI 기록, 비밀값 제외)와 앱 메뉴 "데이터 내보내기…". P5에서 앱스토어판이 이 파일을 사용자 선택으로 가져온다
 - [ ] **T4.C.2** — `break-reminder` 호환 심볼릭 링크와 사용 중단 안내 (2개 릴리스 유지)
 - [ ] **T4.C.3** — MCP 서버 이름 변경 시 Claude Code 재등록 안내
 
 ### D. 배포
 
-- [ ] **T4.D.1** — `release.yml`: `make app` → Developer ID 서명 → `notarytool` 공증 → staple → zip/dmg 첨부
+- [ ] **T4.D.1** — `release.yml`: `make app` → Developer ID 서명 → `notarytool` 공증 → staple → zip/dmg 첨부. P0에서 미룬 공증을 여기서 처음 수행(P0 시점 `spctl`은 "Unnotarized Developer ID")
   - 참조: linetta 직접 배포 워크플로
 - [ ] **T4.D.2** — `devlikebear/tap`에 cask 추가, 기존 `break-reminder` formula는 cask 안내로 교체
 - [ ] **T4.D.3** — 업데이트: cask 기반 기존 자동 업데이트(`internal/autoupdate`)를 새 경로로 교체 (Sparkle 도입은 사용자와 상의)
