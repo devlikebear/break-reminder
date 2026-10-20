@@ -1,15 +1,14 @@
 import AppKit
-import HelperCore
 
 /// Loads the traced full-color SVG hamster frames and caches the resulting vector images.
-enum HamsterMenuBarIcon {
-    static let size = NSSize(width: 24, height: 18)
+public enum HamsterMenuBarIcon {
+    public static let size = NSSize(width: 24, height: 18)
 
     private static let runningImages = HamsterVectorArtwork.running.map { makeImage(svg: $0) }
     private static let restingImages = HamsterVectorArtwork.resting.map { makeImage(svg: $0) }
     private static let sleepingImage = makeImage(svg: HamsterVectorArtwork.sleeping)
 
-    static func image(for frame: MenuBarAnimationFrame) -> NSImage {
+    public static func image(for frame: MenuBarAnimationFrame) -> NSImage {
         func wrapped(_ value: Int, count: Int) -> Int {
             ((value % count) + count) % count
         }

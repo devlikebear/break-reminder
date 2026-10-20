@@ -863,5 +863,16 @@
   "Engine stopped": "엔진 종료",
   "The timer engine is not running.": "타이머 엔진이 실행 중이 아닙니다.",
   "The timer engine did not answer ({0}).": "타이머 엔진이 응답하지 않습니다 ({0}).",
-  "The timer engine stopped unexpectedly.": "타이머 엔진이 예기치 않게 종료됐습니다."
+  "The timer engine stopped unexpectedly.": "타이머 엔진이 예기치 않게 종료됐습니다.",
+  "Away · until resumed": "자리 비움 · 재개할 때까지",
+  "Config is invalid, using defaults: {0}": "설정이 올바르지 않아 기본값을 사용합니다: {0}",
+  "Focus · until resumed": "집중 · 재개할 때까지",
+  "Launch at login": "로그인 시 실행",
+  "Meeting · 1 hour": "회의 · 1시간",
+  "Meeting · 30 min": "회의 · 30분",
+  "On break": "휴식 중",
+  "Quit": "종료",
+  "Snooze 5 min": "5분 미루기",
+  "Starting the timer engine…": "타이머 엔진 시작 중…",
+  "Working": "작업 중"
 }

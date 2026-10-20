@@ -208,3 +208,22 @@ func TestTickSavesDailyHistoryOnNewDay(t *testing.T) {
 		t.Fatalf("saved = %v", saved)
 	}
 }
+
+func TestTickWaitsForFirstIdleReport(t *testing.T) {
+	e, _, r, _ := newTestEngine(t, testConfig())
+	if err := e.Tick(); err != nil {
+		t.Fatal(err)
+	}
+	if got := r.types(); len(got) != 0 {
+		t.Fatalf("tick before any idle report emitted %v", got)
+	}
+	st, _ := e.Status()
+	if st.State.IsSessionActive() {
+		t.Fatal("a session must not start before the app reports idle time")
+	}
+	// The first report ticks right away.
+	e.ReportIdle(0)
+	if got := r.types(); !contains(got, reminder.TypeSessionStart) {
+		t.Fatalf("first idle report should tick, got %v", got)
+	}
+}

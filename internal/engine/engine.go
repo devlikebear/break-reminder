@@ -125,18 +125,24 @@ func (e *Engine) config() config.Config {
 }
 
 // ReportIdle records how long the user has been idle, as measured by the app.
+// The first report ticks at once, since ticks wait for it.
 func (e *Engine) ReportIdle(sec int) {
 	if sec < 0 {
 		sec = 0
 	}
 	e.mu.Lock()
-	defer e.mu.Unlock()
+	first := !e.idleKnown
 	e.idleSec, e.idleAt, e.idleKnown = sec, e.opts.Now(), true
+	e.mu.Unlock()
+	if first {
+		if err := e.Tick(); err != nil {
+			logging.Log(e.opts.LogPath, i18n.Text("Check failed")+": "+err.Error())
+		}
+	}
 }
 
 // idleSeconds extrapolates the last report: if the app stops reporting, the
-// user is treated as idle for that time rather than as working. Before the
-// first report the user counts as active.
+// user is treated as idle for that time rather than as working.
 func (e *Engine) idleSeconds(now time.Time) int {
 	if !e.idleKnown {
 		return 0
@@ -148,9 +154,16 @@ func (e *Engine) idleSeconds(now time.Time) int {
 	return e.idleSec + since
 }
 
-// Tick advances the timer once, like one launchd `check` run.
+// Tick advances the timer once, like one launchd `check` run. Until the app
+// has reported idle time once, nothing advances: guessing "active" would open
+// sessions for a user who is away.
 func (e *Engine) Tick() error {
 	e.mu.Lock()
+	if !e.idleKnown {
+		e.mu.Unlock()
+		e.publish()
+		return nil
+	}
 	cfg := e.config()
 	now := e.opts.Now()
 	path := e.opts.StatePath
