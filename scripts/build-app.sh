@@ -4,6 +4,7 @@
 #   scripts/build-app.sh             Developer ID build (hardened runtime)
 #   scripts/build-app.sh --sandbox   same identity + App Sandbox entitlements,
 #                                    for local sandbox verification (spike)
+#   ... --spike                      also bundle tools/sandbox-probe
 #
 # SIGN_IDENTITY overrides the identity ("-" signs ad hoc). By default the first
 # "Developer ID Application" identity in the keychain is used, falling back to
@@ -14,7 +15,13 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 SANDBOX=0
-[[ "${1:-}" == "--sandbox" ]] && SANDBOX=1
+SPIKE=0
+for arg in "$@"; do
+  case "$arg" in
+    --sandbox) SANDBOX=1 ;;
+    --spike) SPIKE=1 ;;  # adds tools/sandbox-probe for the Phase 0 spike
+  esac
+done
 
 VERSION="$(cat VERSION 2>/dev/null || echo dev)"
 BUILD="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
@@ -46,6 +53,9 @@ cp "$SWIFT_OUT/BreakReminderApp" "$APP/Contents/MacOS/BreakReminderApp"
 cp "$OUT_DIR/engine" "$APP/Contents/MacOS/engine"
 cp "$SWIFT_OUT/BreakScreenApp" "$APP/Contents/MacOS/break-screen"
 cp -R "$SWIFT_OUT/BreakReminderHelpers_BreakScreenApp.bundle" "$APP/Contents/Resources/"
+if [[ $SPIKE == 1 ]]; then
+  go build -o "$APP/Contents/MacOS/sandbox-probe" ./tools/sandbox-probe
+fi
 
 if [[ $SANDBOX == 1 ]]; then
   APP_ENT="$RES/app-sandbox.entitlements"
@@ -64,6 +74,9 @@ echo "==> Signing with: $SIGN_IDENTITY"
 # Inside-out: nested code first, the app bundle last.
 codesign "${SIGN_ARGS[@]}" --sign "$SIGN_IDENTITY" --entitlements "$CHILD_ENT" "$APP/Contents/MacOS/engine"
 codesign "${SIGN_ARGS[@]}" --sign "$SIGN_IDENTITY" --entitlements "$CHILD_ENT" "$APP/Contents/MacOS/break-screen"
+if [[ $SPIKE == 1 ]]; then
+  codesign "${SIGN_ARGS[@]}" --sign "$SIGN_IDENTITY" --entitlements "$CHILD_ENT" "$APP/Contents/MacOS/sandbox-probe"
+fi
 codesign "${SIGN_ARGS[@]}" --sign "$SIGN_IDENTITY" --entitlements "$APP_ENT" "$APP"
 
 codesign --verify --deep --strict "$APP"

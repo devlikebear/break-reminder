@@ -17,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.onEngineStarted = { [weak self] in self?.model.reportIdle(IdleReporter.idleSeconds()) }
         model.start()
         idle.start { [weak self] seconds in self?.model.reportIdle(seconds) }
+        if SpikeProbe.enabled {
+            Task { await SpikeProbe.run(model: model) }
+        }
         if let path = ProcessInfo.processInfo.environment["BREAK_REMINDER_POPOVER_SNAPSHOT"] {
             writePopoverSnapshot(to: URL(fileURLWithPath: path))
         }
