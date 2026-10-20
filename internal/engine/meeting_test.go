@@ -139,3 +139,39 @@ func TestShortBreakNoticeBeforeMeeting(t *testing.T) {
 		t.Fatal("notice 8 minutes early")
 	}
 }
+
+func TestNoBreakScreenDuringMeeting(t *testing.T) {
+	cfg := awareConfig() // 1-minute work blocks
+	e, c, r, _ := newTestEngine(t, cfg)
+	e.ReportIdle(0) // opens the session
+	now := c.Now().Unix()
+	if err := e.UpdateCalendar([]workcontext.Event{{ID: "m", Start: now, End: now + 600, HasAttendees: true, Availability: "busy"}}); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 5; i++ {
+		c.Advance(time.Minute)
+		e.ReportIdle(0)
+		if err := e.Tick(); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, typ := range r.types() {
+		if typ == reminder.TypeBreakStart {
+			t.Fatalf("break started during a meeting: %v", r.types())
+		}
+	}
+	// After the meeting the cycle continues and a break comes due again.
+	c.Advance(6 * time.Minute)
+	for i := 0; i < 3; i++ {
+		c.Advance(time.Minute)
+		e.ReportIdle(0)
+		_ = e.Tick()
+	}
+	found := false
+	for _, typ := range r.types() {
+		found = found || typ == reminder.TypeBreakStart
+	}
+	if !found {
+		t.Fatalf("no break after the meeting: %v", r.types())
+	}
+}

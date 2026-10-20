@@ -8,7 +8,7 @@ _작성일: 2026-10-20 (rev.2) · 로드맵: [renewal-roadmap.md](renewal-roadma
 
 ## 전제 조건
 
-- [ ] P0 완료, 스파이크에서 EventKit 권한 유지 PASS
+- [x] P0 완료 (EventKit 권한 유지는 스파이크에서 "needs user check" — P1 체크포인트에서 함께 확인)
 
 ## 포함 기능
 
@@ -26,38 +26,38 @@ _작성일: 2026-10-20 (rev.2) · 로드맵: [renewal-roadmap.md](renewal-roadma
 
 ### A. Swift 수집기
 
-- [ ] **T1.A.1** — 캘린더 수집
+- [x] **T1.A.1** — 캘린더 수집
   - 파일: `helpers/Sources/MenuBarApp/CalendarCollector.swift`, HelperCore `CalendarModels.swift`
   - 내용: 오늘 00:00 ~ 내일 24:00 일정. 필드: `id, title, start, end, all_day, has_attendees, availability, calendar_id`. `EKEventStoreChanged` + 5분 주기로 엔진 `context.calendar.update` RPC 호출. 설정에서 제외할 캘린더 선택.
   - 검증: 모델 인코딩 테스트, 수동으로 일정 추가 후 1분 내 팝오버 반영
-- [ ] **T1.A.2** — 앱 사용 수집
+- [x] **T1.A.2** — 앱 사용 수집
   - 파일: `helpers/Sources/MenuBarApp/AppUsageCollector.swift`, 집계 순수 함수는 HelperCore
   - 내용: `NSWorkspace.didActivateApplicationNotification`으로 전면 앱 전환 기록, 화면 잠금/잠자기 시 구간 종료. 1분마다 `{bundle_id, name, seconds}` 증분을 `context.app_usage.add` RPC로 전송. 설정 `app_usage_enabled`(기본 true, 수집 범위를 설정 화면에 명시)
   - 검증: `swift test` 집계 테스트
 
 ### B. 엔진 판단 로직 (순수 함수)
 
-- [ ] **T1.B.1** — `internal/workcontext`
+- [x] **T1.B.1** — `internal/workcontext`
   - 파일: `calendar.go`, `appusage.go`, 테스트
   - 내용: 일정 스냅샷 보관(메모리 + `paths` 아래 캐시), `CurrentMeeting(events, now, rule)`(종일·free·참석자 없는 개인 일정 제외 규칙은 설정 `meeting_rule`), `NextEvent`, `FocusWindow(events, now, cfg) (minutes, pomodoros)`. 갱신이 15분 넘게 없으면 "알 수 없음"으로 판단 보류. 앱 사용은 일별 JSON에 집계 저장, 30일 보관.
   - 검증: `go test ./internal/workcontext` (회의 시작/끝 경계, 겹치는 일정, 자정 넘김)
-- [ ] **T1.B.2** — 회의 인식 휴식
+- [x] **T1.B.2** — 회의 인식 휴식
   - 파일: `internal/engine`(Tick 루프), `internal/state/state.go`, `internal/timer`
   - 내용: 회의 중이고 수동 일시정지가 아니면 기존 `meeting` 일시정지 경로 사용, `PauseSource=calendar`와 종료 시각 저장. 종료 후 자동 재개. 사용자가 수동 재개하면 그 회의 동안 다시 자동 일시정지하지 않음. 회의 5분 전 & 연속 작업 ≥ 25분이면 짧은 휴식 알림 1회. 설정 `calendar_aware_breaks`(기본 false, 1주 사용 후 결정).
   - 주의: `state.Save()`/Load 양쪽 반영, `EnterBreak()` 경로 유지
   - 검증: `go test ./internal/timer ./internal/engine -run Meeting`
-- [ ] **T1.B.3** — `status.get`에 `context.calendar{current,next,focus_minutes,focus_pomodoros,stale}`, `context.app_usage_today`(Top 5) 추가
+- [x] **T1.B.3** — `status.get`에 `context.calendar{current,next,focus_minutes,focus_pomodoros,stale}`, `context.app_usage_today`(Top 5) 추가
 
 ### C. 팝오버 UI
 
-- [ ] **T1.C.1** — "지금" 카드: 진행 중 회의 / 다음 일정과 남은 시간 / "다음 회의까지 52분 · 뽀모도로 2회" + [시작]. 권한 없음·데이터 오래됨 문구 포함
-- [ ] **T1.C.2** — 오늘의 앱 사용 Top 5 (팝오버 접기 영역, Dashboard 통계 탭)
-- [ ] **T1.C.3** — 설정: 캘린더 선택, 회의 인식 휴식, 앱 사용 기록 on/off·데이터 삭제
+- [x] **T1.C.1** — "지금" 카드: 진행 중 회의 / 다음 일정과 남은 시간 / "다음 회의까지 52분 · 뽀모도로 2회" + [시작]. 권한 없음·데이터 오래됨 문구 포함
+- [x] **T1.C.2** — 오늘의 앱 사용 Top 5 (팝오버 접기 영역, Dashboard 통계 탭)
+- [x] **T1.C.3** — 설정: 캘린더 선택, 회의 인식 휴식, 앱 사용 기록 on/off·데이터 삭제
   - i18n: `catalog.json` 추가 후 `python3 scripts/generate-localizations.py`
 
 ### D. 진단
 
-- [ ] **T1.D.1** — `doctor`(및 팝오버 진단 섹션)에 캘린더 권한·마지막 갱신 시각·앱 사용 수집 상태
+- [x] **T1.D.1** — `doctor`(및 팝오버 진단 섹션)에 캘린더 권한·마지막 갱신 시각·앱 사용 수집 상태
 
 ---
 
