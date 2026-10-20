@@ -43,6 +43,8 @@ type Options struct {
 	Status func(Status)
 	// AppendHistory stores a finished day; defaults to the AI history file.
 	AppendHistory func(date string, workSec, breakSec int, hourlySec [24]int) error
+	// OnDayEnd runs in the background after a finished day is saved (AI insights).
+	OnDayEnd func(date string)
 }
 
 // Engine owns the timer state while it runs.
@@ -78,6 +80,7 @@ type Status struct {
 	NotificationsEnabled   bool                `json:"notifications_enabled"`
 	AutoSessionDetect      bool                `json:"auto_session_detect"`
 	CheckIntervalSec       int                 `json:"check_interval_sec"`
+	TTSEngine              string              `json:"tts_engine"`
 	TimeTools              *timetools.Snapshot `json:"time_tools,omitempty"`
 	ConfigError            string              `json:"config_error,omitempty"`
 	Context                WorkContext         `json:"context"`
@@ -244,6 +247,8 @@ func (e *Engine) Tick() error {
 	if d := result.DayEndSummary; d != nil {
 		if err := e.opts.AppendHistory(d.Date, d.WorkSeconds, d.BreakSeconds, d.HourlyWork); err != nil {
 			logging.Log(e.opts.LogPath, err.Error())
+		} else if e.opts.OnDayEnd != nil {
+			go e.opts.OnDayEnd(d.Date)
 		}
 	}
 	logging.Rotate(e.opts.LogPath, cfg.MaxLogLines)
@@ -288,6 +293,7 @@ func (e *Engine) statusLocked() (Status, error) {
 		NotificationsEnabled:   cfg.NotificationsEnabled,
 		AutoSessionDetect:      cfg.AutoSessionDetect,
 		CheckIntervalSec:       cfg.CheckIntervalSec,
+		TTSEngine:              cfg.TTSEngine,
 	}
 	if snap, err := timetools.NewStore(e.opts.TimeToolsDir).Load(); err == nil {
 		st.TimeTools = &snap

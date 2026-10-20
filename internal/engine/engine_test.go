@@ -231,3 +231,26 @@ func TestTickWaitsForFirstIdleReport(t *testing.T) {
 		t.Fatalf("first idle report should tick, got %v", got)
 	}
 }
+
+func TestDayEndHookRunsAfterHistorySave(t *testing.T) {
+	e, c, _, _ := newTestEngine(t, testConfig())
+	done := make(chan string, 1)
+	e.opts.AppendHistory = func(string, int, int, [24]int) error { return nil }
+	e.opts.OnDayEnd = func(date string) { done <- date }
+	s := state.New()
+	s.LastUpdateDate = "2026-10-19"
+	s.TodayWorkSeconds = 600
+	s.LastCheck = c.Now().Unix() - 60
+	if err := state.Save(e.opts.StatePath, s); err != nil {
+		t.Fatal(err)
+	}
+	e.ReportIdle(0)
+	select {
+	case d := <-done:
+		if d != "2026-10-19" {
+			t.Fatalf("date = %q", d)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnDayEnd not called")
+	}
+}

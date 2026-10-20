@@ -77,8 +77,10 @@ func TestTimeToolCompletionBecomesEvent(t *testing.T) {
 	}
 	c.Advance(2 * time.Second)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	go e.RunTimeTools(ctx)
+	stopped := make(chan struct{})
+	go func() { e.RunTimeTools(ctx); close(stopped) }()
+	// Let the worker finish its last write before the temp dir is removed.
+	defer func() { cancel(); <-stopped }()
 	for ctx.Err() == nil {
 		for _, typ := range r.types() {
 			if typ == reminder.TypeTimeToolDone {
