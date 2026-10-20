@@ -13,6 +13,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private lazy var appUsage = AppUsageCollector(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Uninstall hook: drop the login item and quit.
+        if ProcessInfo.processInfo.environment["BREAK_REMINDER_UNREGISTER_LOGIN_ITEM"] == "1" {
+            try? SMAppService.mainApp.unregister()
+            NSApp.terminate(nil)
+            return
+        }
         executor = ActionExecutor(model: model)
         executor.requestNotificationPermission()
         model.onEvent = { [weak self] event in self?.executor.handle(event) }
@@ -28,12 +34,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         calendar.start()
         appUsage.start()
-        // Uninstall hook: drop the login item and quit.
-        if ProcessInfo.processInfo.environment["BREAK_REMINDER_UNREGISTER_LOGIN_ITEM"] == "1" {
-            try? SMAppService.mainApp.unregister()
-            NSApp.terminate(nil)
-            return
-        }
         // Install hook: register as a login item without opening the menu.
         if ProcessInfo.processInfo.environment["BREAK_REMINDER_REGISTER_LOGIN_ITEM"] == "1",
            SMAppService.mainApp.status != .enabled {
@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         appUsage.flush()
-        executor.stopOverlay()
+        executor?.stopOverlay()
         model.stop()
     }
 }
