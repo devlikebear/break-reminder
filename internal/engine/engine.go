@@ -67,6 +67,8 @@ type Status struct {
 	IdleThresholdSec       int                 `json:"idle_threshold_sec"`
 	BreakScreenMode        string              `json:"break_screen_mode"`
 	NotificationsEnabled   bool                `json:"notifications_enabled"`
+	AutoSessionDetect      bool                `json:"auto_session_detect"`
+	CheckIntervalSec       int                 `json:"check_interval_sec"`
 	TimeTools              *timetools.Snapshot `json:"time_tools,omitempty"`
 	ConfigError            string              `json:"config_error,omitempty"`
 }
@@ -226,6 +228,8 @@ func (e *Engine) statusLocked() (Status, error) {
 		IdleThresholdSec:       cfg.IdleThresholdSec,
 		BreakScreenMode:        cfg.BreakScreenMode,
 		NotificationsEnabled:   cfg.NotificationsEnabled,
+		AutoSessionDetect:      cfg.AutoSessionDetect,
+		CheckIntervalSec:       cfg.CheckIntervalSec,
 	}
 	if snap, err := timetools.NewStore(e.opts.TimeToolsDir).Load(); err == nil {
 		st.TimeTools = &snap

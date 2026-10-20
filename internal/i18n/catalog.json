@@ -860,5 +860,8 @@
   "Serve JSON-RPC on stdin/stdout": "stdin/stdout으로 JSON-RPC 제공",
   "Tick interval (default: check_interval_sec from config)": "확인 주기 (기본값: 설정의 check_interval_sec)",
   "Engine started (pid %d)": "엔진 시작 (pid %d)",
-  "Engine stopped": "엔진 종료"
+  "Engine stopped": "엔진 종료",
+  "The timer engine is not running.": "타이머 엔진이 실행 중이 아닙니다.",
+  "The timer engine did not answer ({0}).": "타이머 엔진이 응답하지 않습니다 ({0}).",
+  "The timer engine stopped unexpectedly.": "타이머 엔진이 예기치 않게 종료됐습니다."
 }

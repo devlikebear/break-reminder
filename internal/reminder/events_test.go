@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/devlikebear/break-reminder/internal/config"
-		"github.com/devlikebear/break-reminder/internal/state"
+	"github.com/devlikebear/break-reminder/internal/state"
 	"github.com/devlikebear/break-reminder/internal/timer"
 )
 
