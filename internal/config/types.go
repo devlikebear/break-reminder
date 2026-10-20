@@ -6,6 +6,13 @@ const (
 	TimerModePomodoro = "pomodoro"
 )
 
+// Meeting rules selectable through meeting_rule: which calendar events count
+// as a meeting for calendar-aware breaks.
+const (
+	MeetingRuleAttendees = "attendees" // busy, timed events with other attendees
+	MeetingRuleBusy      = "busy"      // any busy, timed event
+)
+
 // Config holds all application configuration.
 type Config struct {
 	WorkDurationMin        int    `yaml:"work_duration_min"`
@@ -40,6 +47,11 @@ type Config struct {
 	MaxLogLines            int    `yaml:"max_log_lines"`
 	CheckIntervalSec       int    `yaml:"check_interval_sec"`
 	Theme                  string `yaml:"theme"` // "auto", "dark", "light"
+
+	CalendarAwareBreaks bool     `yaml:"calendar_aware_breaks"`
+	MeetingRule         string   `yaml:"meeting_rule"`
+	CalendarExcludedIDs []string `yaml:"calendar_excluded_ids"`
+	AppUsageEnabled     bool     `yaml:"app_usage_enabled"`
 }
 
 // WorkDurationSec returns the configured classic work duration in seconds.
