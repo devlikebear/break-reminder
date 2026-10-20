@@ -10,7 +10,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/devlikebear/break-reminder/internal/enginelock"
 	"github.com/devlikebear/break-reminder/internal/notify"
+	"github.com/devlikebear/break-reminder/internal/paths"
 	"github.com/devlikebear/break-reminder/internal/timetools"
 	"github.com/spf13/cobra"
 )
@@ -55,10 +57,23 @@ func newTimeToolsCmd() *cobra.Command {
 	run := &cobra.Command{Use: "run", Short: i18n.Text("Run the background time tools worker"), Args: cobra.NoArgs, RunE: func(cmd *cobra.Command, _ []string) error {
 		ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
 		defer cancel()
-		worker := timetools.Worker{Store: timetools.NewStore(directory), NotificationAvailable: notify.Available, Send: func(ctx context.Context, e timetools.Event) error {
-			return notify.SendEvent(ctx, i18n.Text("Timer complete"), i18n.Text("Timer complete: {0}", timeToolDisplayLabel(e.Label)), e.ID)
-		}}
-		return worker.Run(ctx)
+		engineRunning := func() bool { return enginelock.Held(paths.EngineLockFile()) }
+		for {
+			// The menu bar engine runs its own worker; wait until it is gone.
+			for engineRunning() {
+				select {
+				case <-ctx.Done():
+					return nil
+				case <-time.After(5 * time.Second):
+				}
+			}
+			worker := timetools.Worker{Store: timetools.NewStore(directory), NotificationAvailable: notify.Available, Yield: engineRunning, Send: func(ctx context.Context, e timetools.Event) error {
+				return notify.SendEvent(ctx, i18n.Text("Timer complete"), i18n.Text("Timer complete: {0}", timeToolDisplayLabel(e.Label)), e.ID)
+			}}
+			if err := worker.Run(ctx); err != nil || ctx.Err() != nil {
+				return err
+			}
+		}
 	}}
 	allowInvalidConfig(run)
 	parent.AddCommand(run)

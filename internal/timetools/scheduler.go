@@ -42,6 +42,9 @@ type Worker struct {
 	Interval              time.Duration
 	Send                  func(context.Context, Event) error
 	NotificationAvailable func() bool
+	// Yield, when it returns true, makes Run stop and release the runner lock
+	// so another owner (the menu bar engine) can take over.
+	Yield func() bool
 }
 
 func (w *Worker) now() int64 {
@@ -201,6 +204,9 @@ func (w *Worker) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
+		}
+		if w.Yield != nil && w.Yield() {
+			return nil
 		}
 	}
 }

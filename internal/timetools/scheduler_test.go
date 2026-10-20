@@ -113,3 +113,26 @@ func TestWorkerRefreshesHealthAfterWallClockMovesBackward(t *testing.T) {
 		t.Fatal("heartbeat stays in future after clock adjustment")
 	}
 }
+
+func TestWorkerRunReturnsWhenAskedToYield(t *testing.T) {
+	store := NewStore(t.TempDir())
+	var yield atomic.Bool
+	worker := Worker{Store: store, Interval: 10 * time.Millisecond, Yield: yield.Load}
+	done := make(chan error, 1)
+	go func() { done <- worker.Run(context.Background()) }()
+	time.Sleep(30 * time.Millisecond)
+	yield.Store(true)
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Run() = %v, want nil", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("worker did not yield")
+	}
+	// The runner lock is free again so another worker (the engine's) can take it.
+	second := Worker{Store: store, Interval: 10 * time.Millisecond, Yield: func() bool { return true }}
+	if err := second.Run(context.Background()); err != nil {
+		t.Fatalf("second Run() = %v", err)
+	}
+}
