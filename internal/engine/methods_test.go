@@ -9,6 +9,7 @@ import (
 
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/reminder"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 )
 
 func call(t *testing.T, s *Server, out *lines, line string) map[string]any {
@@ -102,5 +103,28 @@ func TestStatusJSONHasStateFields(t *testing.T) {
 		if !strings.Contains(string(data), key) {
 			t.Errorf("status JSON missing %s: %s", key, data)
 		}
+	}
+}
+
+func TestSecretsSetOnlyReachesTheOverrideLayer(t *testing.T) {
+	e, _, _, _ := newTestEngine(t, testConfig())
+	var out lines
+	s := NewServer(&out)
+	e.Register(s, "test")
+	t.Cleanup(func() { _ = secrets.Overrides.Delete(secrets.TTSAPIKey) })
+
+	r := call(t, s, &out, `{"jsonrpc":"2.0","id":1,"method":"secrets.set","params":{"name":"tts_api_key","value":"AIza-from-app"}}`)
+	if r["error"] != nil {
+		t.Fatalf("secrets.set = %v", r)
+	}
+	if v, _ := secrets.Overrides.Get(secrets.TTSAPIKey); v != "AIza-from-app" {
+		t.Fatalf("override = %q", v)
+	}
+	if strings.Contains(out.String(), "AIza-from-app") {
+		t.Fatal("secret echoed on stdout")
+	}
+	r = call(t, s, &out, `{"jsonrpc":"2.0","id":2,"method":"secrets.set","params":{"name":"voice","value":"x"}}`)
+	if r["error"] == nil {
+		t.Fatal("unknown secret name accepted")
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
 	"github.com/devlikebear/break-reminder/internal/logging"
 	"github.com/devlikebear/break-reminder/internal/reminder"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 	"github.com/devlikebear/break-reminder/internal/state"
 	"github.com/devlikebear/break-reminder/internal/timetools"
 )
@@ -85,6 +86,24 @@ func (e *Engine) Register(s *Server, version string) {
 			return nil, err
 		}
 		return e.ChooseBreakScreen(req.Mode)
+	})
+	s.Handle("secrets.set", func(_ context.Context, p json.RawMessage) (any, error) {
+		var req struct {
+			Name  string `json:"name"`
+			Value string `json:"value"`
+		}
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		if !config.IsSecretKey(req.Name) {
+			return nil, InvalidParams(fmt.Errorf(i18n.Text("unknown config key %q"), req.Name))
+		}
+		// The sandboxed app keeps secrets in its own keychain; the engine only
+		// holds them in memory.
+		if req.Value == "" {
+			return nil, secrets.Overrides.Delete(req.Name)
+		}
+		return nil, secrets.Overrides.Set(req.Name, req.Value)
 	})
 	s.Handle("time_tools.status", func(context.Context, json.RawMessage) (any, error) {
 		return timetools.NewStore(e.opts.TimeToolsDir).Load()

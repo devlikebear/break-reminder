@@ -59,7 +59,11 @@ func newRootCmd() *cobra.Command {
 			if commandAllowsInvalidConfig(cmd) {
 				return nil
 			}
-			return setAppConfig()
+			if err := setAppConfig(); err != nil {
+				return err
+			}
+			migrateLegacySecrets()
+			return nil
 		},
 		SilenceUsage:  true,
 		SilenceErrors: true,

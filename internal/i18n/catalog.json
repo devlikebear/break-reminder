@@ -874,5 +874,15 @@
   "Quit": "종료",
   "Snooze 5 min": "5분 미루기",
   "Starting the timer engine…": "타이머 엔진 시작 중…",
-  "Working": "작업 중"
+  "Working": "작업 중",
+  "secret not found": "저장된 비밀값이 없습니다",
+  "secret value must not be empty": "비밀값은 비어 있을 수 없습니다",
+  "keychain %s failed (OSStatus %d)": "키체인 %s 실패 (OSStatus %d)",
+  "Keychain is unavailable on this platform": "이 플랫폼에서는 키체인을 사용할 수 없습니다",
+  "save api key to keychain: %w": "API 키를 키체인에 저장하지 못했습니다: %w",
+  "Gemini API key saved to the keychain (%d chars)\n": "Gemini API 키를 키체인에 저장했습니다 (%d자)\n",
+  "Could not move tts_api_key to the keychain; it stays in config.yaml": "tts_api_key를 키체인으로 옮기지 못해 config.yaml에 그대로 둡니다",
+  "Could not remove tts_api_key from config.yaml": "config.yaml에서 tts_api_key를 지우지 못했습니다",
+  "Moved tts_api_key from config.yaml to the keychain": "tts_api_key를 config.yaml에서 키체인으로 옮겼습니다",
+  "refusing to change %s from AI output; use `break-reminder tts set-api-key`": "AI 출력으로 %s는 바꿀 수 없습니다. `break-reminder tts set-api-key`를 사용하세요"
 }

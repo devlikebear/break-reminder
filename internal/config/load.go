@@ -79,7 +79,30 @@ func EnsureConfigFile() error {
 		return err
 	}
 
-	return os.WriteFile(path, data, 0o644)
+	return writeOwnerOnly(path, data)
+}
+
+// writeOwnerOnly writes the config readable by the owner only, tightening
+// files created by older versions with 0644.
+func writeOwnerOnly(path string, data []byte) error {
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return err
+	}
+	return os.Chmod(path, 0o600)
+}
+
+// RedactedValue replaces secret values in displayed configuration.
+const RedactedValue = "<redacted>"
+
+// IsSecretKey reports whether a config key holds a secret.
+func IsSecretKey(key string) bool { return key == "tts_api_key" }
+
+// Redact returns a copy safe to print or send to an AI CLI.
+func Redact(c Config) Config {
+	if c.TTSAPIKey != "" {
+		c.TTSAPIKey = RedactedValue
+	}
+	return c
 }
 
 // Save writes the configuration to the YAML file.
@@ -97,7 +120,7 @@ func Save(cfg Config) error {
 		return err
 	}
 
-	return os.WriteFile(ConfigPath(), data, 0o644)
+	return writeOwnerOnly(ConfigPath(), data)
 }
 
 var validConfigKeys = map[string]struct{}{

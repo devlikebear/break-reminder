@@ -9,11 +9,13 @@ import (
 
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/reminder"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 	"github.com/devlikebear/break-reminder/internal/state"
 )
 
 func TestMain(m *testing.M) {
 	os.Setenv("BREAK_REMINDER_LANGUAGE", "en")
+	secrets.Default = secrets.NewMemory() // never touch the real keychain
 	os.Exit(m.Run())
 }
 
