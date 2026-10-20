@@ -56,6 +56,7 @@ public struct EngineStatus: Decodable, Equatable {
     public var checkIntervalSec: Int?
     public var timeTools: TimeToolsSnapshot?
     public var configError: String?
+    public var context: WorkContextStatus?
 
     enum CodingKeys: String, CodingKey {
         case now, state, active
@@ -65,6 +66,7 @@ public struct EngineStatus: Decodable, Equatable {
         case idleSec = "idle_sec", idleThresholdSec = "idle_threshold_sec", breakScreenMode = "break_screen_mode"
         case notificationsEnabled = "notifications_enabled", autoSessionDetect = "auto_session_detect"
         case checkIntervalSec = "check_interval_sec", timeTools = "time_tools", configError = "config_error"
+        case context
     }
 
     /// The state in the shape the shared presentation helpers expect.

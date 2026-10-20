@@ -40,6 +40,10 @@ struct StatsTabView: View {
                 heatmapView
                 Divider().background(theme.divider)
                 summaryCards
+                if !vm.appUsageToday.isEmpty {
+                    Divider().background(theme.divider)
+                    appUsageView
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
@@ -192,6 +196,20 @@ struct StatsTabView: View {
         weekdayFormatter.locale = Locale(identifier: AppLanguage.current == .korean ? "ko_KR" : "en_US")
         weekdayFormatter.dateFormat = "E"
         return weekdayFormatter.string(from: date)
+    }
+
+    private var appUsageView: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(L10n.text("Today's apps"))
+                .font(.system(size: 13, weight: .semibold))
+            ForEach(vm.appUsageToday, id: \.bundleID) { item in
+                HStack {
+                    Text(item.name).lineLimit(1)
+                    Spacer()
+                    Text(formatUsageDuration(item.seconds)).font(.caption.monospacedDigit()).foregroundColor(.secondary)
+                }
+            }
+        }
     }
 
     private var summaryCards: some View {
