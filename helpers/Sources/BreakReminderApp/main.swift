@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 import HelperCore
 import SwiftUI
 
@@ -27,6 +28,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         calendar.start()
         appUsage.start()
+        // Uninstall hook: drop the login item and quit.
+        if ProcessInfo.processInfo.environment["BREAK_REMINDER_UNREGISTER_LOGIN_ITEM"] == "1" {
+            try? SMAppService.mainApp.unregister()
+            NSApp.terminate(nil)
+            return
+        }
+        // Install hook: register as a login item without opening the menu.
+        if ProcessInfo.processInfo.environment["BREAK_REMINDER_REGISTER_LOGIN_ITEM"] == "1",
+           SMAppService.mainApp.status != .enabled {
+            try? SMAppService.mainApp.register()
+        }
         if SpikeProbe.enabled {
             Task { await SpikeProbe.run(model: model) }
         }
