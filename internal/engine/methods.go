@@ -17,6 +17,7 @@ import (
 	"github.com/devlikebear/break-reminder/internal/secrets"
 	"github.com/devlikebear/break-reminder/internal/state"
 	"github.com/devlikebear/break-reminder/internal/timetools"
+	"github.com/devlikebear/break-reminder/internal/workcontext"
 )
 
 // Notification method names sent from the engine to the app.
@@ -104,6 +105,58 @@ func (e *Engine) Register(s *Server, version string) {
 			return nil, secrets.Overrides.Delete(req.Name)
 		}
 		return nil, secrets.Overrides.Set(req.Name, req.Value)
+	})
+	s.Handle("context.calendar.update", func(_ context.Context, p json.RawMessage) (any, error) {
+		var req struct {
+			Events []workcontext.Event `json:"events"`
+		}
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		return nil, e.UpdateCalendar(req.Events)
+	})
+	s.Handle("context.app_usage.add", func(_ context.Context, p json.RawMessage) (any, error) {
+		var req struct {
+			Items []workcontext.AppUsage `json:"items"`
+		}
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		if err := e.AddAppUsage(req.Items); err != nil {
+			return nil, InvalidParams(err)
+		}
+		return nil, nil
+	})
+	s.Handle("context.app_usage.clear", func(context.Context, json.RawMessage) (any, error) { return nil, e.ClearAppUsage() })
+	s.Handle("context.settings.set", func(_ context.Context, p json.RawMessage) (any, error) {
+		var req map[string]json.RawMessage
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		changes := map[string]any{}
+		for key, raw := range req {
+			switch key {
+			case "calendar_aware_breaks", "app_usage_enabled", "meeting_rule", "calendar_excluded_ids":
+				var v any
+				if err := json.Unmarshal(raw, &v); err != nil {
+					return nil, InvalidParams(err)
+				}
+				changes[key] = v
+			default:
+				return nil, InvalidParams(fmt.Errorf(i18n.Text("unknown config key %q"), key))
+			}
+		}
+		if len(changes) == 0 {
+			return e.Status()
+		}
+		if err := e.applyConfig(changes); err != nil {
+			return nil, err
+		}
+		st, err := e.Status()
+		if err == nil {
+			e.opts.Status(st)
+		}
+		return st, err
 	})
 	s.Handle("time_tools.status", func(context.Context, json.RawMessage) (any, error) {
 		return timetools.NewStore(e.opts.TimeToolsDir).Load()

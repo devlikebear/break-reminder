@@ -886,5 +886,10 @@
   "Moved tts_api_key from config.yaml to the keychain": "tts_api_key를 config.yaml에서 키체인으로 옮겼습니다",
   "refusing to change %s from AI output; use `break-reminder tts set-api-key`": "AI 출력으로 %s는 바꿀 수 없습니다. `break-reminder tts set-api-key`를 사용하세요",
   "meeting_rule must be %q or %q": "meeting_rule은 %q 또는 %q여야 합니다",
-  "invalid app usage increment for %q": "%q의 앱 사용 증분이 올바르지 않습니다"
+  "invalid app usage increment for %q": "%q의 앱 사용 증분이 올바르지 않습니다",
+  "Calendar-aware breaks are off; resumed the meeting pause": "회의 인식 휴식이 꺼져 회의 일시정지를 해제했습니다",
+  "Meeting is no longer on the calendar; timer resumed": "캘린더에서 회의가 사라져 타이머를 재개했습니다",
+  "Paused for a calendar meeting": "캘린더 회의로 일시정지했습니다",
+  "Meeting in 5 minutes": "5분 후 회의",
+  "Stretch and grab some water before it starts~": "시작 전에 스트레칭하고 물 한 잔 하세요~"
 }

@@ -64,13 +64,15 @@ func newTestEngine(t *testing.T, cfg config.Config) (*Engine, *clock, *recorder,
 	c := &clock{t: time.Date(2026, 10, 20, 10, 0, 0, 0, time.Local)}
 	r := &recorder{}
 	e := New(Options{
-		Now:          c.Now,
-		LoadConfig:   func() (config.Config, error) { return cfg, nil },
-		StatePath:    filepath.Join(dir, "state"),
-		LogPath:      filepath.Join(dir, "log"),
-		TimeToolsDir: dir,
-		Emit:         r.emit,
-		Status:       r.status,
+		Now:               c.Now,
+		LoadConfig:        func() (config.Config, error) { return cfg, nil },
+		StatePath:         filepath.Join(dir, "state"),
+		LogPath:           filepath.Join(dir, "log"),
+		TimeToolsDir:      dir,
+		CalendarCachePath: filepath.Join(dir, "calendar-cache.json"),
+		AppUsageDir:       filepath.Join(dir, "app-usage"),
+		Emit:              r.emit,
+		Status:            r.status,
 	})
 	return e, c, r, dir
 }

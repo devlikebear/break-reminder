@@ -3,6 +3,9 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -10,6 +13,7 @@ import (
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/reminder"
 	"github.com/devlikebear/break-reminder/internal/secrets"
+	"github.com/devlikebear/break-reminder/internal/workcontext"
 )
 
 func call(t *testing.T, s *Server, out *lines, line string) map[string]any {
@@ -126,5 +130,99 @@ func TestSecretsSetOnlyReachesTheOverrideLayer(t *testing.T) {
 	r = call(t, s, &out, `{"jsonrpc":"2.0","id":2,"method":"secrets.set","params":{"name":"voice","value":"x"}}`)
 	if r["error"] == nil {
 		t.Fatal("unknown secret name accepted")
+	}
+}
+
+func TestCalendarRPCDrivesMeetingPauseAndStatus(t *testing.T) {
+	cfg := awareConfig()
+	e, c, r, _ := newTestEngine(t, cfg)
+	var out lines
+	s := NewServer(&out)
+	e.Register(s, "test")
+
+	now := c.Now().Unix()
+	e.ReportIdle(0) // opens the session
+	update := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"context.calendar.update","params":{"events":[
+		{"id":"m1","title":"Standup","start":%d,"end":%d,"has_attendees":true,"availability":"busy"},
+		{"id":"m2","title":"Review","start":%d,"end":%d,"has_attendees":true,"availability":"busy"}]}}`,
+		now+60, now+1800, now+3600, now+5400)
+	if resp := call(t, s, &out, strings.ReplaceAll(update, "\n", "")); resp["error"] != nil {
+		t.Fatalf("update = %v", resp)
+	}
+	st, _ := e.Status()
+	if st.Context.Calendar.Stale || st.Context.Calendar.Next == nil || st.Context.Calendar.Next.ID != "m1" || st.Context.Calendar.FocusMinutes != 1 {
+		t.Fatalf("context before = %+v", st.Context.Calendar)
+	}
+
+	c.Advance(2 * time.Minute)
+	if err := e.Tick(); err != nil {
+		t.Fatal(err)
+	}
+	st, _ = e.Status()
+	if !st.State.Paused || st.State.PauseSource != "calendar" || st.Context.Calendar.Current == nil {
+		t.Fatalf("not paused for m1: state=%+v ctx=%+v", st.State, st.Context.Calendar)
+	}
+	// Manual resume holds for this meeting.
+	if _, err := e.Resume(); err != nil {
+		t.Fatal(err)
+	}
+	c.Advance(time.Minute)
+	e.ReportIdle(0)
+	_ = e.Tick()
+	if st, _ = e.Status(); st.State.Paused {
+		t.Fatal("re-paused after manual resume")
+	}
+	_ = r
+}
+
+func TestAppUsageRPC(t *testing.T) {
+	e, _, _, dir := newTestEngine(t, testConfig())
+	var out lines
+	s := NewServer(&out)
+	e.Register(s, "test")
+	resp := call(t, s, &out, `{"jsonrpc":"2.0","id":1,"method":"context.app_usage.add","params":{"items":[{"bundle_id":"com.apple.Safari","name":"Safari","seconds":60},{"bundle_id":"com.microsoft.VSCode","name":"Code","seconds":120}]}}`)
+	if resp["error"] != nil {
+		t.Fatalf("add = %v", resp)
+	}
+	st, _ := e.Status()
+	if len(st.Context.AppUsageToday) != 2 || st.Context.AppUsageToday[0].Name != "Code" {
+		t.Fatalf("usage = %+v", st.Context.AppUsageToday)
+	}
+	if entries, _ := os.ReadDir(filepath.Join(dir, "app-usage")); len(entries) != 1 {
+		t.Fatalf("files = %v", entries)
+	}
+	call(t, s, &out, `{"jsonrpc":"2.0","id":2,"method":"context.app_usage.clear"}`)
+	if st, _ = e.Status(); len(st.Context.AppUsageToday) != 0 {
+		t.Fatal("clear left data")
+	}
+}
+
+func TestAppUsageIgnoredWhenDisabled(t *testing.T) {
+	cfg := testConfig()
+	cfg.AppUsageEnabled = false
+	e, _, _, _ := newTestEngine(t, cfg)
+	if err := e.AddAppUsage([]workcontext.AppUsage{{BundleID: "a", Name: "A", Seconds: 5}}); err != nil {
+		t.Fatal(err)
+	}
+	if st, _ := e.Status(); len(st.Context.AppUsageToday) != 0 {
+		t.Fatal("usage recorded while disabled")
+	}
+}
+
+func TestContextSettingsRPC(t *testing.T) {
+	cfg := testConfig()
+	e, _, _, _ := newTestEngine(t, cfg)
+	e.opts.LoadConfig = func() (config.Config, error) { return cfg, nil }
+	e.opts.SaveConfig = func(c config.Config) error { cfg = c; return nil }
+	var out lines
+	s := NewServer(&out)
+	e.Register(s, "test")
+	resp := call(t, s, &out, `{"jsonrpc":"2.0","id":1,"method":"context.settings.set","params":{"calendar_aware_breaks":true,"meeting_rule":"busy","calendar_excluded_ids":["x"],"app_usage_enabled":false}}`)
+	if resp["error"] != nil || !cfg.CalendarAwareBreaks || cfg.MeetingRule != "busy" || len(cfg.CalendarExcludedIDs) != 1 || cfg.AppUsageEnabled {
+		t.Fatalf("resp=%v cfg=%+v", resp, cfg)
+	}
+	resp = call(t, s, &out, `{"jsonrpc":"2.0","id":2,"method":"context.settings.set","params":{"meeting_rule":"often"}}`)
+	if resp["error"] == nil {
+		t.Fatal("invalid rule accepted")
 	}
 }
