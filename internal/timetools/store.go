@@ -4,17 +4,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/devlikebear/break-reminder/internal/i18n"
 	"os"
 	"path/filepath"
 	"syscall"
+
+	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/paths"
 )
 
 type Store struct{ Path string }
 
 func DefaultDirectory() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "break-reminder")
+	return paths.TimeToolsDir()
 }
 func NewStore(dir string) *Store { return &Store{Path: filepath.Join(dir, "time-tools.json")} }
 func (s *Store) Load() (Snapshot, error) {

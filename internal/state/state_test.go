@@ -733,3 +733,11 @@ func TestEndSessionStopsTheCycleAndKeepsDailyTotals(t *testing.T) {
 		t.Error("daily totals must survive the session end")
 	}
 }
+
+func TestDefaultStatePathHonorsBreakReminderHome(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("BREAK_REMINDER_HOME", root)
+	if got, want := DefaultStatePath(), filepath.Join(root, "state"); got != want {
+		t.Fatalf("DefaultStatePath() = %q, want %q", got, want)
+	}
+}

@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/paths"
 
 	"fmt"
 	"os"
@@ -11,7 +12,8 @@ import (
 )
 
 var (
-	configDir  = ".config/break-reminder"
+	// configDir overrides paths.ConfigDir() when set (tests only).
+	configDir  = ""
 	configFile = "config.yaml"
 )
 
@@ -20,8 +22,7 @@ func ConfigDir() string {
 	if filepath.IsAbs(configDir) {
 		return configDir
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, configDir)
+	return paths.ConfigDir()
 }
 
 // ConfigPath returns the full path to the config file.

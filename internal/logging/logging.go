@@ -4,14 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
+
+	"github.com/devlikebear/break-reminder/internal/paths"
 )
 
-// DefaultLogPath returns ~/.break-reminder.log
+// DefaultLogPath returns the log file (see paths.LogFile).
 func DefaultLogPath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".break-reminder.log")
+	return paths.LogFile()
 }
 
 // Log appends a timestamped line to the log file.

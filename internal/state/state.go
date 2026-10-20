@@ -2,6 +2,7 @@ package state
 
 import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/paths"
 
 	"bufio"
 	"errors"
@@ -117,10 +118,9 @@ func (s State) EndSession(at int64, manual bool) State {
 	return s
 }
 
-// DefaultStatePath returns ~/.break-reminder-state
+// DefaultStatePath returns the state file (see paths.StateFile).
 func DefaultStatePath() string {
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".break-reminder-state")
+	return paths.StateFile()
 }
 
 // New returns a fresh state.

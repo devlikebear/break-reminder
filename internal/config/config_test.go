@@ -713,3 +713,11 @@ func TestConfigDirAcceptsAbsoluteTestDirectory(t *testing.T) {
 		t.Fatalf("ConfigDir = %q, want %q", got, configDir)
 	}
 }
+
+func TestConfigPathHonorsBreakReminderHome(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("BREAK_REMINDER_HOME", root)
+	if got, want := ConfigPath(), filepath.Join(root, "config.yaml"); got != want {
+		t.Fatalf("ConfigPath() = %q, want %q", got, want)
+	}
+}

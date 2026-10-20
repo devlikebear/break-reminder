@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/devlikebear/break-reminder/internal/paths"
 )
 
 // Pattern represents a single AI-discovered pattern insight.
@@ -24,13 +26,12 @@ type Report struct {
 // pathOverride lets tests redirect the insights file.
 var pathOverride string
 
-// Path returns ~/.break-reminder-insights.json
+// Path returns the insights file (see paths.InsightsFile).
 func Path() string {
 	if pathOverride != "" {
 		return pathOverride
 	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".break-reminder-insights.json")
+	return paths.InsightsFile()
 }
 
 // Load reads the insights file. Returns (nil, nil) if the file doesn't exist.
