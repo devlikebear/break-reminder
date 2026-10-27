@@ -14,8 +14,10 @@ import (
 	"time"
 
 	"github.com/devlikebear/break-reminder/internal/ai"
+	"github.com/devlikebear/break-reminder/internal/assistant"
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/insights"
 	"github.com/devlikebear/break-reminder/internal/logging"
 	"github.com/devlikebear/break-reminder/internal/paths"
 	"github.com/devlikebear/break-reminder/internal/reminder"
@@ -43,8 +45,18 @@ type Options struct {
 	Status func(Status)
 	// AppendHistory stores a finished day; defaults to the AI history file.
 	AppendHistory func(date string, workSec, breakSec int, hourlySec [24]int) error
-	// OnDayEnd runs in the background after a finished day is saved (AI insights).
+	// OnDayEnd runs in the background after a finished day is saved.
 	OnDayEnd func(date string)
+
+	// AI answers questions and writes the briefing and retro. Nil means
+	// templates only.
+	AI AIService
+	// Notify sends other engine notifications (agent.delta).
+	Notify func(method string, params any)
+	// AssistantDir holds the daily briefing/retro files.
+	AssistantDir string
+	// SaveInsights stores the insights report written with the retro.
+	SaveInsights func(*insights.Report) error
 }
 
 // Engine owns the timer state while it runs.
@@ -60,6 +72,10 @@ type Engine struct {
 	calendar  workcontext.CalendarSnapshot
 	usage     workcontext.UsageStore
 	prunedDay string
+
+	assistant   assistant.Store
+	assistantMu sync.Mutex // one briefing/retro at a time
+	background  sync.WaitGroup
 }
 
 // Status is what the app needs to draw the popover.
@@ -84,6 +100,7 @@ type Status struct {
 	TimeTools              *timetools.Snapshot `json:"time_tools,omitempty"`
 	ConfigError            string              `json:"config_error,omitempty"`
 	Context                WorkContext         `json:"context"`
+	Assistant              assistant.Day       `json:"assistant"`
 }
 
 // WorkContext is what the popover shows about calendar and app usage.
@@ -132,28 +149,37 @@ func New(opts Options) *Engine {
 	if opts.AppUsageDir == "" {
 		opts.AppUsageDir = paths.AppUsageDir()
 	}
+	if opts.AssistantDir == "" {
+		opts.AssistantDir = paths.AssistantDir()
+	}
+	if opts.SaveInsights == nil {
+		opts.SaveInsights = insights.Save
+	}
+	if opts.Notify == nil {
+		opts.Notify = func(string, any) {}
+	}
 	if opts.Emit == nil {
 		opts.Emit = func(reminder.Event) {}
 	}
 	if opts.Status == nil {
 		opts.Status = func(Status) {}
 	}
-	if opts.AppendHistory == nil {
-		opts.AppendHistory = appendAIHistory
+	e := &Engine{opts: opts, usage: workcontext.UsageStore{Dir: opts.AppUsageDir}, assistant: assistant.Store{Dir: opts.AssistantDir}}
+	if e.opts.AppendHistory == nil {
+		e.opts.AppendHistory = e.appendAIHistory
 	}
-	e := &Engine{opts: opts, usage: workcontext.UsageStore{Dir: opts.AppUsageDir}}
 	if snap, err := workcontext.LoadCalendar(opts.CalendarCachePath); err == nil {
 		e.calendar = snap
 	}
 	return e
 }
 
-func appendAIHistory(date string, workSec, breakSec int, hourlySec [24]int) error {
+func (e *Engine) appendAIHistory(date string, workSec, breakSec int, hourlySec [24]int) error {
 	var hourlyMin [24]int
 	for i, s := range hourlySec {
 		hourlyMin[i] = s / 60
 	}
-	return ai.AppendHistory(ai.DailySummary{Date: date, WorkMin: workSec / 60, BreakMin: breakSec / 60, HourlyWork: hourlyMin})
+	return ai.AppendHistory(ai.DailySummary{Date: date, WorkMin: workSec / 60, BreakMin: breakSec / 60, HourlyWork: hourlyMin, Retro: e.retroFor(date)})
 }
 
 // config loads the current settings, keeping defaults when the file is broken
@@ -258,6 +284,7 @@ func (e *Engine) Tick() error {
 	for _, ev := range events {
 		e.opts.Emit(ev)
 	}
+	e.afterTransitions(events)
 	e.publish()
 	return nil
 }
@@ -302,6 +329,7 @@ func (e *Engine) statusLocked() (Status, error) {
 		st.ConfigError = e.cfgErr.Error()
 	}
 	st.Context = e.workContextLocked(cfg, now)
+	st.Assistant, _ = e.assistant.Load(now.Format("2006-01-02"))
 	return st, nil
 }
 
@@ -393,12 +421,18 @@ func (e *Engine) mutate(msg string, fn func(state.State, time.Time) (state.State
 
 // StartSession opens a manual work session (no-op when one is running).
 func (e *Engine) StartSession() (Status, error) {
-	return e.mutate(i18n.Text("Work session started (manual)"), func(s state.State, now time.Time) (state.State, error) {
+	started := false
+	st, err := e.mutate(i18n.Text("Work session started (manual)"), func(s state.State, now time.Time) (state.State, error) {
 		if s.IsSessionActive() {
 			return s, nil
 		}
+		started = true
 		return s.StartSession(now.Unix(), true), nil
 	})
+	if err == nil && started {
+		e.goBackground(e.briefing)
+	}
+	return st, err
 }
 
 // StopSession ends the session and holds reminders until the next start.
@@ -413,6 +447,7 @@ func (e *Engine) StopSession() (Status, error) {
 	})
 	if err == nil && summary != nil {
 		e.opts.Emit(reminder.Event{Type: reminder.TypeSessionEnd, Title: i18n.Text("Work session ended"), Body: reminder.SessionEndMessage(summary), Sound: "Glass"})
+		e.goBackground(e.retro)
 	}
 	return st, err
 }

@@ -958,5 +958,11 @@
   "%d pomodoros done.": "뽀모도로 %d회를 마쳤어요.",
   "the retrospective is missing from the AI reply": "AI 응답에 회고가 없습니다",
   "AI features are turned off.": "AI 기능이 꺼져 있습니다.",
-  "Allow this provider to receive your calendar and app usage first.": "먼저 이 프로바이더가 일정과 앱 사용 정보를 받도록 허용하세요."
+  "Allow this provider to receive your calendar and app usage first.": "먼저 이 프로바이더가 일정과 앱 사용 정보를 받도록 허용하세요.",
+  "Today's briefing": "오늘의 브리핑",
+  "Today's retrospective": "오늘의 회고",
+  "AI retrospective unavailable, using the template": "AI 회고를 쓸 수 없어 템플릿을 사용합니다",
+  "AI briefing unavailable, using the template": "AI 브리핑을 쓸 수 없어 템플릿을 사용합니다",
+  "This provider does not use an API key.": "이 프로바이더는 API 키를 쓰지 않습니다.",
+  "MCP endpoint unavailable": "MCP 엔드포인트를 열 수 없습니다"
 }

@@ -57,13 +57,15 @@ type Handler func(ctx context.Context, params json.RawMessage) (any, error)
 type Server struct {
 	mu       sync.RWMutex
 	handlers map[string]Handler
+	async    map[string]bool
+	inflight sync.WaitGroup
 	writeMu  sync.Mutex
 	out      io.Writer
 }
 
 // NewServer returns a server writing responses and notifications to out.
 func NewServer(out io.Writer) *Server {
-	return &Server{handlers: map[string]Handler{}, out: out}
+	return &Server{handlers: map[string]Handler{}, async: map[string]bool{}, out: out}
 }
 
 // Handle registers a method handler.
@@ -71,6 +73,15 @@ func (s *Server) Handle(method string, h Handler) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.handlers[method] = h
+}
+
+// HandleAsync registers a handler that runs on its own goroutine, for slow
+// methods (AI calls) that must not hold up the requests behind them.
+func (s *Server) HandleAsync(method string, h Handler) {
+	s.Handle(method, h)
+	s.mu.Lock()
+	s.async[method] = true
+	s.mu.Unlock()
 }
 
 // Notify sends a JSON-RPC notification.
@@ -96,6 +107,7 @@ func (s *Server) write(m message) error {
 
 // Serve reads requests until in is exhausted or ctx is cancelled.
 func (s *Server) Serve(ctx context.Context, in io.Reader) error {
+	defer s.inflight.Wait()
 	scanner := bufio.NewScanner(in)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
@@ -106,6 +118,17 @@ func (s *Server) Serve(ctx context.Context, in io.Reader) error {
 		if len(line) == 0 {
 			continue
 		}
+		if s.isAsync(line) {
+			copied := append([]byte(nil), line...)
+			s.inflight.Add(1)
+			go func() {
+				defer s.inflight.Done()
+				if resp := s.dispatch(ctx, copied); resp != nil {
+					_ = s.write(*resp)
+				}
+			}()
+			continue
+		}
 		if resp := s.dispatch(ctx, line); resp != nil {
 			if err := s.write(*resp); err != nil {
 				return err
@@ -113,6 +136,18 @@ func (s *Server) Serve(ctx context.Context, in io.Reader) error {
 		}
 	}
 	return scanner.Err()
+}
+
+func (s *Server) isAsync(line []byte) bool {
+	var probe struct {
+		Method string `json:"method"`
+	}
+	if json.Unmarshal(line, &probe) != nil {
+		return false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.async[probe.Method]
 }
 
 func (s *Server) dispatch(ctx context.Context, line []byte) *message {

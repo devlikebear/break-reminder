@@ -6,13 +6,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/devlikebear/break-reminder/internal/agent"
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/i18n"
 	"github.com/devlikebear/break-reminder/internal/logging"
+	"github.com/devlikebear/break-reminder/internal/mcphost"
 	"github.com/devlikebear/break-reminder/internal/reminder"
 	"github.com/devlikebear/break-reminder/internal/secrets"
 	"github.com/devlikebear/break-reminder/internal/state"
@@ -22,9 +26,16 @@ import (
 
 // Notification method names sent from the engine to the app.
 const (
-	NotifyEvent  = "event"
-	NotifyStatus = "status"
+	NotifyEvent      = "event"
+	NotifyStatus     = "status"
+	NotifyAgentDelta = "agent.delta"
 )
+
+// AgentDelta streams answer text for one agent.ask request.
+type AgentDelta struct {
+	RequestID string `json:"request_id"`
+	Text      string `json:"text"`
+}
 
 func decode(params json.RawMessage, v any) error {
 	if err := json.Unmarshal(params, v); err != nil {
@@ -158,6 +169,98 @@ func (e *Engine) Register(s *Server, version string) {
 		}
 		return st, err
 	})
+	s.HandleAsync("agent.ask", func(ctx context.Context, p json.RawMessage) (any, error) {
+		var req struct {
+			RequestID    string       `json:"request_id"`
+			Question     string       `json:"question"`
+			History      []agent.Turn `json:"history"`
+			AllowActions bool         `json:"allow_actions"`
+		}
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		if e.opts.AI == nil {
+			return nil, Rejected(errors.New(i18n.Text("No AI provider is configured.")))
+		}
+		ans, err := e.opts.AI.Ask(ctx, req.Question, req.History, req.AllowActions, func(text string) {
+			e.opts.Notify(NotifyAgentDelta, AgentDelta{RequestID: req.RequestID, Text: text})
+		})
+		if err != nil {
+			return nil, Rejected(err)
+		}
+		e.publish() // the answer may have changed the timer
+		return ans, nil
+	})
+	s.Handle("ai.status", func(context.Context, json.RawMessage) (any, error) { return e.aiStatus(), nil })
+	s.HandleAsync("ai.test", func(ctx context.Context, _ json.RawMessage) (any, error) {
+		if e.opts.AI == nil {
+			return nil, Rejected(errors.New(i18n.Text("No AI provider is configured.")))
+		}
+		if err := e.opts.AI.Test(ctx); err != nil {
+			return nil, Rejected(err)
+		}
+		return map[string]bool{"ok": true}, nil
+	})
+	s.Handle("ai.settings.set", func(_ context.Context, p json.RawMessage) (any, error) {
+		changes, err := pickChanges(p, "ai_enabled", "ai_provider", "ai_model", "share_event_titles", "briefing_voice")
+		if err != nil {
+			return nil, err
+		}
+		if err := e.applyConfig(changes); err != nil {
+			return nil, err
+		}
+		return e.aiStatus(), nil
+	})
+	s.Handle("ai.consent.set", func(_ context.Context, p json.RawMessage) (any, error) {
+		var req struct {
+			Provider string `json:"provider"`
+			Consent  bool   `json:"consent"`
+		}
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		if !slices.Contains(config.AIProviderKinds, req.Provider) {
+			return nil, InvalidParams(fmt.Errorf(i18n.Text("ai_provider must be one of %s"), strings.Join(config.AIProviderKinds, ", ")))
+		}
+		e.mu.Lock()
+		cfg := e.config()
+		e.mu.Unlock()
+		consented := slices.DeleteFunc(slices.Clone(cfg.AIConsentedProviders), func(k string) bool { return k == req.Provider })
+		if req.Consent {
+			consented = append(consented, req.Provider)
+		}
+		if err := e.applyConfig(map[string]any{"ai_consented_providers": consented}); err != nil {
+			return nil, err
+		}
+		return e.aiStatus(), nil
+	})
+	s.Handle("ai.key.set", func(_ context.Context, p json.RawMessage) (any, error) {
+		var req struct {
+			Provider string `json:"provider"`
+			Key      string `json:"key"`
+		}
+		if err := decode(p, &req); err != nil {
+			return nil, err
+		}
+		if e.opts.AI == nil {
+			return nil, Rejected(errors.New(i18n.Text("No AI provider is configured.")))
+		}
+		if err := e.opts.AI.SetKey(req.Provider, strings.TrimSpace(req.Key)); err != nil {
+			return nil, Rejected(err)
+		}
+		return e.aiStatus(), nil
+	})
+	s.Handle("suggestion.run", func(_ context.Context, p json.RawMessage) (any, error) {
+		var sg mcphost.Suggestion
+		if err := decode(p, &sg); err != nil {
+			return nil, err
+		}
+		if err := e.RunSuggestion(sg); err != nil {
+			return nil, Rejected(err)
+		}
+		return e.Status()
+	})
+	s.Handle("assistant.dismiss", func(context.Context, json.RawMessage) (any, error) { return e.DismissAssistant() })
 	s.Handle("time_tools.status", func(context.Context, json.RawMessage) (any, error) {
 		return timetools.NewStore(e.opts.TimeToolsDir).Load()
 	})
@@ -327,4 +430,53 @@ func (e *Engine) RunTimeTools(ctx context.Context) {
 		case <-time.After(2 * time.Second):
 		}
 	}
+}
+
+// pickChanges reads a JSON object, accepting only the given config keys.
+func pickChanges(p json.RawMessage, allowed ...string) (map[string]any, error) {
+	var req map[string]json.RawMessage
+	if err := decode(p, &req); err != nil {
+		return nil, err
+	}
+	changes := map[string]any{}
+	for key, raw := range req {
+		if !slices.Contains(allowed, key) {
+			return nil, InvalidParams(fmt.Errorf(i18n.Text("unknown config key %q"), key))
+		}
+		var v any
+		if err := json.Unmarshal(raw, &v); err != nil {
+			return nil, InvalidParams(err)
+		}
+		changes[key] = v
+	}
+	if len(changes) == 0 {
+		return nil, InvalidParams(errors.New(i18n.Text("no config changes found")))
+	}
+	return changes, nil
+}
+
+func (e *Engine) aiStatus() agent.ProviderStatus {
+	if e.opts.AI == nil {
+		return agent.ProviderStatus{}
+	}
+	return e.opts.AI.Status()
+}
+
+// RunSuggestion runs an action the user confirmed by clicking its button.
+func (e *Engine) RunSuggestion(sg mcphost.Suggestion) error {
+	b := e.Backend()
+	switch sg.Action {
+	case "start_pomodoro":
+		return b.StartPomodoro()
+	case "start_timer":
+		if sg.Minutes < 1 || sg.Minutes > 1440 {
+			return errors.New(i18n.Text("minutes must be between 1 and 1440"))
+		}
+		return b.StartTimer(sg.Minutes*60, sg.Label)
+	case "pause":
+		return b.Pause(sg.Mode, sg.Minutes*60)
+	case "resume":
+		return b.Resume()
+	}
+	return fmt.Errorf(i18n.Text("unknown action %q"), sg.Action)
 }

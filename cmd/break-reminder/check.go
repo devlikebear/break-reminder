@@ -110,7 +110,9 @@ func executeActions(result timer.TickResult) {
 	if result.DayEndSummary != nil {
 		saveDailyHistory(*result.DayEndSummary)
 		if cfg.AIEnabled {
-			go generateDailyInsights()
+			// Synchronous: a goroutine here died with the short-lived
+			// `check` process before it finished (TIDY-005).
+			generateDailyInsights()
 		}
 	}
 }
@@ -130,9 +132,9 @@ func saveDailyHistory(day timer.DayEndSummary) {
 }
 
 func generateDailyInsights() {
-	client := ai.NewClient(cfg.AICLI)
-	if !client.Available() {
-		log.Warn().Str("cli", cfg.AICLI).Msg(i18n.Text("AI CLI unavailable, skipping insights generation"))
+	client, err := readyAIService()
+	if err != nil {
+		log.Warn().Err(err).Msg(i18n.Text("AI CLI unavailable, skipping insights generation"))
 		return
 	}
 

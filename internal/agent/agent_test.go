@@ -28,12 +28,12 @@ func (b *backend) Calendar() (mcphost.CalendarView, error) {
 	return mcphost.CalendarView{FocusMinutes: 55, FocusPomodoros: 2}, nil
 }
 func (b *backend) AppUsage(int) ([]workcontext.AppUsage, error) { return nil, nil }
-func (b *backend) WorkHistory(int) ([]ai.DailySummary, error)  { return nil, nil }
-func (b *backend) ShareEventTitles() bool                      { return false }
-func (b *backend) StartPomodoro() error                        { b.calls = append(b.calls, "pomodoro"); return nil }
-func (b *backend) StartTimer(int, string) error                { b.calls = append(b.calls, "timer"); return nil }
-func (b *backend) Pause(string, int) error                     { b.calls = append(b.calls, "pause"); return nil }
-func (b *backend) Resume() error                               { b.calls = append(b.calls, "resume"); return nil }
+func (b *backend) WorkHistory(int) ([]ai.DailySummary, error)   { return nil, nil }
+func (b *backend) ShareEventTitles() bool                       { return false }
+func (b *backend) StartPomodoro() error                         { b.calls = append(b.calls, "pomodoro"); return nil }
+func (b *backend) StartTimer(int, string) error                 { b.calls = append(b.calls, "timer"); return nil }
+func (b *backend) Pause(string, int) error                      { b.calls = append(b.calls, "pause"); return nil }
+func (b *backend) Resume() error                                { b.calls = append(b.calls, "resume"); return nil }
 
 // scripted answers each Chat with the next scripted response and records
 // what it was sent.

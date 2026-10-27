@@ -25,6 +25,8 @@ const (
 	TypeSpeak          = "speak"
 	TypeTimeToolDone   = "time_tool_done"
 	TypeMeetingSoon    = "meeting_soon"
+	TypeBriefing       = "briefing"
+	TypeRetro          = "retro"
 )
 
 // Event is one thing the user should see or hear. A non-empty Title means

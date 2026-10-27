@@ -66,7 +66,11 @@ type suggestions struct {
 	list []mcphost.Suggestion
 }
 
-func (s *suggestions) add(x mcphost.Suggestion) { s.mu.Lock(); s.list = append(s.list, x); s.mu.Unlock() }
+func (s *suggestions) add(x mcphost.Suggestion) {
+	s.mu.Lock()
+	s.list = append(s.list, x)
+	s.mu.Unlock()
+}
 func (s *suggestions) all() []mcphost.Suggestion {
 	s.mu.Lock()
 	defer s.mu.Unlock()

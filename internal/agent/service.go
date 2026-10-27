@@ -166,10 +166,27 @@ func (s *Service) Write(ctx context.Context, system, prompt string) (string, err
 	return Generate(ctx, client, system, prompt)
 }
 
-// Query is Write without a system prompt, for the `ai` and `insights`
-// commands (insights.AIClient).
+// Query serves the `ai` and `insights` commands (insights.AIClient). The
+// user runs them explicitly and they send only work/break history, never
+// calendar or app usage, so they need ai_enabled but not that consent.
 func (s *Service) Query(ctx context.Context, prompt string) (string, error) {
-	return s.Write(ctx, "Reply in "+i18n.ResponseLanguage()+".", prompt)
+	client, _, err := s.resolve(false)
+	if err != nil {
+		return "", err
+	}
+	return Generate(ctx, client, "Reply in "+i18n.ResponseLanguage()+".", prompt)
+}
+
+// SetKey stores a provider's API key in the secret store (keychain).
+func (s *Service) SetKey(kind, key string) error {
+	name := provider.SecretName(kind)
+	if name == "" {
+		return errors.New(i18n.Text("This provider does not use an API key."))
+	}
+	if key == "" {
+		return s.Secrets.Delete(name)
+	}
+	return s.Secrets.Set(name, key)
 }
 
 // Test makes a tiny call that carries no user data, so it needs no consent.
