@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strings"
 	"sync"
@@ -45,7 +44,10 @@ type scripted struct {
 	tools   [][]string
 }
 
-func (s *scripted) Ask(ctx context.Context, p string) (string, error) { return "", errors.New("unused") }
+func (s *scripted) Ask(ctx context.Context, p string) (string, error) {
+	r, err := s.Chat(ctx, []llm.ChatMessage{{Role: "user", Content: p}}, llm.ChatOptions{})
+	return r.Message.Content, err
+}
 func (s *scripted) Chat(_ context.Context, msgs []llm.ChatMessage, o llm.ChatOptions) (llm.ChatResponse, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
