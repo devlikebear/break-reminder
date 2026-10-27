@@ -58,6 +58,7 @@ public struct EngineStatus: Decodable, Equatable {
     public var configError: String?
     public var context: WorkContextStatus?
     public var ttsEngine: String?
+    public var assistant: AssistantDay?
 
     enum CodingKeys: String, CodingKey {
         case now, state, active
@@ -67,7 +68,7 @@ public struct EngineStatus: Decodable, Equatable {
         case idleSec = "idle_sec", idleThresholdSec = "idle_threshold_sec", breakScreenMode = "break_screen_mode"
         case notificationsEnabled = "notifications_enabled", autoSessionDetect = "auto_session_detect"
         case checkIntervalSec = "check_interval_sec", timeTools = "time_tools", configError = "config_error"
-        case context, ttsEngine = "tts_engine"
+        case context, assistant, ttsEngine = "tts_engine"
     }
 
     /// The state in the shape the shared presentation helpers expect.
@@ -139,6 +140,7 @@ public enum EngineInbound {
     case response(id: Int, result: Data?, error: EngineRPCError?)
     case event(EngineEvent)
     case status(EngineStatus)
+    case agentDelta(requestID: String, text: String)
     case other
 
     public static func parse(_ line: Data) throws -> EngineInbound {
@@ -148,6 +150,9 @@ public enum EngineInbound {
             switch method {
             case "event": return .event(try JSONDecoder().decode(EngineEvent.self, from: params))
             case "status": return .status(try JSONDecoder().decode(EngineStatus.self, from: params))
+            case "agent.delta":
+                let p = object["params"] as? [String: Any] ?? [:]
+                return .agentDelta(requestID: p["request_id"] as? String ?? "", text: p["text"] as? String ?? "")
             default: return .other
             }
         }

@@ -5,6 +5,7 @@ import HelperCore
 struct PopoverRootView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var calendar: CalendarCollector
+    @ObservedObject var assistant: AssistantModel
 
     var body: some View {
         ScrollView {
@@ -17,13 +18,18 @@ struct PopoverRootView: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let p = model.presentation, let status = model.status {
+                if let day = status.assistant, day.showsCard {
+                    BriefingCard(model: model, day: day)
+                }
                 StatusCard(model: model, presentation: p)
                 let context = status.context ?? WorkContextStatus()
                 NowCard(model: model, calendar: calendar, context: context, sessionActive: p.sessionActive)
                 PomodoroCard(model: model, presentation: p, status: status)
                 CountdownCard(model: model, snapshot: status.timeTools ?? TimeToolsSnapshot())
+                AskSection(assistant: assistant)
                 AppUsageSection(context: context)
                 WorkContextSettings(model: model, calendar: calendar, context: context)
+                AISettings(assistant: assistant)
                 if let configError = status.configError {
                     Text(L10n.text("Config is invalid, using defaults: {0}", configError))
                         .font(.caption).foregroundStyle(.orange).lineLimit(3)

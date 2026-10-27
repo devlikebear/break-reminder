@@ -36,6 +36,7 @@ public final class EngineClient: @unchecked Sendable {
     public var onEvent: ((EngineEvent) -> Void)?
     public var onStatus: ((EngineStatus) -> Void)?
     public var onRunningChange: ((Bool) -> Void)?
+    public var onAgentDelta: ((String, String) -> Void)?
 
     private let configuration: Configuration
     private let queue = DispatchQueue(label: "break-reminder.engine-client")
@@ -168,6 +169,8 @@ public final class EngineClient: @unchecked Sendable {
                 DispatchQueue.main.async { self.onEvent?(event) }
             case let .status(status):
                 DispatchQueue.main.async { self.onStatus?(status) }
+            case let .agentDelta(requestID, text):
+                DispatchQueue.main.async { self.onAgentDelta?(requestID, text) }
             case .other:
                 break
             }

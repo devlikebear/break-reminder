@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let idle = IdleReporter()
     private lazy var calendar = CalendarCollector(model: model)
     private lazy var appUsage = AppUsageCollector(model: model)
+    private lazy var assistant = AssistantModel(model: model)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Uninstall hook: drop the login item and quit.
@@ -22,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         executor = ActionExecutor(model: model)
         executor.requestNotificationPermission()
         model.onEvent = { [weak self] event in self?.executor.handle(event) }
-        statusItem = StatusItemController(model: model, calendar: calendar)
+        statusItem = StatusItemController(model: model, calendar: calendar, assistant: assistant)
         model.onEngineStarted = { [weak self] in
             self?.model.reportIdle(IdleReporter.idleSeconds())
             self?.calendar.sync()
@@ -52,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
-                let view = NSHostingView(rootView: PopoverRootView(model: self.model, calendar: self.calendar))
+                let view = NSHostingView(rootView: PopoverRootView(model: self.model, calendar: self.calendar, assistant: self.assistant))
                 view.frame = NSRect(origin: .zero, size: view.fittingSize)
                 let window = NSWindow(contentRect: view.frame, styleMask: [.borderless], backing: .buffered, defer: false)
                 window.contentView = view
