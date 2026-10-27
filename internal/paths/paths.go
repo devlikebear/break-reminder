@@ -73,3 +73,9 @@ func CalendarCacheFile() string { return filepath.Join(ConfigDir(), "calendar-ca
 
 // AppUsageDir holds one JSON file of per-app foreground time per day.
 func AppUsageDir() string { return filepath.Join(ConfigDir(), "app-usage") }
+
+// MCPDiscoveryFile tells the stdio bridge where the engine's MCP endpoint is.
+func MCPDiscoveryFile() string { return filepath.Join(ConfigDir(), "mcp.json") }
+
+// AssistantDir holds one file per day with the briefing and retrospective.
+func AssistantDir() string { return filepath.Join(ConfigDir(), "assistant") }

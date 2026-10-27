@@ -934,5 +934,13 @@
   "Meeting-aware breaks": "회의 인식 휴식",
   "on (meeting rule: %s)": "켜짐 (회의 규칙: %s)",
   "App usage": "앱 사용 기록",
-  "%d apps recorded today": "오늘 앱 %d개 기록"
+  "%d apps recorded today": "오늘 앱 %d개 기록",
+  "days must be between 1 and 30": "days는 1에서 30 사이여야 합니다",
+  "minutes must be between 1 and 1440": "minutes는 1에서 1440 사이여야 합니다",
+  "minutes must not be negative": "minutes는 음수일 수 없습니다",
+  "unknown action %q": "알 수 없는 동작: %q",
+  "incomplete MCP discovery file": "MCP 연결 정보 파일이 불완전합니다",
+  "Connect an MCP client (Claude Code/Desktop) to the running app over stdio": "MCP 클라이언트(Claude Code/Desktop)를 실행 중인 앱에 stdio로 연결",
+  "Relays MCP between stdio and the menu bar app's local endpoint. Register it with: ": "stdio와 메뉴바 앱의 로컬 엔드포인트 사이에서 MCP를 중계합니다. 등록 방법: ",
+  "Break Reminder is not serving MCP. Start the menu bar app, then reconnect.": "Break Reminder가 MCP를 제공하고 있지 않습니다. 메뉴바 앱을 실행한 뒤 다시 연결하세요."
 }
