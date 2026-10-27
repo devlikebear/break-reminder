@@ -768,3 +768,28 @@ func TestRedactMasksSecrets(t *testing.T) {
 		t.Fatal("IsSecretKey")
 	}
 }
+
+func TestWorkContextKeys(t *testing.T) {
+	d := Default()
+	if d.CalendarAwareBreaks || !d.AppUsageEnabled || d.MeetingRule != MeetingRuleAttendees || len(d.CalendarExcludedIDs) != 0 {
+		t.Fatalf("defaults = aware:%v usage:%v rule:%q excluded:%v", d.CalendarAwareBreaks, d.AppUsageEnabled, d.MeetingRule, d.CalendarExcludedIDs)
+	}
+	got, err := ApplyYAMLChanges(d, []byte("calendar_aware_breaks: true\napp_usage_enabled: false\nmeeting_rule: busy\ncalendar_excluded_ids: [a, b]\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.CalendarAwareBreaks || got.AppUsageEnabled || got.MeetingRule != MeetingRuleBusy || len(got.CalendarExcludedIDs) != 2 {
+		t.Fatalf("applied = %+v", got)
+	}
+	// Leaving a bool out keeps it; an explicit empty list clears exclusions.
+	again, err := ApplyYAMLChanges(got, []byte("calendar_excluded_ids: []\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !again.CalendarAwareBreaks || again.AppUsageEnabled || len(again.CalendarExcludedIDs) != 0 {
+		t.Fatalf("partial = %+v", again)
+	}
+	if _, err := ApplyYAMLChanges(d, []byte("meeting_rule: sometimes\n")); err == nil {
+		t.Fatal("invalid meeting_rule accepted")
+	}
+}

@@ -56,6 +56,8 @@ public struct EngineStatus: Decodable, Equatable {
     public var checkIntervalSec: Int?
     public var timeTools: TimeToolsSnapshot?
     public var configError: String?
+    public var context: WorkContextStatus?
+    public var ttsEngine: String?
 
     enum CodingKeys: String, CodingKey {
         case now, state, active
@@ -65,6 +67,7 @@ public struct EngineStatus: Decodable, Equatable {
         case idleSec = "idle_sec", idleThresholdSec = "idle_threshold_sec", breakScreenMode = "break_screen_mode"
         case notificationsEnabled = "notifications_enabled", autoSessionDetect = "auto_session_detect"
         case checkIntervalSec = "check_interval_sec", timeTools = "time_tools", configError = "config_error"
+        case context, ttsEngine = "tts_engine"
     }
 
     /// The state in the shape the shared presentation helpers expect.
@@ -213,4 +216,18 @@ public func matchSpeechVoice(named name: String, in voices: [SpeechVoiceInfo], f
         return exact.identifier
     }
     return voices.first(where: { $0.language.lowercased().hasPrefix(fallbackLanguage.lowercased()) })?.identifier
+}
+
+public enum SpeechRoute: Equatable {
+    /// AVSpeechSynthesizer with the closest system voice.
+    case system
+    /// `engine tts test <text>`: the configured engine (Gemini, KittenTTS, …).
+    case engineCLI
+}
+
+/// Picks how to speak. The direct build keeps the user's configured TTS
+/// engine; the sandboxed build cannot run it and uses system voices.
+public func speechRoute(ttsEngine: String?, sandboxed: Bool) -> SpeechRoute {
+    guard !sandboxed, let engine = ttsEngine, !engine.isEmpty, engine != "say" else { return .system }
+    return .engineCLI
 }

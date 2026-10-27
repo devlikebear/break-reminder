@@ -4,13 +4,26 @@ import HelperCore
 /// Left-click popover: timer status, controls, pomodoro and countdown cards.
 struct PopoverRootView: View {
     @ObservedObject var model: AppModel
+    @ObservedObject var calendar: CalendarCollector
 
     var body: some View {
+        ScrollView {
+            content
+        }
+        .frame(width: 320)
+        .frame(maxHeight: 640)
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let p = model.presentation, let status = model.status {
                 StatusCard(model: model, presentation: p)
+                let context = status.context ?? WorkContextStatus()
+                NowCard(model: model, calendar: calendar, context: context, sessionActive: p.sessionActive)
                 PomodoroCard(model: model, presentation: p, status: status)
                 CountdownCard(model: model, snapshot: status.timeTools ?? TimeToolsSnapshot())
+                AppUsageSection(context: context)
+                WorkContextSettings(model: model, calendar: calendar, context: context)
                 if let configError = status.configError {
                     Text(L10n.text("Config is invalid, using defaults: {0}", configError))
                         .font(.caption).foregroundStyle(.orange).lineLimit(3)
@@ -26,19 +39,10 @@ struct PopoverRootView: View {
             }
         }
         .padding(14)
-        .frame(width: 320)
     }
 }
 
-private struct Card<Content: View>: View {
-    @ViewBuilder var content: Content
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) { content }
-            .padding(10)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
-    }
-}
+private typealias Card = PopoverCard
 
 private struct StatusCard: View {
     @ObservedObject var model: AppModel

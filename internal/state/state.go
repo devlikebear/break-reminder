@@ -28,6 +28,10 @@ const (
 	PauseReasonAFK     = "afk"
 )
 
+// PauseSourceCalendar marks a pause the engine started for a calendar meeting.
+// Manual pauses leave PauseSource empty.
+const PauseSourceCalendar = "calendar"
+
 // Work session lifecycle values stored in State.SessionState.
 const (
 	SessionStateIdle   = ""       // no work session has started yet today
@@ -67,6 +71,14 @@ type State struct {
 	LastActivity           int64   `json:"last_activity"`
 	PomodoroCount          int     `json:"pomodoro_count"`  // completed pomodoros in the current cycle
 	TodayPomodoros         int     `json:"today_pomodoros"` // completed pomodoros today
+
+	// Calendar-aware breaks. PauseSource/PauseMeetingID describe the current
+	// pause; MeetingOverrideID is a meeting the user resumed by hand (no new
+	// auto-pause for it); MeetingNoticeID is the last meeting warned about.
+	PauseSource       string `json:"pause_source"`
+	PauseMeetingID    string `json:"pause_meeting_id"`
+	MeetingOverrideID string `json:"meeting_override_id"`
+	MeetingNoticeID   string `json:"meeting_notice_id"`
 }
 
 // IsSessionActive reports whether a work session is currently running.
@@ -231,6 +243,8 @@ func (s State) Resume(at int64) State {
 	if !s.Paused {
 		return s
 	}
+	s.PauseSource = ""
+	s.PauseMeetingID = ""
 	reason := s.PauseReason
 
 	if reason == PauseReasonFocus {
@@ -430,6 +444,14 @@ func Load(path string) (State, error) {
 			if v, err := strconv.Atoi(value); err == nil {
 				s.TodayPomodoros = v
 			}
+		case "PAUSE_SOURCE":
+			s.PauseSource = value
+		case "PAUSE_MEETING_ID":
+			s.PauseMeetingID = value
+		case "MEETING_OVERRIDE_ID":
+			s.MeetingOverrideID = value
+		case "MEETING_NOTICE_ID":
+			s.MeetingNoticeID = value
 		case "HOURLY_WORK":
 			parts := strings.Split(value, ",")
 			if len(parts) == 24 {
@@ -467,6 +489,10 @@ func serialize(s State) string {
 	fmt.Fprintf(&b, "LAST_ACTIVITY=%d\n", s.LastActivity)
 	fmt.Fprintf(&b, "POMODORO_COUNT=%d\n", s.PomodoroCount)
 	fmt.Fprintf(&b, "TODAY_POMODOROS=%d\n", s.TodayPomodoros)
+	fmt.Fprintf(&b, "PAUSE_SOURCE=%s\n", oneLine(s.PauseSource))
+	fmt.Fprintf(&b, "PAUSE_MEETING_ID=%s\n", oneLine(s.PauseMeetingID))
+	fmt.Fprintf(&b, "MEETING_OVERRIDE_ID=%s\n", oneLine(s.MeetingOverrideID))
+	fmt.Fprintf(&b, "MEETING_NOTICE_ID=%s\n", oneLine(s.MeetingNoticeID))
 
 	hourlyParts := make([]string, 24)
 	for i, v := range s.HourlyWork {
@@ -542,4 +568,9 @@ func Save(path string, s State) error {
 	return withStateLock(path, func() error {
 		return saveUnlocked(path, s)
 	})
+}
+
+// oneLine keeps an identifier from breaking the key=value format.
+func oneLine(v string) string {
+	return strings.NewReplacer("\n", "", "\r", "").Replace(v)
 }

@@ -17,11 +17,13 @@ import (
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/i18n"
 	"github.com/devlikebear/break-reminder/internal/logging"
+	"github.com/devlikebear/break-reminder/internal/paths"
 	"github.com/devlikebear/break-reminder/internal/reminder"
 	"github.com/devlikebear/break-reminder/internal/schedule"
 	"github.com/devlikebear/break-reminder/internal/state"
 	"github.com/devlikebear/break-reminder/internal/timer"
 	"github.com/devlikebear/break-reminder/internal/timetools"
+	"github.com/devlikebear/break-reminder/internal/workcontext"
 )
 
 // Options wires the engine to its clock, files and outputs.
@@ -32,12 +34,17 @@ type Options struct {
 	StatePath    string
 	LogPath      string
 	TimeToolsDir string
+	// CalendarCachePath and AppUsageDir hold the work context the app sends.
+	CalendarCachePath string
+	AppUsageDir       string
 	// Emit receives reminder events (notifications, speech, break screen).
 	Emit func(reminder.Event)
 	// Status receives a fresh snapshot after every tick and mutation.
 	Status func(Status)
 	// AppendHistory stores a finished day; defaults to the AI history file.
 	AppendHistory func(date string, workSec, breakSec int, hourlySec [24]int) error
+	// OnDayEnd runs in the background after a finished day is saved (AI insights).
+	OnDayEnd func(date string)
 }
 
 // Engine owns the timer state while it runs.
@@ -49,6 +56,10 @@ type Engine struct {
 	idleAt    time.Time
 	idleKnown bool
 	cfgErr    error
+
+	calendar  workcontext.CalendarSnapshot
+	usage     workcontext.UsageStore
+	prunedDay string
 }
 
 // Status is what the app needs to draw the popover.
@@ -69,8 +80,30 @@ type Status struct {
 	NotificationsEnabled   bool                `json:"notifications_enabled"`
 	AutoSessionDetect      bool                `json:"auto_session_detect"`
 	CheckIntervalSec       int                 `json:"check_interval_sec"`
+	TTSEngine              string              `json:"tts_engine"`
 	TimeTools              *timetools.Snapshot `json:"time_tools,omitempty"`
 	ConfigError            string              `json:"config_error,omitempty"`
+	Context                WorkContext         `json:"context"`
+}
+
+// WorkContext is what the popover shows about calendar and app usage.
+type WorkContext struct {
+	Calendar            CalendarContext        `json:"calendar"`
+	AppUsageToday       []workcontext.AppUsage `json:"app_usage_today"`
+	AppUsageEnabled     bool                   `json:"app_usage_enabled"`
+	CalendarAwareBreaks bool                   `json:"calendar_aware_breaks"`
+	MeetingRule         string                 `json:"meeting_rule"`
+	CalendarExcludedIDs []string               `json:"calendar_excluded_ids"`
+}
+
+// CalendarContext summarizes the calendar right now.
+type CalendarContext struct {
+	Current        *workcontext.Event `json:"current,omitempty"`
+	Next           *workcontext.Event `json:"next,omitempty"`
+	FocusMinutes   int                `json:"focus_minutes"`
+	FocusPomodoros int                `json:"focus_pomodoros"`
+	Stale          bool               `json:"stale"`
+	UpdatedAt      int64              `json:"updated_at"`
 }
 
 // New builds an engine; zero-valued options fall back to real defaults.
@@ -93,6 +126,12 @@ func New(opts Options) *Engine {
 	if opts.TimeToolsDir == "" {
 		opts.TimeToolsDir = timetools.DefaultDirectory()
 	}
+	if opts.CalendarCachePath == "" {
+		opts.CalendarCachePath = paths.CalendarCacheFile()
+	}
+	if opts.AppUsageDir == "" {
+		opts.AppUsageDir = paths.AppUsageDir()
+	}
 	if opts.Emit == nil {
 		opts.Emit = func(reminder.Event) {}
 	}
@@ -102,7 +141,11 @@ func New(opts Options) *Engine {
 	if opts.AppendHistory == nil {
 		opts.AppendHistory = appendAIHistory
 	}
-	return &Engine{opts: opts}
+	e := &Engine{opts: opts, usage: workcontext.UsageStore{Dir: opts.AppUsageDir}}
+	if snap, err := workcontext.LoadCalendar(opts.CalendarCachePath); err == nil {
+		e.calendar = snap
+	}
+	return e
 }
 
 func appendAIHistory(date string, workSec, breakSec int, hourlySec [24]int) error {
@@ -182,8 +225,10 @@ func (e *Engine) Tick() error {
 
 	idleSec := e.idleSeconds(now)
 	var result timer.TickResult
+	var meeting meetingResult
 	if err := state.Update(path, func(s state.State) (state.State, error) {
-		result = timer.Tick(cfg, s, now, idleSec)
+		meeting = applyMeeting(cfg, s, e.calendar, now)
+		result = timer.Tick(cfg, meeting.State, now, idleSec)
 		return result.State, nil
 	}); err != nil {
 		logging.Log(e.opts.LogPath, i18n.Text("Failed to update state, using fresh state")+": "+err.Error())
@@ -193,16 +238,21 @@ func (e *Engine) Tick() error {
 			return saveErr
 		}
 	}
+	if meeting.Log != "" {
+		logging.Log(e.opts.LogPath, meeting.Log)
+	}
 	if result.LogMsg != "" {
 		logging.Log(e.opts.LogPath, result.LogMsg)
 	}
 	if d := result.DayEndSummary; d != nil {
 		if err := e.opts.AppendHistory(d.Date, d.WorkSeconds, d.BreakSeconds, d.HourlyWork); err != nil {
 			logging.Log(e.opts.LogPath, err.Error())
+		} else if e.opts.OnDayEnd != nil {
+			go e.opts.OnDayEnd(d.Date)
 		}
 	}
 	logging.Rotate(e.opts.LogPath, cfg.MaxLogLines)
-	events := reminder.Events(cfg, result)
+	events := append(meeting.Events, reminder.Events(cfg, result)...)
 	e.mu.Unlock()
 
 	for _, ev := range events {
@@ -243,6 +293,7 @@ func (e *Engine) statusLocked() (Status, error) {
 		NotificationsEnabled:   cfg.NotificationsEnabled,
 		AutoSessionDetect:      cfg.AutoSessionDetect,
 		CheckIntervalSec:       cfg.CheckIntervalSec,
+		TTSEngine:              cfg.TTSEngine,
 	}
 	if snap, err := timetools.NewStore(e.opts.TimeToolsDir).Load(); err == nil {
 		st.TimeTools = &snap
@@ -250,7 +301,67 @@ func (e *Engine) statusLocked() (Status, error) {
 	if e.cfgErr != nil {
 		st.ConfigError = e.cfgErr.Error()
 	}
+	st.Context = e.workContextLocked(cfg, now)
 	return st, nil
+}
+
+func (e *Engine) workContextLocked(cfg config.Config, now time.Time) WorkContext {
+	events := e.calendar.Visible(cfg.CalendarExcludedIDs)
+	cal := CalendarContext{Stale: e.calendar.Stale(now), UpdatedAt: e.calendar.UpdatedAt}
+	if !cal.Stale {
+		cal.Current = workcontext.CurrentMeeting(events, now, cfg.MeetingRule)
+		cal.Next = workcontext.NextEvent(events, now)
+		cal.FocusMinutes, cal.FocusPomodoros = workcontext.FocusWindow(events, now, cfg)
+	}
+	wc := WorkContext{
+		Calendar:            cal,
+		AppUsageEnabled:     cfg.AppUsageEnabled,
+		CalendarAwareBreaks: cfg.CalendarAwareBreaks,
+		MeetingRule:         cfg.MeetingRule,
+		CalendarExcludedIDs: cfg.CalendarExcludedIDs,
+	}
+	if usage, err := e.usage.Day(now); err == nil {
+		wc.AppUsageToday = workcontext.Top(usage, 5)
+	}
+	return wc
+}
+
+// UpdateCalendar replaces the calendar snapshot with events from the app.
+func (e *Engine) UpdateCalendar(events []workcontext.Event) error {
+	e.mu.Lock()
+	e.calendar = workcontext.CalendarSnapshot{Events: events, UpdatedAt: e.opts.Now().Unix()}
+	err := workcontext.SaveCalendar(e.opts.CalendarCachePath, e.calendar)
+	e.mu.Unlock()
+	e.publish()
+	return err
+}
+
+// AddAppUsage records foreground-time increments for today, unless the user
+// turned app usage off. Old days are pruned once a day.
+func (e *Engine) AddAppUsage(items []workcontext.AppUsage) error {
+	e.mu.Lock()
+	cfg := e.config()
+	if !cfg.AppUsageEnabled {
+		e.mu.Unlock()
+		return nil
+	}
+	now := e.opts.Now()
+	err := e.usage.Add(now, items)
+	if day := now.Format("2006-01-02"); err == nil && e.prunedDay != day {
+		e.prunedDay = day
+		err = e.usage.Prune(now, 30)
+	}
+	e.mu.Unlock()
+	return err
+}
+
+// ClearAppUsage deletes every stored app usage day.
+func (e *Engine) ClearAppUsage() error {
+	e.mu.Lock()
+	err := e.usage.DeleteAll()
+	e.mu.Unlock()
+	e.publish()
+	return err
 }
 
 func (e *Engine) publish() {
@@ -331,7 +442,7 @@ func (e *Engine) Resume() (Status, error) {
 		if !s.Paused {
 			return s, nil
 		}
-		return s.Resume(now.Unix()), nil
+		return resumeByHand(s, now.Unix()), nil
 	})
 }
 

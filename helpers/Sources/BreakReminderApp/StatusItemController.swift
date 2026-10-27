@@ -14,11 +14,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var animationTick = 0
     private var loginItem: NSMenuItem!
 
-    init(model: AppModel) {
+    init(model: AppModel, calendar: CalendarCollector) {
         self.model = model
         super.init()
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: PopoverRootView(model: model))
+        popover.contentViewController = NSHostingController(rootView: PopoverRootView(model: model, calendar: calendar))
 
         if let button = statusItem.button {
             button.imagePosition = .imageLeading

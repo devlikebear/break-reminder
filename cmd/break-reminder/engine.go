@@ -65,6 +65,12 @@ func runEngine(ctx context.Context, in io.Reader, out io.Writer, interval time.D
 		LoadConfig: loadAppConfig,
 		Emit:       func(e reminder.Event) { _ = server.Notify(engine.NotifyEvent, e) },
 		Status:     func(s engine.Status) { _ = server.Notify(engine.NotifyStatus, s) },
+		OnDayEnd: func(string) {
+			if c, err := loadAppConfig(); err == nil && c.AIEnabled {
+				cfg = c
+				generateDailyInsights()
+			}
+		},
 	})
 	eng.Register(server, version)
 
