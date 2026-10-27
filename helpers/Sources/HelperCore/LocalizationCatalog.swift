@@ -376,6 +376,7 @@ extension L10n {
         "Next break postponed until: %s\n": "다음 휴식 예정: %s\n",
         "Next break: %d min\n": "다음 휴식: %d분\n",
         "Next: {0} · in {1}": "다음: {0} · {1} 후",
+        "No AI provider is configured.": "AI 프로바이더가 설정되지 않았습니다.",
         "No API key is stored for this provider.": "이 프로바이더의 API 키가 저장돼 있지 않습니다.",
         "No active timer": "실행 중인 타이머 없음",
         "No app usage recorded yet today.": "오늘 기록된 앱 사용이 아직 없습니다.",

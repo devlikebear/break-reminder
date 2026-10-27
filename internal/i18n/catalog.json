@@ -948,5 +948,6 @@
   "No API key is stored for this provider.": "이 프로바이더의 API 키가 저장돼 있지 않습니다.",
   "Claude Code is not available in the App Store version. Use an API key provider.": "앱스토어판에서는 Claude Code를 쓸 수 없습니다. API 키 프로바이더를 사용하세요.",
   "Claude Code (claude) was not found. Install it or choose an API key provider.": "Claude Code(claude)를 찾지 못했습니다. 설치하거나 API 키 프로바이더를 선택하세요.",
-  "The provider returned an empty reply.": "프로바이더가 빈 응답을 돌려줬습니다."
+  "The provider returned an empty reply.": "프로바이더가 빈 응답을 돌려줬습니다.",
+  "No AI provider is configured.": "AI 프로바이더가 설정되지 않았습니다."
 }
