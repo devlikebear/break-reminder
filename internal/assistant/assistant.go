@@ -62,9 +62,11 @@ func BriefingPrompt(f Facts) string {
 	lines := []string{
 		fmt.Sprintf("Write today's (%s) start-of-day briefing: at most 3 sentences, numbers first, and end with one concrete suggestion for today.", f.Date),
 		"",
-		fmt.Sprintf("- yesterday: worked %d min, took %d min of breaks", f.YesterdayWorkMin, f.YesterdayBreakMin),
-		fmt.Sprintf("- calendar events today: %d", f.TodayEvents),
 	}
+	if f.YesterdayWorkMin > 0 || f.YesterdayBreakMin > 0 {
+		lines = append(lines, fmt.Sprintf("- yesterday: worked %d min, took %d min of breaks", f.YesterdayWorkMin, f.YesterdayBreakMin))
+	}
+	lines = append(lines, fmt.Sprintf("- calendar events today: %d", f.TodayEvents))
 	if f.NextEventInMin > 0 {
 		if f.NextEventTitle != "" {
 			lines = append(lines, fmt.Sprintf("- next event: %q in %d min", f.NextEventTitle, f.NextEventInMin))
@@ -97,7 +99,10 @@ Give 2-3 patterns. Keep the field names and type values exactly. Write the text 
 
 // TemplateBriefing is the briefing without AI.
 func TemplateBriefing(f Facts) string {
-	parts := []string{fmt.Sprintf(i18n.Text("Yesterday: %s of work, %s of breaks."), reminder.FormatMinutes(f.YesterdayWorkMin), reminder.FormatMinutes(f.YesterdayBreakMin))}
+	var parts []string
+	if f.YesterdayWorkMin > 0 || f.YesterdayBreakMin > 0 {
+		parts = append(parts, fmt.Sprintf(i18n.Text("Yesterday: %s of work, %s of breaks."), reminder.FormatMinutes(f.YesterdayWorkMin), reminder.FormatMinutes(f.YesterdayBreakMin)))
+	}
 	if f.NextEventInMin > 0 {
 		parts = append(parts, fmt.Sprintf(i18n.Text("%d events today; the next one is in %d min."), f.TodayEvents, f.NextEventInMin))
 	} else if f.TodayEvents > 0 {
@@ -105,6 +110,9 @@ func TemplateBriefing(f Facts) string {
 	}
 	if f.FocusPomodoros > 0 {
 		parts = append(parts, fmt.Sprintf(i18n.Text("You have %d min to focus: %d pomodoros fit."), f.FocusMinutes, f.FocusPomodoros))
+	}
+	if len(parts) == 0 {
+		return i18n.Text("Have a good day. I'll remind you to take breaks.")
 	}
 	return strings.Join(parts, " ")
 }

@@ -50,8 +50,8 @@ func TestTemplatesWorkWithoutAI(t *testing.T) {
 		t.Fatalf("retro = %q", r)
 	}
 	empty := TemplateBriefing(Facts{Date: "2026-10-27"})
-	if empty == "" {
-		t.Fatal("empty facts must still give a sentence")
+	if empty == "" || strings.Contains(empty, "Yesterday") {
+		t.Fatalf("no history: %q", empty)
 	}
 }
 

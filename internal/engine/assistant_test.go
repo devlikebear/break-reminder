@@ -122,7 +122,7 @@ func TestBriefingFallsBackToTemplateAndStaysQuietInMeetings(t *testing.T) {
 	if ev.Text != "" {
 		t.Fatalf("spoke during a meeting: %+v", ev)
 	}
-	if !strings.Contains(ev.Body, "Yesterday") {
+	if ev.Body == "" {
 		t.Fatalf("template briefing = %q", ev.Body)
 	}
 }

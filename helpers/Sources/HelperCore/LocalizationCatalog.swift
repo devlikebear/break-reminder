@@ -294,6 +294,7 @@ extension L10n {
         "Go back": "돌아가기",
         "Great work today! 🏆": "오늘도 잘 해냈어요! 🏆",
         "Guide time remaining": "가이드 남은 시간",
+        "Have a good day. I'll remind you to take breaks.": "좋은 하루 보내세요. 쉬는 시간은 제가 챙길게요.",
         "Help": "도움말",
         "Help for any command": "명령 도움말",
         "Help for {0}": "{0} 도움말",
