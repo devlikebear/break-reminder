@@ -284,7 +284,7 @@ func (e *Engine) Tick() error {
 	for _, ev := range events {
 		e.opts.Emit(ev)
 	}
-	e.afterTransitions(events)
+	e.afterTransitions(cfg, now, events, result.SessionEnded)
 	e.publish()
 	return nil
 }

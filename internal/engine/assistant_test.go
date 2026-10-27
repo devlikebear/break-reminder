@@ -278,3 +278,23 @@ func TestAIRPCs(t *testing.T) {
 		t.Fatalf("ai.status = %v", r)
 	}
 }
+
+func TestRetroWaitsForTheEndOfTheDay(t *testing.T) {
+	cfg := testConfig() // work_end_hour 18
+	at := func(h int) time.Time { return time.Date(2026, 10, 27, h, 0, 0, 0, time.Local) }
+	cases := []struct {
+		reason string
+		now    time.Time
+		want   bool
+	}{
+		{"manual", at(12), true},
+		{"window", at(22), true},
+		{"idle", at(12), false}, // lunch
+		{"idle", at(19), true},
+	}
+	for _, c := range cases {
+		if got := retroDue(cfg, c.now, c.reason); got != c.want {
+			t.Errorf("retroDue(%s at %d:00) = %v, want %v", c.reason, c.now.Hour(), got, c.want)
+		}
+	}
+}

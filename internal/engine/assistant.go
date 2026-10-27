@@ -7,9 +7,11 @@ import (
 	"github.com/devlikebear/break-reminder/internal/agent"
 	"github.com/devlikebear/break-reminder/internal/ai"
 	"github.com/devlikebear/break-reminder/internal/assistant"
+	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/i18n"
 	"github.com/devlikebear/break-reminder/internal/logging"
 	"github.com/devlikebear/break-reminder/internal/reminder"
+	"github.com/devlikebear/break-reminder/internal/timer"
 	"github.com/devlikebear/break-reminder/internal/workcontext"
 )
 
@@ -24,17 +26,30 @@ type AIService interface {
 
 const assistantTimeout = 2 * time.Minute
 
-// afterTransitions starts the briefing on a session start and the retro on a
-// session end. Both run once a day and never block the tick.
-func (e *Engine) afterTransitions(events []reminder.Event) {
+// afterTransitions starts the briefing on a session start and the retro on
+// an end-of-day session end. Both run once a day and never block the tick.
+func (e *Engine) afterTransitions(cfg config.Config, now time.Time, events []reminder.Event, ended *timer.SessionSummary) {
 	for _, ev := range events {
 		switch ev.Type {
 		case reminder.TypeSessionStart:
 			e.goBackground(e.briefing)
 		case reminder.TypeSessionEnd:
-			e.goBackground(e.retro)
+			if ended != nil && retroDue(cfg, now, ended.Reason) {
+				e.goBackground(e.retro)
+			}
 		}
 	}
+}
+
+// retroDue: a day has one retrospective, so it waits for a session end that
+// closes the day — a manual stop, the detection window closing, or an idle
+// end after work hours — not a lunch break that ended a session at noon.
+func retroDue(cfg config.Config, now time.Time, reason string) bool {
+	switch reason {
+	case timer.SessionEndManual, timer.SessionEndWindow:
+		return true
+	}
+	return now.Hour() >= cfg.WorkEndHour
 }
 
 func (e *Engine) goBackground(fn func()) {
