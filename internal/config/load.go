@@ -1,6 +1,9 @@
 package config
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/devlikebear/break-reminder/internal/i18n"
 	"github.com/devlikebear/break-reminder/internal/paths"
 
@@ -94,8 +97,15 @@ func writeOwnerOnly(path string, data []byte) error {
 // RedactedValue replaces secret values in displayed configuration.
 const RedactedValue = "<redacted>"
 
-// IsSecretKey reports whether a config key holds a secret.
-func IsSecretKey(key string) bool { return key == "tts_api_key" }
+// IsSecretKey reports whether a config key holds a secret. Secrets never live
+// in config.yaml: `config set` stores them in the keychain.
+func IsSecretKey(key string) bool {
+	switch key {
+	case "tts_api_key", "anthropic_api_key", "openai_api_key", "gemini_api_key":
+		return true
+	}
+	return false
+}
 
 // Redact returns a copy safe to print or send to an AI CLI.
 func Redact(c Config) Config {
@@ -160,6 +170,14 @@ var validConfigKeys = map[string]struct{}{
 	"meeting_rule":              {},
 	"calendar_excluded_ids":     {},
 	"app_usage_enabled":         {},
+	"ai_provider":               {},
+	"ai_model":                  {},
+	"ai_consented_providers":    {},
+	"share_event_titles":        {},
+	"briefing_voice":            {},
+	"anthropic_api_key":         {},
+	"openai_api_key":            {},
+	"gemini_api_key":            {},
 }
 
 // ApplyYAMLChanges merges YAML changes into an existing config and validates the result.
@@ -223,6 +241,9 @@ func validate(cfg Config) error {
 	}
 	if err := validateTimerMode(cfg); err != nil {
 		return err
+	}
+	if cfg.AIProvider != "" && !slices.Contains(AIProviderKinds, cfg.AIProvider) {
+		return fmt.Errorf(i18n.Text("ai_provider must be one of %s"), strings.Join(AIProviderKinds, ", "))
 	}
 	switch cfg.MeetingRule {
 	case MeetingRuleAttendees, MeetingRuleBusy:
@@ -385,6 +406,21 @@ func merge(dst, src *Config, raw map[string]any) {
 	}
 	if src.MeetingRule != "" {
 		dst.MeetingRule = src.MeetingRule
+	}
+	if _, ok := raw["ai_provider"]; ok {
+		dst.AIProvider = src.AIProvider
+	}
+	if _, ok := raw["ai_model"]; ok {
+		dst.AIModel = src.AIModel
+	}
+	if _, ok := raw["ai_consented_providers"]; ok {
+		dst.AIConsentedProviders = src.AIConsentedProviders
+	}
+	if _, ok := raw["share_event_titles"]; ok {
+		dst.ShareEventTitles = src.ShareEventTitles
+	}
+	if _, ok := raw["briefing_voice"]; ok {
+		dst.BriefingVoice = src.BriefingVoice
 	}
 	if _, ok := raw["calendar_excluded_ids"]; ok {
 		dst.CalendarExcludedIDs = src.CalendarExcludedIDs

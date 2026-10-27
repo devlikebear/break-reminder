@@ -942,5 +942,11 @@
   "incomplete MCP discovery file": "MCP 연결 정보 파일이 불완전합니다",
   "Connect an MCP client (Claude Code/Desktop) to the running app over stdio": "MCP 클라이언트(Claude Code/Desktop)를 실행 중인 앱에 stdio로 연결",
   "Relays MCP between stdio and the menu bar app's local endpoint. Register it with: ": "stdio와 메뉴바 앱의 로컬 엔드포인트 사이에서 MCP를 중계합니다. 등록 방법: ",
-  "Break Reminder is not serving MCP. Start the menu bar app, then reconnect.": "Break Reminder가 MCP를 제공하고 있지 않습니다. 메뉴바 앱을 실행한 뒤 다시 연결하세요."
+  "Break Reminder is not serving MCP. Start the menu bar app, then reconnect.": "Break Reminder가 MCP를 제공하고 있지 않습니다. 메뉴바 앱을 실행한 뒤 다시 연결하세요.",
+  "ai_provider must be one of %s": "ai_provider는 다음 중 하나여야 합니다: %s",
+  "The codex CLI is no longer supported. Choose Claude Code or an API key provider.": "codex CLI는 더 이상 지원하지 않습니다. Claude Code나 API 키 프로바이더를 선택하세요.",
+  "No API key is stored for this provider.": "이 프로바이더의 API 키가 저장돼 있지 않습니다.",
+  "Claude Code is not available in the App Store version. Use an API key provider.": "앱스토어판에서는 Claude Code를 쓸 수 없습니다. API 키 프로바이더를 사용하세요.",
+  "Claude Code (claude) was not found. Install it or choose an API key provider.": "Claude Code(claude)를 찾지 못했습니다. 설치하거나 API 키 프로바이더를 선택하세요.",
+  "The provider returned an empty reply.": "프로바이더가 빈 응답을 돌려줬습니다."
 }

@@ -38,5 +38,6 @@ func Default() Config {
 		CalendarAwareBreaks:    false,
 		MeetingRule:            MeetingRuleAttendees,
 		AppUsageEnabled:        true,
+		BriefingVoice:          true,
 	}
 }

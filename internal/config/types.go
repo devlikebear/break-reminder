@@ -52,7 +52,25 @@ type Config struct {
 	MeetingRule         string   `yaml:"meeting_rule"`
 	CalendarExcludedIDs []string `yaml:"calendar_excluded_ids"`
 	AppUsageEnabled     bool     `yaml:"app_usage_enabled"`
+
+	// Assistant (Phase 2). AIProvider "" means "derive from ai_cli".
+	AIProvider           string   `yaml:"ai_provider"`
+	AIModel              string   `yaml:"ai_model"`
+	AIConsentedProviders []string `yaml:"ai_consented_providers"`
+	ShareEventTitles     bool     `yaml:"share_event_titles"`
+	BriefingVoice        bool     `yaml:"briefing_voice"`
 }
+
+// AI provider kinds selectable through ai_provider (tars pkg/llm names).
+const (
+	AIProviderClaudeCode = "claude-code-cli"
+	AIProviderAnthropic  = "anthropic"
+	AIProviderOpenAI     = "openai"
+	AIProviderGemini     = "gemini-native"
+)
+
+// AIProviderKinds lists every selectable provider.
+var AIProviderKinds = []string{AIProviderClaudeCode, AIProviderAnthropic, AIProviderOpenAI, AIProviderGemini}
 
 // WorkDurationSec returns the configured classic work duration in seconds.
 func (c Config) WorkDurationSec() int {
