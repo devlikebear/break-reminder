@@ -713,3 +713,58 @@ func TestConfigDirAcceptsAbsoluteTestDirectory(t *testing.T) {
 		t.Fatalf("ConfigDir = %q, want %q", got, configDir)
 	}
 }
+
+func TestConfigPathHonorsBreakReminderHome(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("BREAK_REMINDER_HOME", root)
+	if got, want := ConfigPath(), filepath.Join(root, "config.yaml"); got != want {
+		t.Fatalf("ConfigPath() = %q, want %q", got, want)
+	}
+}
+
+func TestSaveWritesOwnerOnlyPermissions(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("BREAK_REMINDER_HOME", root)
+	path := filepath.Join(root, "config.yaml")
+	// An existing world-readable file is tightened on the next save.
+	if err := os.WriteFile(path, []byte("work_duration_min: 50\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Save(Default()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("perm after Save = %o, want 600", perm)
+	}
+
+	os.Remove(path)
+	if err := EnsureConfigFile(); err != nil {
+		t.Fatal(err)
+	}
+	info, _ = os.Stat(path)
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Fatalf("perm after EnsureConfigFile = %o, want 600", perm)
+	}
+}
+
+func TestRedactMasksSecrets(t *testing.T) {
+	c := Default()
+	if Redact(c).TTSAPIKey != "" {
+		t.Fatal("empty key should stay empty")
+	}
+	c.TTSAPIKey = "AIza-secret"
+	r := Redact(c)
+	if r.TTSAPIKey == c.TTSAPIKey || r.TTSAPIKey != RedactedValue {
+		t.Fatalf("Redact = %q", r.TTSAPIKey)
+	}
+	if c.TTSAPIKey != "AIza-secret" {
+		t.Fatal("Redact must not modify its input")
+	}
+	if !IsSecretKey("tts_api_key") || IsSecretKey("voice") {
+		t.Fatal("IsSecretKey")
+	}
+}

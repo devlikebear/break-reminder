@@ -182,19 +182,7 @@ func newAIConfigureCmd() *cobra.Command {
 				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
 			}
 
-			description := strings.Join(args, " ")
-			currentYAML, _ := yaml.Marshal(&cfg)
-
-			prompt := fmt.Sprintf(`Given this break-reminder config:
-%s
-
-The user wants: "%s"
-
-Output ONLY the changed YAML fields (not the full config). For example:
-work_duration_min: 25
-break_duration_min: 5
-
-No explanation, just the YAML fields to change.`, string(currentYAML), description)
+			prompt := buildConfigurePrompt(cfg, strings.Join(args, " "))
 
 			resp, err := client.Query(context.Background(), prompt)
 			if err != nil {
@@ -212,6 +200,9 @@ No explanation, just the YAML fields to change.`, string(currentYAML), descripti
 				return nil
 			}
 
+			if err := checkAIConfigChanges([]byte(resp)); err != nil {
+				return err
+			}
 			updatedCfg, err := config.ApplyYAMLChanges(cfg, []byte(resp))
 			if err != nil {
 				return fmt.Errorf(i18n.Text("invalid configuration changes: %w"), err)
@@ -225,4 +216,35 @@ No explanation, just the YAML fields to change.`, string(currentYAML), descripti
 			return nil
 		},
 	}
+}
+
+// buildConfigurePrompt describes the current settings to the AI CLI with
+// secrets redacted: the prompt leaves this machine.
+func buildConfigurePrompt(c config.Config, description string) string {
+	shown := config.Redact(c)
+	currentYAML, _ := yaml.Marshal(&shown)
+	return fmt.Sprintf(`Given this break-reminder config:
+%s
+
+The user wants: "%s"
+
+Output ONLY the changed YAML fields (not the full config). For example:
+work_duration_min: 25
+break_duration_min: 5
+
+No explanation, just the YAML fields to change.`, string(currentYAML), description)
+}
+
+// checkAIConfigChanges refuses AI output that would touch a secret.
+func checkAIConfigChanges(changes []byte) error {
+	var raw map[string]any
+	if err := yaml.Unmarshal(changes, &raw); err != nil {
+		return fmt.Errorf(i18n.Text("invalid configuration changes: %w"), err)
+	}
+	for key := range raw {
+		if config.IsSecretKey(key) {
+			return fmt.Errorf(i18n.Text("refusing to change %s from AI output; use `break-reminder tts set-api-key`"), key)
+		}
+	}
+	return nil
 }

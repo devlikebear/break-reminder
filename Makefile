@@ -1,4 +1,4 @@
-.PHONY: build build-helper install uninstall test clean release
+.PHONY: build build-helper install uninstall test clean release app app-sandbox
 
 BINARY := break-reminder
 HELPER := break-screen
@@ -19,6 +19,12 @@ build-helper:
 
 build: build-helper
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/break-reminder
+
+app:
+	scripts/build-app.sh
+
+app-sandbox:
+	scripts/build-app.sh --sandbox
 
 install: build
 	@mkdir -p $(INSTALL_DIR)

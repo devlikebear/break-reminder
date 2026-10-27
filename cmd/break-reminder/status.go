@@ -11,21 +11,12 @@ import (
 	"github.com/devlikebear/break-reminder/internal/config"
 	"github.com/devlikebear/break-reminder/internal/idle"
 	"github.com/devlikebear/break-reminder/internal/launchd"
+	"github.com/devlikebear/break-reminder/internal/reminder"
 	"github.com/devlikebear/break-reminder/internal/schedule"
 	"github.com/devlikebear/break-reminder/internal/state"
 )
 
-func fmtMin(min int) string {
-	if min >= 60 {
-		h := min / 60
-		m := min % 60
-		if m > 0 {
-			return fmt.Sprintf(i18n.Text("%dh %dm"), h, m)
-		}
-		return fmt.Sprintf(i18n.Text("%dh"), h)
-	}
-	return fmt.Sprintf(i18n.Text("%dm"), min)
-}
+func fmtMin(min int) string { return reminder.FormatMinutes(min) }
 
 func displayMode(s state.State) string {
 	if s.Paused {

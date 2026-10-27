@@ -11,12 +11,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/devlikebear/break-reminder/internal/config"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 )
 
 func withTempConfigDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	orig := secrets.Default
+	secrets.Default = secrets.NewMemory()
+	t.Cleanup(func() { secrets.Default = orig })
 	return dir
 }
 
@@ -43,19 +47,31 @@ func TestSetAPIKeyFromArg(t *testing.T) {
 	cfg = config.Default()
 	stdinIsTerminal = func() bool { return true }
 
+	cfg.TTSAPIKey = "old-plaintext-key"
+	if err := config.Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := runSetAPIKey([]string{"AIzaSy-test-key"}); err != nil {
 		t.Fatalf("runSetAPIKey() error = %v", err)
 	}
-	if cfg.TTSAPIKey != "AIzaSy-test-key" {
-		t.Fatalf("in-memory cfg.TTSAPIKey = %q, want AIzaSy-test-key", cfg.TTSAPIKey)
+	if got := storedTTSKey(t); got != "AIzaSy-test-key" {
+		t.Fatalf("stored key = %q, want AIzaSy-test-key", got)
+	}
+	if cfg.TTSAPIKey != "" {
+		t.Fatalf("in-memory cfg.TTSAPIKey = %q, want cleared", cfg.TTSAPIKey)
 	}
 
 	loaded, err := config.Load()
 	if err != nil {
 		t.Fatalf("config.Load() error = %v", err)
 	}
-	if loaded.TTSAPIKey != "AIzaSy-test-key" {
-		t.Fatalf("loaded cfg.TTSAPIKey = %q, want AIzaSy-test-key", loaded.TTSAPIKey)
+	if loaded.TTSAPIKey != "" {
+		t.Fatalf("config.yaml still holds the key: %q", loaded.TTSAPIKey)
+	}
+	data, _ := os.ReadFile(config.ConfigPath())
+	if strings.Contains(string(data), "AIzaSy-test-key") || strings.Contains(string(data), "old-plaintext-key") {
+		t.Fatalf("config file contains a key:\n%s", data)
 	}
 
 	info, err := os.Stat(config.ConfigPath())
@@ -65,6 +81,12 @@ func TestSetAPIKeyFromArg(t *testing.T) {
 	if perm := info.Mode().Perm(); perm != 0o600 {
 		t.Fatalf("config perm = %o, want 0600", perm)
 	}
+}
+
+func storedTTSKey(t *testing.T) string {
+	t.Helper()
+	v, _ := secrets.Default.Get(secrets.TTSAPIKey)
+	return v
 }
 
 func TestSetAPIKeyFromStdin(t *testing.T) {
@@ -84,8 +106,8 @@ func TestSetAPIKeyFromStdin(t *testing.T) {
 	if err := runSetAPIKey(nil); err != nil {
 		t.Fatalf("runSetAPIKey() error = %v", err)
 	}
-	if cfg.TTSAPIKey != "piped-key-123" {
-		t.Fatalf("cfg.TTSAPIKey = %q, want piped-key-123", cfg.TTSAPIKey)
+	if got := storedTTSKey(t); got != "piped-key-123" {
+		t.Fatalf("stored key = %q, want piped-key-123", got)
 	}
 }
 
@@ -103,8 +125,8 @@ func TestSetAPIKeyTrimsWhitespace(t *testing.T) {
 	if err := runSetAPIKey([]string{"  padded-key  "}); err != nil {
 		t.Fatalf("runSetAPIKey() error = %v", err)
 	}
-	if cfg.TTSAPIKey != "padded-key" {
-		t.Fatalf("cfg.TTSAPIKey = %q, want padded-key", cfg.TTSAPIKey)
+	if got := storedTTSKey(t); got != "padded-key" {
+		t.Fatalf("stored key = %q, want padded-key", got)
 	}
 }
 

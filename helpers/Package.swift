@@ -21,6 +21,10 @@ let package = Package(
             name: "MenuBarApp",
             dependencies: ["HelperCore"]
         ),
+        .executableTarget(
+            name: "BreakReminderApp",
+            dependencies: ["HelperCore"]
+        ),
         .testTarget(
             name: "HelperCoreTests",
             dependencies: ["HelperCore"]

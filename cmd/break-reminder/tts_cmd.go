@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 
 	"bufio"
 	"fmt"
@@ -213,23 +214,20 @@ func runSetAPIKey(args []string) error {
 		return fmt.Errorf("%s", i18n.Text("api key must not contain newline characters"))
 	}
 
-	if err := config.EnsureConfigFile(); err != nil {
-		return fmt.Errorf(i18n.Text("ensure config file: %w"), err)
+	if err := secrets.Default.Set(secrets.TTSAPIKey, key); err != nil {
+		return fmt.Errorf(i18n.Text("save api key to keychain: %w"), err)
+	}
+	// Drop any plaintext copy left in config.yaml by older versions.
+	if strings.TrimSpace(cfg.TTSAPIKey) != "" {
+		updated := cfg
+		updated.TTSAPIKey = ""
+		if err := config.Save(updated); err != nil {
+			return fmt.Errorf(i18n.Text("save config: %w"), err)
+		}
+		cfg = updated
 	}
 
-	updated := cfg
-	updated.TTSAPIKey = key
-	if err := config.Save(updated); err != nil {
-		return fmt.Errorf(i18n.Text("save config: %w"), err)
-	}
-	cfg = updated
-
-	path := config.ConfigPath()
-	if err := os.Chmod(path, 0o600); err != nil {
-		return fmt.Errorf(i18n.Text("restrict permissions on %s: %w"), path, err)
-	}
-
-	fmt.Printf(i18n.Text("Gemini API key saved (%d chars) to %s with permissions 0600\n"), len(key), path)
+	fmt.Printf(i18n.Text("Gemini API key saved to the keychain (%d chars)\n"), len(key))
 	return nil
 }
 

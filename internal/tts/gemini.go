@@ -2,6 +2,7 @@ package tts
 
 import (
 	"github.com/devlikebear/break-reminder/internal/i18n"
+	"github.com/devlikebear/break-reminder/internal/secrets"
 
 	"bytes"
 	"context"
@@ -18,11 +19,15 @@ import (
 	"github.com/devlikebear/break-reminder/internal/config"
 )
 
-// ResolveAPIKey returns the Gemini API key, preferring the config value and
-// falling back to the GEMINI_API_KEY environment variable.
+// ResolveAPIKey returns the Gemini API key from config.yaml (legacy), the
+// secret store, or the GEMINI_API_KEY environment variable, in that order.
 func ResolveAPIKey(cfg config.Config) string {
+	// A key still in config.yaml (not migrated yet) wins, then the keychain.
 	if key := strings.TrimSpace(cfg.TTSAPIKey); key != "" {
 		return key
+	}
+	if key, err := secrets.Default.Get(secrets.TTSAPIKey); err == nil && strings.TrimSpace(key) != "" {
+		return strings.TrimSpace(key)
 	}
 	return strings.TrimSpace(os.Getenv("GEMINI_API_KEY"))
 }
