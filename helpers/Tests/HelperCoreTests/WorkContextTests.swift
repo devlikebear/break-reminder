@@ -53,6 +53,18 @@ final class WorkContextTests: XCTestCase {
         XCTAssertEqual(nowCardLines(context: ctx, calendarAuthorized: true, now: now).headline, L10n.text("Calendar data is out of date"))
     }
 
+    func testFocusBoundedByEndOfDayIsNotCalledTimeUntilTheEvent() {
+        let now: Int64 = 1_000_000
+        var ctx = WorkContextStatus()
+        ctx.calendar.updatedAt = now; ctx.calendar.stale = false
+        // Next event is tomorrow; the focus window ends with today's detection window.
+        ctx.calendar.next = CalendarEventPayload(id: "n", title: "Tomorrow", start: now + 21 * 3600, end: now + 22 * 3600, allDay: false, hasAttendees: true, availability: "busy", calendarID: "c")
+        ctx.calendar.focusMinutes = 674; ctx.calendar.focusPomodoros = 22
+        let lines = nowCardLines(context: ctx, calendarAuthorized: true, now: now)
+        XCTAssertEqual(lines.focus, "674 min of focus time left today")
+        XCTAssertFalse(lines.canStartFocus)
+    }
+
     func testAppUsageAggregatorSplitsByAppAndSkipsSuspendedTime() {
         var agg = AppUsageAggregator()
         agg.activate(bundleID: "com.apple.Safari", name: "Safari", at: 0)

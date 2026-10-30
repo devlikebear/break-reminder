@@ -962,6 +962,7 @@ extension L10n {
         "{0} / {1} min": "{0} / {1}분",
         "{0} break": "{0} 휴식",
         "{0} min": "{0}분",
+        "{0} min of focus time left today": "오늘 남은 집중 가능 시간 {0}분",
         "{0} min until the next event": "다음 일정까지 {0}분",
         "{0} min {1} sec": "{0}분 {1}초",
         "{0} percent": "{0}퍼센트",
