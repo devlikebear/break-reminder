@@ -47,9 +47,9 @@ func newAISuggestCmd() *cobra.Command {
 		Use:   "suggest",
 		Short: i18n.Text("AI-powered optimal break timing analysis"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := ai.NewClient(cfg.AICLI)
-			if !client.Available() {
-				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
+			client, err := readyAIService()
+			if err != nil {
+				return err
 			}
 
 			history, err := ai.LoadHistory()
@@ -92,9 +92,9 @@ func newAISummaryCmd() *cobra.Command {
 		Use:   "summary",
 		Short: i18n.Text("AI-powered productivity report"),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := ai.NewClient(cfg.AICLI)
-			if !client.Available() {
-				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
+			client, err := readyAIService()
+			if err != nil {
+				return err
 			}
 
 			history, err := ai.LoadHistory()
@@ -177,9 +177,9 @@ func newAIConfigureCmd() *cobra.Command {
 		Short: i18n.Text("Configure settings using natural language"),
 		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			client := ai.NewClient(cfg.AICLI)
-			if !client.Available() {
-				return fmt.Errorf(i18n.Text("%s CLI not found in PATH"), cfg.AICLI)
+			client, err := readyAIService()
+			if err != nil {
+				return err
 			}
 
 			prompt := buildConfigurePrompt(cfg, strings.Join(args, " "))

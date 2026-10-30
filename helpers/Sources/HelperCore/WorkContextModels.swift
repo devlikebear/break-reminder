@@ -114,6 +114,12 @@ public func nowCardLines(context: WorkContextStatus, calendarAuthorized: Bool, n
     } else {
         headline = L10n.text("No more events today")
     }
+    // The window ends at the next event only when that event comes first;
+    // otherwise it is the rest of today's work window.
+    let boundedByEvent = cal.next.map { Int($0.start - now) / 60 <= cal.focusMinutes } ?? false
+    guard boundedByEvent else {
+        return NowCardLines(headline: headline, focus: L10n.text("{0} min of focus time left today", cal.focusMinutes), canStartFocus: false)
+    }
     var focus = L10n.text("{0} min until the next event", cal.focusMinutes)
     if cal.focusPomodoros > 0 {
         focus += " · " + L10n.text("{0} pomodoros", cal.focusPomodoros)

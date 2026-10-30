@@ -793,3 +793,25 @@ func TestWorkContextKeys(t *testing.T) {
 		t.Fatal("invalid meeting_rule accepted")
 	}
 }
+
+func TestAssistantKeys(t *testing.T) {
+	d := Default()
+	if d.AIProvider != "" || d.ShareEventTitles || !d.BriefingVoice || len(d.AIConsentedProviders) != 0 {
+		t.Fatalf("defaults = provider:%q share:%v voice:%v consent:%v", d.AIProvider, d.ShareEventTitles, d.BriefingVoice, d.AIConsentedProviders)
+	}
+	got, err := ApplyYAMLChanges(d, []byte("ai_provider: anthropic\nai_model: claude-sonnet-5-5\nai_consented_providers: [anthropic]\nshare_event_titles: true\nbriefing_voice: false\n"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AIProvider != "anthropic" || got.AIModel != "claude-sonnet-5-5" || !got.ShareEventTitles || got.BriefingVoice || len(got.AIConsentedProviders) != 1 {
+		t.Fatalf("applied = %+v", got)
+	}
+	if _, err := ApplyYAMLChanges(d, []byte("ai_provider: skynet\n")); err == nil {
+		t.Fatal("unknown provider accepted")
+	}
+	for _, k := range []string{"anthropic_api_key", "openai_api_key", "gemini_api_key"} {
+		if !IsSecretKey(k) {
+			t.Errorf("%s should be a secret key", k)
+		}
+	}
+}

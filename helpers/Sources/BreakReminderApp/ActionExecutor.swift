@@ -34,6 +34,10 @@ final class ActionExecutor {
             startBreak(event)
         case "speak":
             speak(event.text ?? "", voiceName: event.voice ?? "")
+        case "briefing":
+            // The engine leaves text empty when the voice is off or a meeting runs.
+            notify(event)
+            if let text = event.text, !text.isEmpty { speak(text, voiceName: event.voice ?? "") }
         default:
             notify(event)
         }

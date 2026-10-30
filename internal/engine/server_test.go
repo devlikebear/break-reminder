@@ -5,11 +5,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
-type lines struct{ bytes.Buffer }
+type lines struct {
+	mu sync.Mutex
+	b  bytes.Buffer
+}
+
+func (l *lines) Write(p []byte) (int, error) { l.mu.Lock(); defer l.mu.Unlock(); return l.b.Write(p) }
+func (l *lines) String() string              { l.mu.Lock(); defer l.mu.Unlock(); return l.b.String() }
+func (l *lines) Reset()                      { l.mu.Lock(); l.b.Reset(); l.mu.Unlock() }
 
 func (l *lines) messages(t *testing.T) []map[string]any {
 	t.Helper()
@@ -85,5 +95,33 @@ func TestNotifyWritesJSONRPCNotification(t *testing.T) {
 	msgs := out.messages(t)
 	if len(msgs) != 1 || msgs[0]["method"] != "event" || msgs[0]["id"] != nil {
 		t.Fatalf("notification = %v", msgs)
+	}
+}
+
+func TestAsyncHandlerDoesNotBlockOthers(t *testing.T) {
+	var out lines
+	s := NewServer(&out)
+	release := make(chan struct{})
+	s.HandleAsync("slow", func(context.Context, json.RawMessage) (any, error) { <-release; return "slow-done", nil })
+	s.Handle("fast", func(context.Context, json.RawMessage) (any, error) { return "fast-done", nil })
+	pr, pw := io.Pipe()
+	done := make(chan error, 1)
+	go func() { done <- s.Serve(context.Background(), pr) }()
+	io.WriteString(pw, `{"jsonrpc":"2.0","id":1,"method":"slow"}`+"\n")
+	io.WriteString(pw, `{"jsonrpc":"2.0","id":2,"method":"fast"}`+"\n")
+	deadline := time.Now().Add(2 * time.Second)
+	for !strings.Contains(out.String(), "fast-done") && time.Now().Before(deadline) {
+		time.Sleep(5 * time.Millisecond)
+	}
+	if strings.Contains(out.String(), "slow-done") || !strings.Contains(out.String(), "fast-done") {
+		t.Fatalf("fast should answer while slow runs: %s", out.String())
+	}
+	close(release)
+	pw.Close()
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "slow-done") {
+		t.Fatal("Serve returned before the async handler answered")
 	}
 }

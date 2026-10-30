@@ -44,7 +44,9 @@ uninstall:
 
 test:
 	python3 scripts/generate-localizations.py --check
+	scripts/check-llm-deps.sh
 	go test ./...
+	go build -tags mas ./...
 	cd helpers && swift test
 
 release: build

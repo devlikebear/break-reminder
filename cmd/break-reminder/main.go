@@ -77,6 +77,7 @@ func newRootCmd() *cobra.Command {
 		newMenuBarCmd(),
 		newDaemonCmd(),
 		newEngineCmd(),
+		newMCPCmd(),
 		newResetCmd(),
 		newPauseCmd(),
 		newResumeCmd(),

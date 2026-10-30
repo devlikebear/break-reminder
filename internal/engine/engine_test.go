@@ -61,11 +61,16 @@ func testConfig() config.Config {
 func newTestEngine(t *testing.T, cfg config.Config) (*Engine, *clock, *recorder, string) {
 	t.Helper()
 	dir := t.TempDir()
+	// Every default path (history, insights, config, assistant) lands in the
+	// temp dir, never in the real home.
+	t.Setenv("BREAK_REMINDER_HOME", dir)
 	c := &clock{t: time.Date(2026, 10, 20, 10, 0, 0, 0, time.Local)}
 	r := &recorder{}
+	var cfgMu sync.Mutex
 	e := New(Options{
 		Now:               c.Now,
-		LoadConfig:        func() (config.Config, error) { return cfg, nil },
+		LoadConfig:        func() (config.Config, error) { cfgMu.Lock(); defer cfgMu.Unlock(); return cfg, nil },
+		SaveConfig:        func(updated config.Config) error { cfgMu.Lock(); cfg = updated; cfgMu.Unlock(); return nil },
 		StatePath:         filepath.Join(dir, "state"),
 		LogPath:           filepath.Join(dir, "log"),
 		TimeToolsDir:      dir,
@@ -74,6 +79,7 @@ func newTestEngine(t *testing.T, cfg config.Config) (*Engine, *clock, *recorder,
 		Emit:              r.emit,
 		Status:            r.status,
 	})
+	t.Cleanup(e.WaitBackground)
 	return e, c, r, dir
 }
 

@@ -15,6 +15,7 @@ type DailySummary struct {
 	Sessions   int     `json:"sessions"`
 	Activities int     `json:"activities"`
 	HourlyWork [24]int `json:"hourly_work"`
+	Retro      string  `json:"retro,omitempty"` // end-of-day retrospective, when one was written
 }
 
 // historyPathOverride allows tests to redirect the history file.

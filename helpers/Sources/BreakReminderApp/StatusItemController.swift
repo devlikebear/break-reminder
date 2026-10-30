@@ -5,7 +5,7 @@ import SwiftUI
 
 /// Status bar item: left click opens the SwiftUI popover, right click the menu.
 @MainActor
-final class StatusItemController: NSObject, NSMenuDelegate {
+final class StatusItemController: NSObject, NSMenuDelegate, NSPopoverDelegate {
     private let model: AppModel
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let popover = NSPopover()
@@ -14,11 +14,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private var animationTick = 0
     private var loginItem: NSMenuItem!
 
-    init(model: AppModel, calendar: CalendarCollector) {
+    private let assistant: AssistantModel
+
+    init(model: AppModel, calendar: CalendarCollector, assistant: AssistantModel) {
         self.model = model
+        self.assistant = assistant
         super.init()
         popover.behavior = .transient
-        popover.contentViewController = NSHostingController(rootView: PopoverRootView(model: model, calendar: calendar))
+        popover.delegate = self
+        popover.contentViewController = NSHostingController(rootView: PopoverRootView(model: model, calendar: calendar, assistant: assistant))
 
         if let button = statusItem.button {
             button.imagePosition = .imageLeading
@@ -73,6 +77,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        // A conversation lasts while the popover is open.
+        assistant.reset()
     }
 
     func menuDidClose(_ menu: NSMenu) {

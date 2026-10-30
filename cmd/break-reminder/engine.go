@@ -17,6 +17,7 @@ import (
 	"github.com/devlikebear/break-reminder/internal/enginelock"
 	"github.com/devlikebear/break-reminder/internal/i18n"
 	"github.com/devlikebear/break-reminder/internal/logging"
+	"github.com/devlikebear/break-reminder/internal/mcphost"
 	"github.com/devlikebear/break-reminder/internal/paths"
 	"github.com/devlikebear/break-reminder/internal/reminder"
 )
@@ -61,18 +62,23 @@ func runEngine(ctx context.Context, in io.Reader, out io.Writer, interval time.D
 	}
 
 	server := engine.NewServer(out)
+	host := &mcphost.Host{}
 	eng := engine.New(engine.Options{
 		LoadConfig: loadAppConfig,
 		Emit:       func(e reminder.Event) { _ = server.Notify(engine.NotifyEvent, e) },
 		Status:     func(s engine.Status) { _ = server.Notify(engine.NotifyStatus, s) },
-		OnDayEnd: func(string) {
-			if c, err := loadAppConfig(); err == nil && c.AIEnabled {
-				cfg = c
-				generateDailyInsights()
-			}
-		},
+		Notify:     func(method string, params any) { _ = server.Notify(method, params) },
+		AI:         newAIService(host),
 	})
+	host.Backend = eng.Backend()
 	eng.Register(server, version)
+
+	// External MCP clients (Claude Code/Desktop via `break-reminder mcp`).
+	if mcpServer, err := mcphost.StartHTTP(host, mcphost.ServerOptions{Actions: true}, paths.MCPDiscoveryFile()); err != nil {
+		logging.Log(logging.DefaultLogPath(), i18n.Text("MCP endpoint unavailable")+": "+err.Error())
+	} else {
+		defer mcpServer.Close()
+	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	var workers sync.WaitGroup
@@ -83,6 +89,7 @@ func runEngine(ctx context.Context, in io.Reader, out io.Writer, interval time.D
 	go func() { defer workers.Done(); eng.RunTimeTools(ctx) }()
 
 	err = server.Serve(ctx, in)
+	eng.WaitBackground()
 	logging.Log(logging.DefaultLogPath(), i18n.Text("Engine stopped"))
 	return err
 }

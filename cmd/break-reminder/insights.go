@@ -37,9 +37,9 @@ func refreshInsights() error {
 		return fmt.Errorf("%s", i18n.Text("AI is disabled in config (set ai_enabled: true)"))
 	}
 
-	client := ai.NewClient(cfg.AICLI)
-	if !client.Available() {
-		return fmt.Errorf(i18n.Text("AI CLI %q not found in PATH"), cfg.AICLI)
+	client, err := readyAIService()
+	if err != nil {
+		return err
 	}
 
 	history, err := ai.LoadHistory()
